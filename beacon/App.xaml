@@ -1,0 +1,8 @@
+<Application x:Class="Beacon.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             ShutdownMode="OnExplicitShutdown">
+    <!-- No StartupUri: there is no main window. Beacon lives in the tray and creates its
+         overlay once, at startup, keeping it hidden until the hotkey fires. -->
+    <Application.Resources />
+</Application>

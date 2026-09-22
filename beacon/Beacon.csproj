@@ -1,0 +1,45 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <!-- WinForms is pulled in solely for NotifyIcon; WPF has no tray icon of its own. -->
+    <UseWindowsForms>true</UseWindowsForms>
+    <AssemblyName>Beacon</AssemblyName>
+    <RootNamespace>Beacon</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\Beacon.ico</ApplicationIcon>
+    <!-- WFO0003 is a WinForms analyzer telling us to move DPI config out of the manifest.
+         This is a WPF app (WinForms is here only for NotifyIcon), and WPF per-monitor v2
+         awareness must be declared in the manifest, so the advice does not apply. -->
+    <NoWarn>$(NoWarn);WFO0003</NoWarn>
+    <!-- AnyCPU so the JIT emits native ARM64 on this Snapdragon box. -->
+    <PlatformTarget>AnyCPU</PlatformTarget>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Anthropic" Version="12.48.0" />
+    <PackageReference Include="NAudio.WinMM" Version="3.1.0" />
+    <PackageReference Include="Whisper.net" Version="1.9.1" />
+    <PackageReference Include="Whisper.net.Runtime" Version="1.9.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Generated artwork. The .ico carries 16-256px frames; the PNG is used in the UI. -->
+    <Resource Include="Assets\Beacon.ico" />
+    <Resource Include="Assets\Beacon.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- UseWindowsForms adds these as implicit usings, which then collide with WPF in
+         every file (Brush, Color, Point, KeyEventArgs, Application, Message...). WinForms
+         is here only for NotifyIcon, so the handful of files that need it import it
+         explicitly or via the `Forms` alias. -->
+    <Using Remove="System.Drawing" />
+    <Using Remove="System.Windows.Forms" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,1070 @@
+<Window x:Class="Beacon.UI.SettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ui="clr-namespace:Beacon.UI"
+        Title="Beacon Settings"
+        Icon="pack://application:,,,/Assets/Beacon.ico"
+        Width="980" Height="720"
+        MinWidth="780" MinHeight="520"
+        WindowStartupLocation="CenterScreen"
+        Background="#FF17171A"
+        UseLayoutRounding="True"
+        TextOptions.TextFormattingMode="Ideal">
+
+    <Window.Resources>
+        <SolidColorBrush x:Key="TextPrimary"   Color="#F2FFFFFF" />
+        <SolidColorBrush x:Key="TextSecondary" Color="#99FFFFFF" />
+        <SolidColorBrush x:Key="TextTertiary"  Color="#5CFFFFFF" />
+        <SolidColorBrush x:Key="FieldBg"       Color="#12FFFFFF" />
+        <SolidColorBrush x:Key="FieldBorder"   Color="#26FFFFFF" />
+        <SolidColorBrush x:Key="CardBg"        Color="#0DFFFFFF" />
+        <SolidColorBrush x:Key="Divider"       Color="#1AFFFFFF" />
+        <SolidColorBrush x:Key="Accent"        Color="#FF5B8DEF" />
+        <SolidColorBrush x:Key="SidebarBg"     Color="#FF121214" />
+        <SolidColorBrush x:Key="Danger"        Color="#FFFF8A7A" />
+
+        <FontFamily x:Key="UiFont">Segoe UI Variable Text, Segoe UI</FontFamily>
+        <FontFamily x:Key="GlyphFont">Segoe Fluent Icons, Segoe MDL2 Assets</FontFamily>
+
+        <!-- ============================ text ============================ -->
+        <Style TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="{StaticResource UiFont}" />
+            <Setter Property="Foreground" Value="{StaticResource TextPrimary}" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+        </Style>
+
+        <Style x:Key="PageTitle" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="{StaticResource UiFont}" />
+            <Setter Property="Foreground" Value="{StaticResource TextPrimary}" />
+            <Setter Property="FontSize" Value="22" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Margin" Value="0,0,0,4" />
+        </Style>
+
+        <Style x:Key="PageSubtitle" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="{StaticResource UiFont}" />
+            <Setter Property="Foreground" Value="{StaticResource TextSecondary}" />
+            <Setter Property="FontSize" Value="12.5" />
+            <Setter Property="Margin" Value="0,0,0,20" />
+        </Style>
+
+        <Style x:Key="GroupHeader" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="{StaticResource UiFont}" />
+            <Setter Property="Foreground" Value="{StaticResource TextPrimary}" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Margin" Value="0,0,0,10" />
+        </Style>
+
+        <Style x:Key="Label" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="{StaticResource UiFont}" />
+            <Setter Property="Foreground" Value="{StaticResource TextPrimary}" />
+            <Setter Property="FontSize" Value="12.5" />
+            <Setter Property="Margin" Value="0,0,0,5" />
+        </Style>
+
+        <Style x:Key="Caption" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="{StaticResource UiFont}" />
+            <Setter Property="Foreground" Value="{StaticResource TextTertiary}" />
+            <Setter Property="FontSize" Value="11.5" />
+            <Setter Property="Margin" Value="0,5,0,0" />
+        </Style>
+
+        <!-- ============================ inputs ============================ -->
+        <Style TargetType="TextBox">
+            <Setter Property="FontFamily" Value="{StaticResource UiFont}" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="Background" Value="{StaticResource FieldBg}" />
+            <Setter Property="Foreground" Value="{StaticResource TextPrimary}" />
+            <Setter Property="BorderBrush" Value="{StaticResource FieldBorder}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Padding" Value="9,7" />
+            <Setter Property="CaretBrush" Value="{StaticResource Accent}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TextBox">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="6">
+                            <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsFocused" Value="True">
+                                <Setter Property="BorderBrush" Value="{StaticResource Accent}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="PasswordBox">
+            <Setter Property="FontFamily" Value="{StaticResource UiFont}" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="Background" Value="{StaticResource FieldBg}" />
+            <Setter Property="Foreground" Value="{StaticResource TextPrimary}" />
+            <Setter Property="BorderBrush" Value="{StaticResource FieldBorder}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Padding" Value="9,7" />
+            <Setter Property="CaretBrush" Value="{StaticResource Accent}" />
+        </Style>
+
+        <Style TargetType="CheckBox">
+            <Setter Property="FontFamily" Value="{StaticResource UiFont}" />
+            <Setter Property="FontSize" Value="12.5" />
+            <Setter Property="Foreground" Value="{StaticResource TextPrimary}" />
+            <Setter Property="Margin" Value="0,0,0,10" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+
+        <!-- The stock ComboBox template is system-light chrome; left alone it is the one
+             bright control in an otherwise dark window. -->
+        <Style TargetType="ComboBoxItem">
+            <Setter Property="FontFamily" Value="{StaticResource UiFont}" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="Foreground" Value="{StaticResource TextPrimary}" />
+            <Setter Property="Padding" Value="10,7" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBoxItem">
+                        <Border x:Name="Bd" Background="Transparent" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsHighlighted" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#26FFFFFF" />
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#33FFFFFF" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="ComboBox">
+            <Setter Property="FontFamily" Value="{StaticResource UiFont}" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="Foreground" Value="{StaticResource TextPrimary}" />
+            <Setter Property="Background" Value="{StaticResource FieldBg}" />
+            <Setter Property="BorderBrush" Value="{StaticResource FieldBorder}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBox">
+                        <Grid>
+                            <ToggleButton x:Name="Toggle"
+                                          Focusable="False"
+                                          ClickMode="Press"
+                                          IsChecked="{Binding IsDropDownOpen, Mode=TwoWay,
+                                                      RelativeSource={RelativeSource TemplatedParent}}">
+                                <ToggleButton.Template>
+                                    <ControlTemplate TargetType="ToggleButton">
+                                        <Border x:Name="Bd"
+                                                Background="{StaticResource FieldBg}"
+                                                BorderBrush="{StaticResource FieldBorder}"
+                                                BorderThickness="1"
+                                                CornerRadius="6">
+                                            <Path x:Name="Arrow"
+                                                  HorizontalAlignment="Right"
+                                                  VerticalAlignment="Center"
+                                                  Margin="0,0,12,0"
+                                                  Data="M 0 0 L 4 4 L 8 0"
+                                                  Stroke="#99FFFFFF"
+                                                  StrokeThickness="1.4" />
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="Bd" Property="Background" Value="#1FFFFFFF" />
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </ToggleButton.Template>
+                            </ToggleButton>
+
+                            <!-- TemplateBinding does not reliably pick up the template WPF
+                                 synthesises from DisplayMemberPath; without the explicit
+                                 RelativeSource binding the box renders the item's ToString(). -->
+                            <ContentPresenter Margin="11,7,34,7"
+                                              VerticalAlignment="Center"
+                                              IsHitTestVisible="False"
+                                              Content="{Binding SelectionBoxItem,
+                                                        RelativeSource={RelativeSource TemplatedParent}}"
+                                              ContentTemplate="{Binding SelectionBoxItemTemplate,
+                                                                RelativeSource={RelativeSource TemplatedParent}}"
+                                              ContentStringFormat="{Binding SelectionBoxItemStringFormat,
+                                                                   RelativeSource={RelativeSource TemplatedParent}}" />
+
+                            <Popup x:Name="PART_Popup"
+                                   AllowsTransparency="True"
+                                   Placement="Bottom"
+                                   Focusable="False"
+                                   PopupAnimation="Fade"
+                                   IsOpen="{Binding IsDropDownOpen,
+                                            RelativeSource={RelativeSource TemplatedParent}}">
+                                <Border Background="#FF202024"
+                                        BorderBrush="{StaticResource FieldBorder}"
+                                        BorderThickness="1"
+                                        CornerRadius="6"
+                                        Margin="0,4,0,0"
+                                        MinWidth="{Binding ActualWidth,
+                                                   RelativeSource={RelativeSource TemplatedParent}}"
+                                        MaxHeight="{TemplateBinding MaxDropDownHeight}">
+                                    <Border.Effect>
+                                        <DropShadowEffect BlurRadius="16" ShadowDepth="3" Opacity="0.5" />
+                                    </Border.Effect>
+                                    <ScrollViewer VerticalScrollBarVisibility="Hidden">
+                                        <ItemsPresenter />
+                                    </ScrollViewer>
+                                </Border>
+                            </Popup>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="Slider">
+            <Setter Property="IsSnapToTickEnabled" Value="True" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+
+        <Style TargetType="Button">
+            <Setter Property="FontFamily" Value="{StaticResource UiFont}" />
+            <Setter Property="FontSize" Value="12.5" />
+            <Setter Property="Foreground" Value="{StaticResource TextPrimary}" />
+            <Setter Property="Background" Value="{StaticResource FieldBg}" />
+            <Setter Property="BorderBrush" Value="{StaticResource FieldBorder}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Padding" Value="12,7" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="6"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#1FFFFFFF" />
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource Accent}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="PrimaryButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="Background" Value="{StaticResource Accent}" />
+            <Setter Property="BorderBrush" Value="{StaticResource Accent}" />
+            <Setter Property="Foreground" Value="White" />
+        </Style>
+
+        <!-- An implicit Button style does NOT reach a subclass of Button, so HotkeyBox
+             needs its own or it falls back to the default light Windows chrome. -->
+        <Style TargetType="ui:HotkeyBox" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="FontFamily" Value="Cascadia Mono, Consolas" />
+            <Setter Property="FontSize" Value="12" />
+        </Style>
+
+        <!-- ============================ layout ============================ -->
+        <Style x:Key="Card" TargetType="Border">
+            <Setter Property="Background" Value="{StaticResource CardBg}" />
+            <Setter Property="BorderBrush" Value="{StaticResource Divider}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="10" />
+            <Setter Property="Padding" Value="18" />
+            <Setter Property="Margin" Value="0,0,0,16" />
+        </Style>
+
+        <!-- Foreground is set here, not left to the implicit TextBlock style: implicit
+             styles for non-Control elements do not cross into templates, so text inside
+             an item template inherits the ListBox's default foreground - which is black. -->
+        <Style x:Key="NavItem" TargetType="ListBoxItem">
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Margin" Value="8,2" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="Foreground" Value="{StaticResource TextSecondary}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Border x:Name="Bd" Background="Transparent" CornerRadius="7" Padding="11,9">
+                            <ContentPresenter />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#24FFFFFF" />
+                                <Setter Property="Foreground" Value="{StaticResource TextPrimary}" />
+                            </Trigger>
+                            <MultiTrigger>
+                                <MultiTrigger.Conditions>
+                                    <Condition Property="IsMouseOver" Value="True" />
+                                    <Condition Property="IsSelected" Value="False" />
+                                </MultiTrigger.Conditions>
+                                <Setter TargetName="Bd" Property="Background" Value="#12FFFFFF" />
+                                <Setter Property="Foreground" Value="{StaticResource TextPrimary}" />
+                            </MultiTrigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="212" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- ============================ sidebar ============================ -->
+        <Border Grid.Row="0" Grid.RowSpan="2" Grid.Column="0" Background="{StaticResource SidebarBg}">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="20,22,20,18">
+                    <Image Source="pack://application:,,,/Assets/Beacon.png"
+                           Width="36" Height="36"
+                           VerticalAlignment="Center"
+                           RenderOptions.BitmapScalingMode="HighQuality" />
+                    <StackPanel Margin="11,0,0,0" VerticalAlignment="Center">
+                        <TextBlock Text="Beacon" FontSize="17" FontWeight="SemiBold" />
+                        <TextBlock Text="Settings" Foreground="{StaticResource TextTertiary}" FontSize="12" />
+                    </StackPanel>
+                </StackPanel>
+
+                <ListBox x:Name="Nav"
+                         Background="Transparent"
+                         BorderThickness="0"
+                         ItemContainerStyle="{StaticResource NavItem}"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                         ScrollViewer.VerticalScrollBarVisibility="Hidden">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="{Binding Glyph}"
+                                           FontFamily="{StaticResource GlyphFont}"
+                                           FontSize="14"
+                                           Width="24"
+                                           VerticalAlignment="Center" />
+                                <TextBlock Text="{Binding Title}" FontSize="13" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </DockPanel>
+        </Border>
+
+        <!-- ============================ pages ============================ -->
+        <ScrollViewer Grid.Row="0" Grid.Column="1"
+                      VerticalScrollBarVisibility="Hidden"
+                      Padding="30,26,30,10">
+            <Grid x:Name="Pages">
+
+                <!-- ========================= General ========================= -->
+                <StackPanel x:Name="PageGeneral">
+                    <TextBlock Text="General" Style="{StaticResource PageTitle}" />
+                    <TextBlock Style="{StaticResource PageSubtitle}"
+                               Text="How Beacon starts and where it appears." />
+
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <TextBlock Text="Startup" Style="{StaticResource GroupHeader}" />
+                            <CheckBox x:Name="RunAtStartup" Content="Start Beacon when I sign in" />
+                            <TextBlock Style="{StaticResource Caption}"
+                                       Text="Registers under HKCU\Software\Microsoft\Windows\CurrentVersion\Run. Beacon runs as a normal user, so this never shows a UAC prompt — the trade-off is that it cannot move or close windows belonging to apps running as administrator." />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <TextBlock Text="Launcher shortcut" Style="{StaticResource GroupHeader}" />
+                            <StackPanel Orientation="Horizontal">
+                                <ui:HotkeyBox x:Name="LauncherHotkey" MinWidth="190" />
+                                <TextBlock x:Name="HotkeyWarning"
+                                           Margin="14,0,0,0"
+                                           VerticalAlignment="Center"
+                                           Foreground="{StaticResource Danger}"
+                                           FontSize="12"
+                                           Visibility="Collapsed" />
+                            </StackPanel>
+                            <TextBlock Style="{StaticResource Caption}"
+                                       Text="Click, then press the shortcut. Alt+Space is the default; PowerToys Run claims the same chord, so disable that first if you use it." />
+
+                            <TextBlock Text="Speak instead of typing" Style="{StaticResource GroupHeader}" Margin="0,18,0,0" />
+                            <ui:HotkeyBox x:Name="VoiceHotkey" MinWidth="190" HorizontalAlignment="Left" />
+                            <TextBlock Style="{StaticResource Caption}"
+                                       Text="Opens Beacon already listening, from anywhere. Press it again to finish talking. Alt+M by default — clear it to turn it off." />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <TextBlock Text="Results" Style="{StaticResource GroupHeader}" />
+
+                            <TextBlock Text="Maximum results shown" Style="{StaticResource Label}" />
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,14">
+                                <Slider x:Name="MaxResults" Minimum="3" Maximum="20" TickFrequency="1" Width="300" />
+                                <TextBlock x:Name="MaxResultsValue" Margin="12,0,0,0" VerticalAlignment="Center"
+                                           Foreground="{StaticResource TextSecondary}" />
+                            </StackPanel>
+
+                            <TextBlock Text="Vertical position on screen" Style="{StaticResource Label}" />
+                            <StackPanel Orientation="Horizontal">
+                                <Slider x:Name="TopOffset" Minimum="0" Maximum="45" TickFrequency="1" Width="300" />
+                                <TextBlock x:Name="TopOffsetValue" Margin="12,0,0,0" VerticalAlignment="Center"
+                                           Foreground="{StaticResource TextSecondary}" />
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <!-- ====================== Command library ==================== -->
+                <StackPanel x:Name="PageLibrary" Visibility="Collapsed">
+                    <TextBlock Text="All Commands" Style="{StaticResource PageTitle}" />
+                    <TextBlock x:Name="LibrarySubtitle" Style="{StaticResource PageSubtitle}"
+                               Text="Everything Beacon can do - what each command is for, how to call it, and its shortcut." />
+
+                    <Grid Margin="0,0,0,12">
+                        <TextBox x:Name="LibraryFilter" />
+                        <TextBlock x:Name="LibraryFilterHint"
+                                   Text="Search commands, keywords or shortcuts&#8230;"
+                                   IsHitTestVisible="False"
+                                   Margin="11,0,0,0"
+                                   VerticalAlignment="Center"
+                                   Foreground="{StaticResource TextTertiary}"
+                                   FontSize="13" />
+                    </Grid>
+
+                    <!-- Category chips -->
+                    <ListBox x:Name="LibraryCategories"
+                             Background="Transparent"
+                             BorderThickness="0"
+                             Margin="0,0,0,16"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                             ScrollViewer.VerticalScrollBarVisibility="Disabled">
+                        <ListBox.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel />
+                            </ItemsPanelTemplate>
+                        </ListBox.ItemsPanel>
+                        <ListBox.ItemContainerStyle>
+                            <Style TargetType="ListBoxItem">
+                                <Setter Property="Margin" Value="0,0,8,8" />
+                                <Setter Property="Cursor" Value="Hand" />
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="ListBoxItem">
+                                            <Border x:Name="Bd"
+                                                    CornerRadius="14"
+                                                    Padding="12,5"
+                                                    Background="#12FFFFFF"
+                                                    BorderBrush="#22FFFFFF"
+                                                    BorderThickness="1">
+                                                <TextBlock x:Name="Label"
+                                                           Text="{Binding Label}"
+                                                           FontFamily="{StaticResource UiFont}"
+                                                           FontSize="12"
+                                                           Foreground="{StaticResource TextSecondary}" />
+                                            </Border>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsSelected" Value="True">
+                                                    <Setter TargetName="Bd" Property="Background" Value="{StaticResource Accent}" />
+                                                    <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource Accent}" />
+                                                    <Setter TargetName="Label" Property="Foreground" Value="White" />
+                                                </Trigger>
+                                                <MultiTrigger>
+                                                    <MultiTrigger.Conditions>
+                                                        <Condition Property="IsMouseOver" Value="True" />
+                                                        <Condition Property="IsSelected" Value="False" />
+                                                    </MultiTrigger.Conditions>
+                                                    <Setter TargetName="Bd" Property="Background" Value="#22FFFFFF" />
+                                                </MultiTrigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </ListBox.ItemContainerStyle>
+                    </ListBox>
+
+                    <TextBlock x:Name="LibraryEmpty"
+                               Visibility="Collapsed"
+                               Foreground="{StaticResource TextTertiary}"
+                               Text="No commands match." />
+
+                    <!-- Gallery -->
+                    <ItemsControl x:Name="LibraryGallery">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <!-- ItemWidth is computed from the available width so the
+                                     cards always fill the row: 2 across by default, more
+                                     when the window is widened. -->
+                                <WrapPanel ItemWidth="{Binding LibraryCardWidth,
+                                                       RelativeSource={RelativeSource AncestorType=Window}}" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <!-- Every TextBlock sets its Foreground explicitly: implicit
+                                     TextBlock styles do not reach inside templates. -->
+                                <Border Margin="0,0,12,12"
+                                        Padding="16,14"
+                                        CornerRadius="10"
+                                        Background="{StaticResource CardBg}"
+                                        BorderBrush="{StaticResource Divider}"
+                                        BorderThickness="1">
+                                    <StackPanel>
+                                        <DockPanel LastChildFill="True">
+                                            <Border DockPanel.Dock="Left"
+                                                    Width="34" Height="34"
+                                                    CornerRadius="9"
+                                                    Background="{Binding TileBrush}">
+                                                <TextBlock Text="{Binding Glyph}"
+                                                           FontFamily="{StaticResource GlyphFont}"
+                                                           FontSize="16"
+                                                           Foreground="{Binding AccentBrush}"
+                                                           HorizontalAlignment="Center"
+                                                           VerticalAlignment="Center" />
+                                            </Border>
+                                            <Border DockPanel.Dock="Right"
+                                                    VerticalAlignment="Top"
+                                                    CornerRadius="9"
+                                                    Padding="8,2"
+                                                    Background="{Binding TileBrush}">
+                                                <TextBlock Text="{Binding Category}"
+                                                           FontFamily="{StaticResource UiFont}"
+                                                           FontSize="10.5"
+                                                           Foreground="{Binding AccentBrush}" />
+                                            </Border>
+                                            <TextBlock Text="{Binding Title}"
+                                                       Margin="11,0,8,0"
+                                                       VerticalAlignment="Center"
+                                                       FontFamily="{StaticResource UiFont}"
+                                                       FontSize="14"
+                                                       FontWeight="SemiBold"
+                                                       Foreground="{StaticResource TextPrimary}"
+                                                       TextTrimming="CharacterEllipsis" />
+                                        </DockPanel>
+
+                                        <TextBlock Text="{Binding Purpose}"
+                                                   Margin="0,11,0,0"
+                                                   FontFamily="{StaticResource UiFont}"
+                                                   FontSize="12.5"
+                                                   Foreground="{StaticResource TextPrimary}"
+                                                   TextWrapping="Wrap" />
+                                        <TextBlock Text="{Binding Detail}"
+                                                   Margin="0,4,0,0"
+                                                   FontFamily="{StaticResource UiFont}"
+                                                   FontSize="11.5"
+                                                   Foreground="{StaticResource TextSecondary}"
+                                                   TextWrapping="Wrap"
+                                                   Visibility="{Binding DetailVisibility}" />
+
+                                        <Border Height="1" Margin="0,12,0,10" Background="{StaticResource Divider}" />
+
+                                        <TextBlock Text="HOW TO USE"
+                                                   FontFamily="{StaticResource UiFont}"
+                                                   FontSize="9.5"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="{StaticResource TextTertiary}" />
+                                        <TextBlock Text="{Binding HowToUse}"
+                                                   Margin="0,4,0,0"
+                                                   FontFamily="{StaticResource UiFont}"
+                                                   FontSize="12"
+                                                   Foreground="{StaticResource TextSecondary}"
+                                                   TextWrapping="Wrap" />
+
+                                        <TextBlock Text="SHORTCUT"
+                                                   Margin="0,11,0,0"
+                                                   FontFamily="{StaticResource UiFont}"
+                                                   FontSize="9.5"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="{StaticResource TextTertiary}" />
+                                        <DockPanel Margin="0,5,0,0" LastChildFill="False">
+                                            <Border DockPanel.Dock="Left"
+                                                    CornerRadius="5"
+                                                    Padding="7,2"
+                                                    Background="#1FFFFFFF"
+                                                    BorderBrush="#33FFFFFF"
+                                                    BorderThickness="1"
+                                                    Visibility="{Binding HotkeyVisibility}">
+                                                <TextBlock Text="{Binding Hotkey}"
+                                                           FontFamily="Cascadia Mono, Consolas"
+                                                           FontSize="11.5"
+                                                           Foreground="{StaticResource TextPrimary}" />
+                                            </Border>
+                                            <TextBlock DockPanel.Dock="Left"
+                                                       Text="{Binding NoHotkeyText}"
+                                                       VerticalAlignment="Center"
+                                                       FontFamily="{StaticResource UiFont}"
+                                                       FontSize="11.5"
+                                                       Foreground="{StaticResource TextTertiary}"
+                                                       Visibility="{Binding NoHotkeyVisibility}" />
+                                            <Button DockPanel.Dock="Right"
+                                                    Content="{Binding ActionLabel}"
+                                                    Padding="10,3"
+                                                    FontSize="11.5"
+                                                    Visibility="{Binding ActionVisibility}" />
+                                        </DockPanel>
+
+                                        <TextBlock Text="&#x26A0; Asks before running - can't be undone"
+                                                   Margin="0,10,0,0"
+                                                   FontFamily="{StaticResource UiFont}"
+                                                   FontSize="11"
+                                                   Foreground="{StaticResource Danger}"
+                                                   Visibility="{Binding DestructiveVisibility}" />
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+
+                <!-- ======================== Appearance ======================= -->
+                <StackPanel x:Name="PageAppearance" Visibility="Collapsed">
+                    <TextBlock Text="Appearance" Style="{StaticResource PageTitle}" />
+                    <TextBlock Style="{StaticResource PageSubtitle}"
+                               Text="Size, colour and density of the launcher bar." />
+
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <TextBlock Text="Launcher style" Style="{StaticResource GroupHeader}" />
+                            <ComboBox x:Name="ThemePicker" Width="300" HorizontalAlignment="Left">
+                                <ComboBoxItem Content="Tactical — gunmetal and amber" Tag="tactical" />
+                                <ComboBoxItem Content="HUD — cyan holographic" Tag="hud" />
+                                <ComboBoxItem Content="Classic — clean and minimal" Tag="classic" />
+                            </ComboBox>
+                            <TextBlock Style="{StaticResource Caption}"
+                                       Text="Tactical: machined grey panels with a bevelled cut-corner frame, amber stripes, an emblem header with live CPU, RAM, time and date. HUD: glowing cyan lines, scanlines and a power-up sweep. Both use your accent colour below if you pick one." />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <TextBlock Text="Accent colour" Style="{StaticResource GroupHeader}" />
+                            <StackPanel Orientation="Horizontal">
+                                <TextBox x:Name="AccentColor" Width="140" />
+                                <Border x:Name="AccentSwatch" Width="34" Height="34" Margin="10,0,0,0"
+                                        CornerRadius="6" BorderThickness="1"
+                                        BorderBrush="{StaticResource FieldBorder}" />
+                                <ItemsControl x:Name="AccentPresets" Margin="16,0,0,0" VerticalAlignment="Center">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate><StackPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                </ItemsControl>
+                            </StackPanel>
+                            <TextBlock Style="{StaticResource Caption}" Text="Any hex colour, e.g. #5B8DEF." />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <TextBlock Text="Layout" Style="{StaticResource GroupHeader}" />
+
+                            <TextBlock Text="Bar width" Style="{StaticResource Label}" />
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,14">
+                                <Slider x:Name="WindowWidth" Minimum="440" Maximum="1200" TickFrequency="10" Width="300" />
+                                <TextBlock x:Name="WindowWidthValue" Margin="12,0,0,0" VerticalAlignment="Center"
+                                           Foreground="{StaticResource TextSecondary}" />
+                            </StackPanel>
+
+                            <TextBlock Text="Text size" Style="{StaticResource Label}" />
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,14">
+                                <Slider x:Name="FontScale" Minimum="0.8" Maximum="1.6" TickFrequency="0.05" Width="300" />
+                                <TextBlock x:Name="FontScaleValue" Margin="12,0,0,0" VerticalAlignment="Center"
+                                           Foreground="{StaticResource TextSecondary}" />
+                            </StackPanel>
+
+                            <CheckBox x:Name="ShowFileIcons" Content="Show file and app icons" />
+                            <CheckBox x:Name="ShowSubtitles" Content="Show the second line under each result" />
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <!-- ===================== Search and index ==================== -->
+                <StackPanel x:Name="PageSearch" Visibility="Collapsed">
+                    <TextBlock Text="Search &amp; Index" Style="{StaticResource PageTitle}" />
+                    <TextBlock Style="{StaticResource PageSubtitle}"
+                               Text="What Beacon searches, and how it stays current." />
+
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <TextBlock Text="Index status" Style="{StaticResource GroupHeader}" />
+                            <TextBlock x:Name="IndexStatus" Foreground="{StaticResource TextSecondary}" FontSize="12.5" />
+                            <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                                <Button x:Name="RebuildIndexButton" Content="Rebuild now" />
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <TextBlock Text="Folders to index" Style="{StaticResource GroupHeader}" />
+                            <TextBox x:Name="IndexRoots" Height="90" AcceptsReturn="True"
+                                     VerticalScrollBarVisibility="Hidden"
+                                     TextWrapping="NoWrap" />
+                            <TextBlock Style="{StaticResource Caption}"
+                                       Text="One folder per line. Leave empty to index every fixed drive, which is the default." />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <TextBlock Text="Folders to skip" Style="{StaticResource GroupHeader}" />
+                            <TextBox x:Name="ExcludedFolders" Height="110" AcceptsReturn="True"
+                                     VerticalScrollBarVisibility="Hidden"
+                                     TextWrapping="NoWrap" />
+                            <TextBlock Style="{StaticResource Caption}"
+                                       Text="Folder names, one per line, skipped anywhere in the tree. WinSxS alone accounts for about 148,000 files on this machine. Adding node_modules, .git, .venv and obj removes roughly 120,000 more — files inside them are still on disk, just not searchable here." />
+
+                            <CheckBox x:Name="IncludeHidden" Margin="0,14,0,0"
+                                      Content="Also index hidden and system files" />
+                            <TextBlock Style="{StaticResource Caption}"
+                                       Text="Off by default. These are overwhelmingly operating-system internals and roughly double the index." />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <TextBlock Text="Refresh" Style="{StaticResource GroupHeader}" />
+                            <TextBlock Text="Rebuild the index every (minutes, 0 to disable)" Style="{StaticResource Label}" />
+                            <TextBox x:Name="RefreshMinutes" Width="120" HorizontalAlignment="Left" />
+                            <TextBlock Style="{StaticResource Caption}"
+                                       Text="Beacon runs without administrator rights, so it cannot read the NTFS change journal and has no way to be told a file was created. Periodically re-walking the drives is the only mechanism available for noticing new files." />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <TextBlock Text="Everything integration" Style="{StaticResource GroupHeader}" />
+                            <TextBlock Text="HTTP server port" Style="{StaticResource Label}" />
+                            <TextBox x:Name="EverythingPort" Width="120" HorizontalAlignment="Left" />
+                            <TextBlock Style="{StaticResource Caption}"
+                                       Text="If Everything (voidtools) is running with its HTTP server enabled, Beacon uses it instead of its own index: it reads the NTFS master file table, so results are instant and always current. Beacon talks to it over HTTP rather than its SDK because the SDK ships x64-only DLLs and this machine is ARM64." />
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <!-- ======================== Shortcuts ======================== -->
+                <StackPanel x:Name="PageShortcuts" Visibility="Collapsed">
+                    <TextBlock Text="Shortcuts" Style="{StaticResource PageTitle}" />
+                    <TextBlock Style="{StaticResource PageSubtitle}"
+                               Text="Bind any command to its own global shortcut. These fire directly, without opening the launcher." />
+
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <TextBlock Text="Open the launcher" Style="{StaticResource GroupHeader}" />
+                            <ui:HotkeyBox x:Name="LauncherHotkeyMirror" MinWidth="190" HorizontalAlignment="Left" />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <TextBlock Text="Commands" Style="{StaticResource GroupHeader}" />
+                            <Grid Margin="0,0,0,12">
+                                <TextBox x:Name="ShortcutFilter" />
+                                <TextBlock x:Name="ShortcutFilterHint"
+                                           Text="Filter commands&#8230;"
+                                           IsHitTestVisible="False"
+                                           Margin="11,0,0,0"
+                                           VerticalAlignment="Center"
+                                           Foreground="{StaticResource TextTertiary}"
+                                           FontSize="13" />
+                            </Grid>
+                            <ItemsControl x:Name="CommandShortcuts" MaxHeight="340">
+                                <ItemsControl.Template>
+                                    <ControlTemplate TargetType="ItemsControl">
+                                        <ScrollViewer VerticalScrollBarVisibility="Hidden">
+                                            <ItemsPresenter />
+                                        </ScrollViewer>
+                                    </ControlTemplate>
+                                </ItemsControl.Template>
+                            </ItemsControl>
+                            <TextBlock Style="{StaticResource Caption}"
+                                       Text="Commands that need typed input cannot be bound to a shortcut, because a chord carries no arguments. Commands with a fixed set of options use their first option." />
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <!-- ===================== Custom commands ===================== -->
+                <StackPanel x:Name="PageCustom" Visibility="Collapsed">
+                    <TextBlock Text="Custom Commands" Style="{StaticResource PageTitle}" />
+                    <TextBlock Style="{StaticResource PageSubtitle}"
+                               Text="Your own searches, launchers, scripts and shortcuts." />
+
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="260" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0" Margin="0,0,16,0">
+                            <ListBox x:Name="CustomList"
+                                     Height="360"
+                                     ScrollViewer.VerticalScrollBarVisibility="Hidden"
+                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                     Background="{StaticResource CardBg}"
+                                     BorderBrush="{StaticResource Divider}"
+                                     BorderThickness="1"
+                                     Foreground="{StaticResource TextPrimary}"
+                                     ItemContainerStyle="{StaticResource NavItem}">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding Name}" FontSize="13" />
+                                            <TextBlock Text="{Binding KindLabel}"
+                                                       FontSize="11"
+                                                       Foreground="{StaticResource TextTertiary}" />
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                            <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                                <Button x:Name="AddCustom" Content="Add" Width="80" Margin="0,0,8,0" />
+                                <Button x:Name="DeleteCustom" Content="Delete" Width="80" />
+                            </StackPanel>
+                        </StackPanel>
+
+                        <TextBlock Grid.Column="1"
+                                   x:Name="CustomEmptyState"
+                                   VerticalAlignment="Center"
+                                   Margin="24,0,0,0"
+                                   Foreground="{StaticResource TextTertiary}"
+                                   FontSize="13"
+                                   Visibility="Collapsed"
+                                   Text="No custom commands yet.&#10;&#10;Click Add to create one — a search you use often, a program you launch with particular arguments, a PowerShell snippet, or a shortcut to a folder. Each one can have its own global shortcut." />
+
+                        <Border Grid.Column="1" x:Name="CustomEditor" Style="{StaticResource Card}" Margin="0">
+                            <StackPanel>
+                                <TextBlock Text="Name" Style="{StaticResource Label}" />
+                                <TextBox x:Name="CustomName" Margin="0,0,0,12" />
+
+                                <TextBlock Text="Type" Style="{StaticResource Label}" />
+                                <ComboBox x:Name="CustomKind" Margin="0,0,0,12">
+                                    <ComboBoxItem Content="Web search" Tag="WebSearch" />
+                                    <ComboBoxItem Content="Run program or script" Tag="Launch" />
+                                    <ComboBoxItem Content="PowerShell snippet" Tag="PowerShell" />
+                                    <ComboBoxItem Content="Open file or folder" Tag="OpenPath" />
+                                </ComboBox>
+
+                                <TextBlock x:Name="CustomTargetLabel" Text="URL" Style="{StaticResource Label}" />
+                                <TextBox x:Name="CustomTarget" Margin="0,0,0,4"
+                                         AcceptsReturn="True" VerticalScrollBarVisibility="Hidden" />
+                                <TextBlock x:Name="CustomTargetHint" Style="{StaticResource Caption}" Margin="0,0,0,12" />
+
+                                <TextBlock x:Name="CustomArgsLabel" Text="Arguments" Style="{StaticResource Label}" />
+                                <TextBox x:Name="CustomArgs" Margin="0,0,0,12" />
+
+                                <TextBlock Text="Keywords (optional)" Style="{StaticResource Label}" />
+                                <TextBox x:Name="CustomKeywords" Margin="0,0,0,12" />
+
+                                <TextBlock Text="Shortcut (optional)" Style="{StaticResource Label}" />
+                                <ui:HotkeyBox x:Name="CustomHotkey" MinWidth="190" HorizontalAlignment="Left"
+                                              Margin="0,0,0,12" />
+
+                                <CheckBox x:Name="CustomConfirm" Content="Ask before running" />
+                                <CheckBox x:Name="CustomExposeAi" Content="Let Claude use this command" />
+
+                                <TextBlock x:Name="CustomError"
+                                           Foreground="{StaticResource Danger}"
+                                           FontSize="12"
+                                           Margin="0,8,0,0"
+                                           Visibility="Collapsed" />
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+                </StackPanel>
+
+                <!-- ============================ AI =========================== -->
+                <StackPanel x:Name="PageAi" Visibility="Collapsed">
+                    <TextBlock Text="Plain English" Style="{StaticResource PageTitle}" />
+                    <TextBlock Style="{StaticResource PageSubtitle}"
+                               Text="Say or type whole instructions, and Beacon carries them out on this PC." />
+
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <CheckBox x:Name="NaturalLanguage" Content="Understand whole sentences" />
+                            <TextBlock Style="{StaticResource Caption}"
+                                       Text="“turn the volume to 75% and dim the screen”, “open youtube and search for mr beast”, “close all apps and shut down”. Worked out on this PC — instant, offline, and no API key needed. Single words stay ordinary search." />
+                            <TextBlock Style="{StaticResource Caption}" Margin="0,8,0,0"
+                                       Text="Anything that shuts down, closes apps or deletes still asks for a second Enter before it runs." />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <TextBlock Text="When Beacon can't work it out" Style="{StaticResource GroupHeader}" />
+                            <CheckBox x:Name="AiEnabled" Content="Hand the sentence to Claude instead" />
+                            <TextBlock Style="{StaticResource Caption}"
+                                       Text="Offered as a row under the local reading, and used straight away when you start with ?, e.g. “? snap this left and mute the volume”. Needs an API key below." />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <TextBlock Text="Model" Style="{StaticResource GroupHeader}" />
+                            <ComboBox x:Name="ModelPicker" DisplayMemberPath="Label" Width="300"
+                                      HorizontalAlignment="Left" />
+                            <TextBlock x:Name="ModelNote" Style="{StaticResource Caption}" />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <TextBlock Text="API key" Style="{StaticResource GroupHeader}" />
+                            <PasswordBox x:Name="ApiKeyBox" />
+                            <TextBlock x:Name="KeyStatus" Style="{StaticResource Caption}" />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <TextBlock Text="Safety" Style="{StaticResource GroupHeader}" />
+                            <CheckBox x:Name="ConfirmDestructive" Content="Confirm before destructive actions" />
+                            <TextBlock Style="{StaticResource Caption}"
+                                       Text="Strongly recommended. Kill process, shut down, empty Recycle Bin and any custom command marked “Ask before running” will pause for an explicit keystroke rather than running on the model’s say-so." />
+
+                            <TextBlock Text="Maximum steps per request" Style="{StaticResource Label}" Margin="0,16,0,5" />
+                            <TextBox x:Name="AiMaxTurns" Width="120" HorizontalAlignment="Left" />
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <!-- ========================= Voice =========================== -->
+                <StackPanel x:Name="PageVoice" Visibility="Collapsed">
+                    <TextBlock Text="Voice" Style="{StaticResource PageTitle}" />
+                    <TextBlock Style="{StaticResource PageSubtitle}"
+                               Text="Speak your search. Transcribed entirely on this PC by OpenAI's Whisper." />
+
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <CheckBox x:Name="VoiceEnabled" Content="Show the microphone button in the bar" />
+                            <TextBlock Style="{StaticResource Caption}"
+                                       Text="Click the mic or press Ctrl+M while the bar is open. To start listening from anywhere, bind “Voice Search” to a shortcut on the Shortcuts page." />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <TextBlock Text="Speech model" Style="{StaticResource GroupHeader}" />
+                            <ComboBox x:Name="VoiceModel" Width="360" HorizontalAlignment="Left" />
+                            <TextBlock x:Name="VoiceModelNote" Style="{StaticResource Caption}" />
+
+                            <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
+                                <Button x:Name="VoiceDownload" Content="Download" Margin="0,0,8,0" />
+                                <Button x:Name="VoiceDelete" Content="Delete" />
+                                <TextBlock x:Name="VoiceModelStatus"
+                                           Margin="14,0,0,0"
+                                           VerticalAlignment="Center"
+                                           Foreground="{StaticResource TextSecondary}"
+                                           FontSize="12.5" />
+                            </StackPanel>
+
+                            <TextBlock Style="{StaticResource Caption}" Margin="0,12,0,0"
+                                       Text="Models come from the official whisper.cpp repository on Hugging Face and are checked against a fixed SHA-256 hash before use. Only the model is downloaded — your voice is never uploaded anywhere." />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <TextBlock Text="Microphone" Style="{StaticResource GroupHeader}" />
+                            <ComboBox x:Name="VoiceDevice" Width="360" HorizontalAlignment="Left" />
+                            <CheckBox x:Name="VoiceAutoStop" Margin="0,14,0,0"
+                                      Content="Stop listening automatically when I pause" />
+                            <TextBlock Style="{StaticResource Caption}"
+                                       Text="When off, click the mic or press Ctrl+M again to finish. Recording always stops after 30 seconds." />
+
+                            <CheckBox x:Name="VoiceAutoRun" Margin="0,14,0,0"
+                                      Content="Carry out what I said, without pressing Enter" />
+                            <TextBlock Style="{StaticResource Caption}"
+                                       Text="Only when the instruction is understood exactly and is not destructive — “set the volume to 20” runs itself, “close all apps and shut down” still waits for you. Needs sentence understanding, on the Plain English page." />
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <!-- ======================== Advanced ========================= -->
+                <StackPanel x:Name="PageAdvanced" Visibility="Collapsed">
+                    <TextBlock Text="Advanced" Style="{StaticResource PageTitle}" />
+                    <TextBlock Style="{StaticResource PageSubtitle}"
+                               Text="Icons, folder behaviour and maintenance." />
+
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <TextBlock Text="Site icons" Style="{StaticResource GroupHeader}" />
+                            <ComboBox x:Name="FaviconMode" Width="300" HorizontalAlignment="Left">
+                                <ComboBoxItem Content="Fetch from each site (private)" Tag="direct" />
+                                <ComboBoxItem Content="Off — use glyphs only" Tag="off" />
+                            </ComboBox>
+                            <TextBlock Style="{StaticResource Caption}"
+                                       Text="Icons are fetched straight from each site and cached on disk. Google’s and DuckDuckGo’s favicon services are deliberately not used: either would receive the list of every site you have bookmarked. The cost of doing it this way is that some sites serve no icon and fall back to a glyph." />
+                            <Button x:Name="ClearFavicons" Content="Clear icon cache" Margin="0,12,0,0"
+                                    HorizontalAlignment="Left" />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <TextBlock Text="Opening folders" Style="{StaticResource GroupHeader}" />
+                            <ComboBox x:Name="FolderMode" Width="340" HorizontalAlignment="Left">
+                                <ComboBoxItem Content="Reuse an open Explorer window" Tag="reuse" />
+                                <ComboBoxItem Content="Always open a new window" Tag="new" />
+                                <ComboBoxItem Content="Use another file manager" Tag="custom" />
+                            </ComboBox>
+                            <TextBlock Style="{StaticResource Caption}"
+                                       Text="Windows 11’s Explorer tabs are not scriptable — there is no public API to open a folder as a tab in an existing window. Reusing a window is the closest supported behaviour, done through Shell COM automation." />
+
+                            <TextBlock Text="File manager command" Style="{StaticResource Label}" Margin="0,14,0,5" />
+                            <TextBox x:Name="CustomFileManager" />
+                            <TextBlock Style="{StaticResource Caption}"
+                                       Text="Used only when “Use another file manager” is selected. {path} is replaced with the folder; if omitted, the path is appended in quotes." />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <TextBlock Text="Maintenance" Style="{StaticResource GroupHeader}" />
+                            <StackPanel Orientation="Horizontal">
+                                <Button x:Name="OpenConfigFolder" Content="Open settings folder" Margin="0,0,8,0" />
+                                <Button x:Name="ResetUsage" Content="Reset ranking history" Margin="0,0,8,0" />
+                                <Button x:Name="ResetAll" Content="Reset everything" />
+                            </StackPanel>
+                            <TextBlock Style="{StaticResource Caption}"
+                                       Text="Ranking history is what makes frequently used results rise to the top. Resetting everything restores defaults and discards custom commands and shortcuts." />
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </Grid>
+        </ScrollViewer>
+
+        <!-- ============================ footer ============================ -->
+        <Border Grid.Row="1" Grid.Column="1"
+                BorderBrush="{StaticResource Divider}" BorderThickness="0,1,0,0"
+                Padding="30,14">
+            <Grid>
+                <TextBlock x:Name="FooterStatus"
+                           VerticalAlignment="Center"
+                           Foreground="{StaticResource TextTertiary}"
+                           FontSize="12" />
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button x:Name="CancelButton" Content="Close" Width="96" Margin="0,0,10,0" />
+                    <Button x:Name="SaveButton" Content="Save" Width="96" Style="{StaticResource PrimaryButton}"
+                            IsDefault="True" />
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>
