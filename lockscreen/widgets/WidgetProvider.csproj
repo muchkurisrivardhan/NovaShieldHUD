@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Out-of-process COM widget provider (Windows App SDK). Built as a plain exe; packaged
+       into the MSIX by makeappx with the manifest in this folder. Runs with the package's
+       identity when the widget host activates its COM class. -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <RuntimeIdentifier>win-arm64</RuntimeIdentifier>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>VantageWidgets</AssemblyName>
+    <RootNamespace>Vantage.Lockscreen.Widgets</RootNamespace>
+    <SelfContained>false</SelfContained>
+    <WindowsAppSDKSelfContained>false</WindowsAppSDKSelfContained>
+    <EnableMsixTooling>false</EnableMsixTooling>
+    <WindowsPackageType>None</WindowsPackageType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Only the Widgets component of the Windows App SDK (the whole SDK adds WinUI, AI and WebView). -->
+    <PackageReference Include="Microsoft.WindowsAppSDK.Widgets" Version="1.8.251231004" />
+    <PackageReference Include="Microsoft.WindowsAppSDK.Runtime" Version="1.8.260921001" />
+    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.28000.2957" />
+  </ItemGroup>
+
+</Project>

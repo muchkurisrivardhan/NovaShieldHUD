@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Vantage Widgets: a headless, full-trust package whose only job is to host the widget
+  provider (an out-of-process COM server) for the Widgets board and, where Windows allows
+  it, the lock screen. No Start menu entry (AppListEntry="none").
+  Publisher must match the signing certificate's subject (see build-package.ps1).
+-->
+<Package
+  xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
+  xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
+  xmlns:uap3="http://schemas.microsoft.com/appx/manifest/uap/windows10/3"
+  xmlns:com="http://schemas.microsoft.com/appx/manifest/com/windows10"
+  xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
+  IgnorableNamespaces="uap uap3 com rescap">
+
+  <Identity Name="Vantage.LockscreenWidgets" Publisher="CN=Vantage Dev" Version="1.0.0.0" ProcessorArchitecture="arm64" />
+
+  <Properties>
+    <DisplayName>Vantage Widgets</DisplayName>
+    <PublisherDisplayName>Vantage</PublisherDisplayName>
+    <Logo>Assets\StoreLogo.png</Logo>
+  </Properties>
+
+  <Dependencies>
+    <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.19041.0" MaxVersionTested="10.0.28000.0" />
+    <PackageDependency Name="Microsoft.WindowsAppRuntime.1.8" MinVersion="8000.994.2142.0"
+                       Publisher="CN=Microsoft Corporation, O=Microsoft Corporation, L=Redmond, S=Washington, C=US" />
+  </Dependencies>
+
+  <Resources>
+    <Resource Language="en-us" />
+  </Resources>
+
+  <Capabilities>
+    <rescap:Capability Name="runFullTrust" />
+  </Capabilities>
+
+  <Applications>
+    <Application Id="App" Executable="VantageWidgets.exe" EntryPoint="Windows.FullTrustApplication">
+      <uap:VisualElements DisplayName="Vantage Widgets" Description="HUD widgets: node status, day and year progress, countdown"
+                          BackgroundColor="transparent" AppListEntry="none"
+                          Square150x150Logo="Assets\Square150x150Logo.png" Square44x44Logo="Assets\Square44x44Logo.png" />
+      <Extensions>
+        <com:Extension Category="windows.comServer">
+          <com:ComServer>
+            <com:ExeServer Executable="VantageWidgets.exe" Arguments="-RegisterProcessAsComServer" DisplayName="Vantage Widgets">
+              <com:Class Id="7E3F9A20-5C84-4E1B-9D6F-2A1C3B4D5E6F" DisplayName="Vantage Widget Provider" />
+            </com:ExeServer>
+          </com:ComServer>
+        </com:Extension>
+
+        <uap3:Extension Category="windows.appExtension">
+          <uap3:AppExtension Name="com.microsoft.windows.widgets" DisplayName="Vantage" Id="VantageWidgets" PublicFolder="Public">
+            <uap3:Properties>
+              <WidgetProvider>
+                <ProviderIcons>
+                  <Icon Path="Assets\WidgetIcon.png" />
+                </ProviderIcons>
+                <Activation>
+                  <CreateInstance ClassId="7E3F9A20-5C84-4E1B-9D6F-2A1C3B4D5E6F" />
+                </Activation>
+                <Definitions>
+                  <Definition Id="Node_Status" DisplayName="Node Status" Description="Link, power and uptime, HUD style">
+                    <Capabilities>
+                      <Capability><Size Name="small" /></Capability>
+                      <Capability><Size Name="medium" /></Capability>
+                    </Capabilities>
+                    <ThemeResources>
+                      <Icons><Icon Path="Assets\WidgetIcon.png" /></Icons>
+                      <Screenshots><Screenshot Path="Assets\Screenshot-Node.png" DisplayAltText="Node Status widget" /></Screenshots>
+                      <DarkMode />
+                      <LightMode />
+                    </ThemeResources>
+                  </Definition>
+                  <Definition Id="Day_Year_Progress" DisplayName="Day / Year Progress" Description="How much of today and this year has passed">
+                    <Capabilities>
+                      <Capability><Size Name="small" /></Capability>
+                      <Capability><Size Name="medium" /></Capability>
+                    </Capabilities>
+                    <ThemeResources>
+                      <Icons><Icon Path="Assets\WidgetIcon.png" /></Icons>
+                      <Screenshots><Screenshot Path="Assets\Screenshot-Progress.png" DisplayAltText="Day and year progress widget" /></Screenshots>
+                      <DarkMode />
+                      <LightMode />
+                    </ThemeResources>
+                  </Definition>
+                  <Definition Id="Countdown" DisplayName="Countdown" Description="Days left to the date set in the lock screen settings">
+                    <Capabilities>
+                      <Capability><Size Name="small" /></Capability>
+                      <Capability><Size Name="medium" /></Capability>
+                    </Capabilities>
+                    <ThemeResources>
+                      <Icons><Icon Path="Assets\WidgetIcon.png" /></Icons>
+                      <Screenshots><Screenshot Path="Assets\Screenshot-Countdown.png" DisplayAltText="Countdown widget" /></Screenshots>
+                      <DarkMode />
+                      <LightMode />
+                    </ThemeResources>
+                  </Definition>
+                </Definitions>
+              </WidgetProvider>
+            </uap3:Properties>
+          </uap3:AppExtension>
+        </uap3:Extension>
+      </Extensions>
+    </Application>
+  </Applications>
+</Package>

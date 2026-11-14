@@ -6,8 +6,8 @@ follows Beacon's style, so the lock screen matches the launcher and the widgets.
 
 ![Amber](../docs/media/lockscreen-amber.png)
 
-**Status: milestone 3 of 6.** The renderer, preview, apply, restore and the account emblem
-work. Lock screen widgets and scheduled refresh are not built yet.
+**Status: milestone 4 of 6.** The renderer, preview, apply, restore, the account emblem and
+the widgets work. Scheduled refresh is not built yet.
 
 ## From Beacon
 
@@ -130,6 +130,58 @@ Windows has no API for a desktop app to set the account picture, so this only ma
 Set it yourself: **Settings > Accounts > Your info > Choose a file**, and pick the PNG (1080
 is the safe size). Use the one whose theme matches your lock screen.
 
+## Widgets
+
+Three HUD widgets, each in small and medium sizes:
+
+| Widget | Shows |
+|---|---|
+| **Node Status** | The node label from your config (not the PC's real name), network up or down (not which network), battery percent and charging, uptime |
+| **Day / Year Progress** | How much of today and of this year has passed, as a percent and a bar |
+| **Countdown** | Days left to `widgets.countdown.date`, with its label |
+
+They refresh when shown or resized, and every 5 minutes while on screen.
+
+![Node Status widget](widgets-node-placeholder.png) <!-- screenshot to be added -->
+
+### Install
+
+The widgets come from a small packaged app (`widgets/`): a headless, out-of-process COM
+widget provider built on the Windows App SDK. Windows only runs widget providers from signed
+packages, so it is signed with your own development certificate.
+
+```bash
+powershell -ExecutionPolicy Bypass -File lockscreen\widgets\build-package.ps1
+```
+
+```bash
+powershell -ExecutionPolicy Bypass -File lockscreen\widgets\install.ps1
+```
+
+`build-package.ps1` compiles the provider, renders its icons from the padlock emblem, packs the
+MSIX with `makeappx` and signs it. It creates the certificate (`CN=Vantage Dev`) in your user
+store on first run. `install.ps1` adds that one certificate to Local Machine > Trusted People,
+which takes **one admin prompt**, then installs the package as you. It needs the Windows App
+Runtime 1.8, which Windows usually already has.
+
+### Add them
+
+- **Widgets board:** Win+W > **+** (Add widgets) > **Vantage**.
+- **Lock screen:** Settings > Personalization > Lock screen > **Your widgets** > **Add widget**,
+  if Windows lists Vantage there. Windows decides which widgets may appear on the lock screen,
+  and on some builds it only offers its own. When it doesn't offer Vantage, the widgets still
+  work on the Widgets board, and the rest of the lock screen HUD is unaffected.
+
+![Lock screen widgets](widgets-lockscreen-placeholder.png) <!-- screenshot to be added -->
+
+### Remove them
+
+```bash
+powershell -ExecutionPolicy Bypass -File lockscreen\widgets\uninstall.ps1
+```
+
+It removes the package and the certificate from both stores (one admin prompt for the trusted one).
+
 ## What it shows, and what it never will
 
 Anyone at the keyboard can read the lock screen. The picture only carries the corner text
@@ -144,3 +196,5 @@ names or calendar details.
 - No auto-login, no second password screen.
 - No network calls, no telemetry.
 - Spotlight and the sign-in screen background setting are only read or mentioned, never changed.
+- The widgets read only: your config, network up/down, battery and uptime. The one admin
+  step trusts your own signing certificate, and `uninstall.ps1` takes it away again.
