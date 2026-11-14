@@ -3,12 +3,13 @@
 A tactical HUD layer for the Windows desktop: a keyboard launcher, desktop widgets, a focus
 timer and a live world map on your wallpaper, all in one gunmetal-and-amber style.
 
-Two apps, built to work together:
+Two apps, built to work together, and a lock screen to match:
 
 | App | What it is |
 |---|---|
 | **[Beacon](beacon/)** | A Spotlight-style launcher. `Alt+Space`, type, Enter. Apps, files, windows, system commands, timers, plain-English sentences, local voice, and Claude for anything else. |
 | **[Dotline](dotline/)** | Desktop widgets that sit on your wallpaper: your life and your goals as dots, a focus timer, and time zones on a world-map wallpaper. Installed and set up through Beacon, and always in Beacon's style. |
+| **[Lockscreen](lockscreen/)** | A HUD picture for the Windows lock and sign-in screens, in Beacon's style. In progress: the renderer and preview work; applying it, widgets and auto-refresh are next. |
 
 ![Focus timer](docs/media/focus-timer.png)
 

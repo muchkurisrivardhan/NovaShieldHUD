@@ -3,6 +3,8 @@
 ## Unreleased
 
 ### 2026-11-14
+- Lockscreen (new, milestone 1 of 6): renders the lock screen HUD picture at the monitor's real resolution in six themes, following Beacon's style by default. `--preview`, `--theme`, `--size`, `--debug-zones`, `--selftest`. Nothing on the PC is changed yet.
+- Beacon Settings: **Save** keeps the window open and shows when it saved; **Close** leaves.
 - Three more styles for Beacon and Dotline: **Cyberpunk** (neon pink and cyan on deep violet), **Retro CRT** (phosphor-green terminal, monospace) and **Minimal mono** (black, white and grey).
 - Dotline follows Beacon's look: Tactical, HUD or Classic, with Beacon's accent colour. Changing it in Beacon restarts Dotline in the new style.
 - Beacon Settings has a **Dotline** page: start Dotline with Beacon (on by default), birthday, lifespan, dot size, background, lock positions, time-zone dots.
