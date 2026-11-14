@@ -6,8 +6,8 @@ follows Beacon's style, so the lock screen matches the launcher and the widgets.
 
 ![Amber](../docs/media/lockscreen-amber.png)
 
-**Status: milestone 2 of 6.** The renderer, preview, apply and restore work. The account
-emblem, lock screen widgets and scheduled refresh are not built yet.
+**Status: milestone 3 of 6.** The renderer, preview, apply, restore and the account emblem
+work. Lock screen widgets and scheduled refresh are not built yet.
 
 ## From Beacon
 
@@ -62,6 +62,7 @@ lockscreen/bin/Release/net10.0-windows/Lockscreen.exe --preview hud.png
 | `--debug-zones` | Outline the areas kept clear for the Windows clock and the sign-in box |
 | `--apply` | Render at the monitor's size and set it as the lock screen (see below) |
 | `--restore` | Put your own lock screen picture back |
+| `--emblem <dir>` | Write the account-picture padlock PNGs (448 and 1080 px) for every theme, or just `--theme <name>`. Changes nothing |
 | `--status` | Show what's set and what's saved; changes nothing |
 | `--selftest` | Config parsing, tokens, theme math and a check of the rendered picture |
 
@@ -109,6 +110,25 @@ A custom theme: set `"theme": "custom"` and add
 Corner text tokens: `{DATE}`, `{WEEKDAY}`, `{DAY_OF_YEAR}`, `{YEAR_PROGRESS}`,
 `{UPTIME_DAYS}`, `{COUNTDOWN:YYYY-MM-DD}`. There is no time-of-day token: Windows shows a
 live clock, and a time baked into a picture goes stale.
+
+## Account picture emblem
+
+A matching padlock emblem for your Windows account picture. On the sign-in screen it sits in
+the empty centre of the HUD ring.
+
+![Emblem](../docs/media/lockscreen-emblem.png)
+
+```bash
+Lockscreen.exe --emblem emblems
+```
+
+That writes `emblem-<theme>-448.png` and `emblem-<theme>-1080.png` for every theme into the
+`emblems` folder (add `--theme amber` for just one). The background is a charcoal disc with
+transparent corners, so Windows' circular crop shows a clean disc.
+
+Windows has no API for a desktop app to set the account picture, so this only makes the file.
+Set it yourself: **Settings > Accounts > Your info > Choose a file**, and pick the PNG (1080
+is the safe size). Use the one whose theme matches your lock screen.
 
 ## What it shows, and what it never will
 

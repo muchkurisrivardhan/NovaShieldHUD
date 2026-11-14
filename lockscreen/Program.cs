@@ -15,6 +15,8 @@ static class Program
           --apply               render at the monitor's size and set it as the lock screen
                                 (the first apply saves your current picture for --restore)
           --restore             put back your original lock screen picture
+          --emblem <dir>        write the account-picture padlock PNGs (448 and 1080 px);
+                                every theme, or just --theme <name>. Changes nothing on the PC
           --status              show the current lock screen picture and what's saved; changes nothing
           --selftest            run the built-in tests
         """;
@@ -22,7 +24,7 @@ static class Program
     [STAThread]
     static int Main(string[] args)
     {
-        string? preview = null, theme = null;
+        string? preview = null, theme = null, emblemDir = null;
         int w = 0, h = 0;
         bool zones = false, apply = false, restore = false;
         for (var i = 0; i < args.Length; i++)
@@ -33,6 +35,7 @@ static class Program
                 case "--preview" when i + 1 < args.Length: preview = args[++i]; break;
                 case "--theme" when i + 1 < args.Length: theme = args[++i]; break;
                 case "--size" when i + 1 < args.Length && ParseSize(args[i + 1], out w, out h): i++; break;
+                case "--emblem" when i + 1 < args.Length: emblemDir = args[++i]; break;
                 case "--debug-zones": zones = true; break;
                 case "--apply": apply = true; break;
                 case "--restore": restore = true; break;
@@ -45,12 +48,28 @@ static class Program
 
         if (restore) return Run(LockScreenApplier.RestoreAsync);
         if (apply) preview = LockScreenApplier.AppliedPng;
-        if (preview is null) { Console.WriteLine(Usage); return 0; }
+        if (preview is null && emblemDir is null) { Console.WriteLine(Usage); return 0; }
 
         var warnings = new List<string>();
         var cfg = Config.Load(warnings);
         var t = Themes.Resolve(cfg, theme, warnings);
         foreach (var warning in warnings) Console.Error.WriteLine("warning: " + warning);
+
+        if (emblemDir is not null)
+        {
+            // Every built-in theme, unless --theme pins one (which may be beacon-following or custom).
+            var themes = theme is null ? Themes.BuiltIn : [t];
+            var dir = emblemDir;
+            System.IO.Directory.CreateDirectory(dir);
+            foreach (var em in themes)
+                foreach (var size in new[] { 448, 1080 })
+                {
+                    var path = System.IO.Path.Combine(dir, $"emblem-{em.Name}-{size}.png");
+                    EmblemRenderer.Save(size, em, path);
+                    Console.WriteLine($"{path}  {size}x{size}  theme {em.Name}");
+                }
+        }
+        if (preview is null) return 0;   // --emblem on its own is done here
 
         // The lock screen is always the monitor's real size; --size is for previews only.
         if (w == 0 || apply) (w, h) = PrimaryMonitor();
@@ -117,6 +136,7 @@ static class SelfTest
         TokenTests();
         ThemeTests();
         RenderTests();
+        EmblemTests();
         Console.WriteLine(failed == 0 ? "selftest ok" : $"selftest: {failed} failed");
         return failed == 0 ? 0 : 1;
     }
@@ -234,5 +254,29 @@ static class SelfTest
         var lit = Enumerable.Range(0, 360).Count(a => Red(cx + 0.82 * R0 * Math.Cos(a * Math.PI / 180), cy + 0.82 * R0 * Math.Sin(a * Math.PI / 180)) > 150);
         Check(lit is > 180 and < 300, $"dashed ring is drawn with gaps ({lit}/360 bright)");
         Check(Red(44 * 0.5 + 4, 44 * 0.5) > 120, $"top-left bracket is drawn (red {Red(44 * 0.5 + 4, 44 * 0.5)})");
+    }
+
+    static void EmblemTests()
+    {
+        foreach (var size in new[] { 448, 1080 })
+        {
+            var t = Themes.BuiltIn[0];   // amber
+            var bmp = EmblemRenderer.Render(size, t);
+            Eq((bmp.PixelWidth, bmp.PixelHeight), (size, size), $"emblem {size} size");
+            var px = new byte[size * size * 4];   // Pbgra32: B,G,R,A, premultiplied
+            bmp.CopyPixels(px, size * 4, 0);
+            byte At(int x, int y, int ch) => px[(y * size + x) * 4 + ch];
+
+            Check(At(2, 2, 3) == 0, $"emblem {size} corner is transparent");
+            Check(At(size / 2, size / 2, 3) > 0, $"emblem {size} centre has the disc");
+
+            // Full-opacity accent pixels (the sharp padlock and ring; the blurred glow is skipped).
+            var accent = 0;
+            for (var i = 0; i < size * size; i++)
+                if (px[i * 4 + 3] == 255 &&
+                    Math.Abs(px[i * 4] - t.Accent.B) < 30 && Math.Abs(px[i * 4 + 1] - t.Accent.G) < 30 && Math.Abs(px[i * 4 + 2] - t.Accent.R) < 30)
+                    accent++;
+            Check(accent > 300, $"emblem {size} draws the accent padlock ({accent} px)");
+        }
     }
 }

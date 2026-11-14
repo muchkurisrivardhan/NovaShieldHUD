@@ -4,6 +4,7 @@
 
 ### 2026-11-14
 - Beacon Settings → Appearance has a **Lock screen** card: style, the eight corner text lines (with {DATE}/{COUNTDOWN} fill-ins), effect toggles, and Preview / Apply / Restore buttons. Save re-applies the HUD while it's on your lock screen.
+- Lockscreen milestone 3: `--emblem <dir>` writes the account-picture padlock PNGs (448 and 1080 px) in every theme. A charcoal disc with transparent corners, so Windows' circular crop is clean. Windows can't set the account picture from a desktop app, so the README gives the manual step.
 - Lockscreen milestone 2: `--apply` sets the HUD as the lock screen through the documented WinRT API (no packaging or admin needed), saving your picture first; `--restore` puts it back byte for byte; `--status` shows both. Refuses politely while Spotlight is on.
 - Lockscreen (new, milestone 1 of 6): renders the lock screen HUD picture at the monitor's real resolution in six themes, following Beacon's style by default. `--preview`, `--theme`, `--size`, `--debug-zones`, `--selftest`. Nothing on the PC is changed yet.
 - Beacon Settings: **Save** keeps the window open and shows when it saved; **Close** leaves.
