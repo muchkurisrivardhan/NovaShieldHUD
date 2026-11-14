@@ -647,9 +647,12 @@
                                 <ComboBoxItem Content="Tactical — gunmetal and amber" Tag="tactical" />
                                 <ComboBoxItem Content="HUD — cyan holographic" Tag="hud" />
                                 <ComboBoxItem Content="Classic — clean and minimal" Tag="classic" />
+                                <ComboBoxItem Content="Cyberpunk — neon pink and cyan" Tag="cyberpunk" />
+                                <ComboBoxItem Content="Retro CRT — phosphor green terminal" Tag="crt" />
+                                <ComboBoxItem Content="Minimal mono — black, white and grey" Tag="mono" />
                             </ComboBox>
                             <TextBlock Style="{StaticResource Caption}"
-                                       Text="Tactical: machined grey panels with a bevelled cut-corner frame, amber stripes, an emblem header with live CPU, RAM, time and date. HUD: glowing cyan lines, scanlines and a power-up sweep. Both use your accent colour below if you pick one." />
+                                       Text="Tactical: machined grey panels, amber stripes, an emblem header with the time and date. HUD: glowing cyan lines, scanlines and a power-up sweep. Cyberpunk: the HUD frame in hot pink on deep violet. Retro CRT: green-screen terminal, monospace text. Minimal mono: Classic with the colour taken out. Dotline's widgets follow the same style. Each uses your accent colour below if you pick one." />
                         </StackPanel>
                     </Border>
 
@@ -691,6 +694,54 @@
 
                             <CheckBox x:Name="ShowFileIcons" Content="Show file and app icons" />
                             <CheckBox x:Name="ShowSubtitles" Content="Show the second line under each result" />
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <!-- ========================== Dotline ========================= -->
+                <StackPanel x:Name="PageDotline" Visibility="Collapsed">
+                    <TextBlock Text="Dotline" Style="{StaticResource PageTitle}" />
+                    <TextBlock Style="{StaticResource PageSubtitle}"
+                               Text="The desktop widgets: your life and goals as dots, and the focus timer. They wear the same style and accent colour as Beacon (Appearance page)." />
+
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <TextBlock Text="Startup" Style="{StaticResource GroupHeader}" />
+                            <CheckBox x:Name="LaunchDotline" Content="Start Dotline with Beacon" />
+                            <TextBlock Style="{StaticResource Caption}"
+                                       Text="You can also type “open dotline” or “close dotline” in Beacon." />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <TextBlock Text="Life" Style="{StaticResource GroupHeader}" />
+                            <TextBlock Text="Birthday (YYYY-MM-DD)" Style="{StaticResource Label}" />
+                            <TextBox x:Name="DotBirthday" Width="200" HorizontalAlignment="Left" Margin="0,0,0,14" />
+                            <TextBlock Text="Lifespan in years" Style="{StaticResource Label}" />
+                            <TextBox x:Name="DotLifespan" Width="80" HorizontalAlignment="Left" Margin="0,0,0,14" />
+                            <TextBlock Text="One dot per" Style="{StaticResource Label}" />
+                            <ComboBox x:Name="DotLifeUnit" Width="200" HorizontalAlignment="Left">
+                                <ComboBoxItem Content="Week" Tag="week" />
+                                <ComboBoxItem Content="Month" Tag="month" />
+                                <ComboBoxItem Content="Year" Tag="year" />
+                            </ComboBox>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <TextBlock Text="Widgets" Style="{StaticResource GroupHeader}" />
+                            <TextBlock Text="Background" Style="{StaticResource Label}" />
+                            <ComboBox x:Name="DotBackground" Width="200" HorizontalAlignment="Left" Margin="0,0,0,14">
+                                <ComboBoxItem Content="Clear" Tag="0" />
+                                <ComboBoxItem Content="Glass" Tag="1" />
+                                <ComboBoxItem Content="Solid" Tag="2" />
+                            </ComboBox>
+                            <CheckBox x:Name="DotLocked" Content="Lock widget positions" />
+                            <CheckBox x:Name="DotMap" Content="Show time-zone dots on the wallpaper map" />
+                            <TextBlock Style="{StaticResource Caption}"
+                                       Text="Goals and time zones are edited on the widgets themselves: right-click one. Saving here restarts Dotline to apply the change; nothing is lost." />
                         </StackPanel>
                     </Border>
                 </StackPanel>

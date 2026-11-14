@@ -1,32 +1,33 @@
 using System.Diagnostics;
 using System.IO;
 using System.Text.Json;
-using System.Text.RegularExpressions;
+using System.Text.Json.Nodes;
 
 namespace Beacon.Core;
 
 /// <summary>
-/// Beacon's side of the Vantage apps that live beside it (D:\projects\Vantage\...):
-/// starting and stopping Dotline, and handing it a flight to track. The apps talk through
-/// small JSON files in %APPDATA%\Vantage - no sockets, no services.
+/// Beacon's side of Dotline, the desktop widgets app that lives beside it: starting and
+/// stopping it, and editing its settings from Beacon's Settings window.
+///
+/// Dotline reads Beacon's look (style and accent) from Beacon's settings file when it starts,
+/// and saves its own state on every change, so a restart is how a change made here reaches it.
 /// </summary>
-public static partial class Suite
+public static class Suite
 {
-    static readonly string SharedDir = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Vantage");
-
-    static readonly string FlightFile = Path.Combine(SharedDir, "flight.json");
-
-    // ------------------------------------------------------------------ dotline
+    static readonly string DotlineState = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Dotline", "state.json");
 
     public static bool DotlineRunning => Process.GetProcessesByName("Dotline").Length > 0;
 
     /// <summary>
-    /// Dotline's exe, found by walking up from Beacon's own folder to Vantage: the newest of
-    /// its published build (dist) and its Release build.
+    /// Dotline's exe: beside Beacon when installed, otherwise found by walking up from Beacon's
+    /// folder to the source tree (the newest of its published build and its Release build).
     /// </summary>
     public static string? FindDotline()
     {
+        var beside = Path.Combine(AppContext.BaseDirectory, "Dotline.exe");
+        if (File.Exists(beside)) return beside;
+
         for (var dir = new DirectoryInfo(AppContext.BaseDirectory); dir is not null; dir = dir.Parent)
         {
             var root = Path.Combine(dir.FullName, "dotline");
@@ -46,7 +47,7 @@ public static partial class Suite
     public static string OpenDotline()
     {
         if (DotlineRunning) return "Dotline is already running.";
-        if (FindDotline() is not { } exe) return "Couldn't find Dotline next to Beacon (expected Vantage\\dotline).";
+        if (FindDotline() is not { } exe) return "Couldn't find Dotline next to Beacon.";
         Process.Start(new ProcessStartInfo(exe) { UseShellExecute = true, WorkingDirectory = Path.GetDirectoryName(exe)! });
         return "Opened Dotline.";
     }
@@ -67,81 +68,72 @@ public static partial class Suite
         return DotlineRunning ? "Windows refused to close Dotline." : "Closed Dotline.";
     }
 
-    // ------------------------------------------------------------------ flights
-
-    public sealed record FlightRequest(string Flight, string Callsign);
-
-    /// <summary>The flight Dotline is tracking, if any.</summary>
-    public static FlightRequest? CurrentFlight()
+    /// <summary>Restart Dotline if it is running, so it picks up a new look or settings.</summary>
+    public static void RefreshDotline()
     {
+        if (!DotlineRunning) return;
+        CloseDotline();
+        OpenDotline();
+    }
+
+    // ------------------------------------------------------------------ settings
+
+    /// <summary>The Dotline settings Beacon's Settings window shows.</summary>
+    public sealed record DotlineOptions(DateTime? Birthday, int Lifespan, string LifeUnit, int Background, bool Locked, bool MapOn);
+
+    /// <summary>Dotline's saved settings, or its defaults if it has never run.</summary>
+    public static DotlineOptions ReadDotline()
+    {
+        var s = LoadState();
         try
         {
-            if (!File.Exists(FlightFile)) return null;
-            var r = JsonSerializer.Deserialize<FlightRequest>(File.ReadAllText(FlightFile));
-            return string.IsNullOrWhiteSpace(r?.Flight) ? null : r;
+            var example = s?["Example"]?.GetValue<bool>() ?? true;   // still the placeholder birthday
+            return new DotlineOptions(
+                example ? null : s?["Birthday"]?.GetValue<DateTime>(),
+                s?["Lifespan"]?.GetValue<int>() ?? 70,
+                s?["LifeUnit"]?.GetValue<string>() ?? "week",
+                s?["Glass"]?.GetValue<int>() ?? 1,
+                s?["Locked"]?.GetValue<bool>() ?? false,
+                s?["Map"]?["On"]?.GetValue<bool>() ?? true);
         }
-        catch (Exception e) when (e is IOException or JsonException or UnauthorizedAccessException) { return null; }
+        catch (Exception e) when (e is InvalidOperationException or FormatException)
+        {
+            return new DotlineOptions(null, 70, "week", 1, false, true);   // hand-edited file with a wrong type
+        }
     }
-
-    /// <summary>Hand a flight to Dotline (starting it if needed). Returns what happened, for the status line.</summary>
-    public static string Track(string typed)
-    {
-        var flight = Normalize(typed);
-        if (!ValidFlight().IsMatch(flight)) return "A flight number is 2–10 letters and digits, like AA100.";
-        var callsign = ToCallsign(flight);
-        Write(new FlightRequest(flight, callsign));
-        var started = DotlineRunning ? "" : " " + OpenDotline();
-        var shown = callsign == flight ? flight : $"{flight} ({callsign})";
-        return $"Tracking {shown} on your wallpaper map.{started}";
-    }
-
-    public static string StopTracking()
-    {
-        var current = CurrentFlight();
-        Write(new FlightRequest("", ""));
-        return current is null ? "No flight was being tracked." : $"Stopped tracking {current.Flight}.";
-    }
-
-    static void Write(FlightRequest r)
-    {
-        Directory.CreateDirectory(SharedDir);
-        Settings.WriteAtomic(FlightFile, JsonSerializer.Serialize(r));
-    }
-
-    public static string Normalize(string typed) => Regex.Replace(typed.ToUpperInvariant(), @"[\s\-]", "");
 
     /// <summary>
-    /// Airlines put the ICAO code in the broadcast callsign ("AAL100"), while tickets show the
-    /// IATA flight number ("AA100"). Maps the common airlines; anything else is used as typed.
+    /// Writes changed settings into Dotline's state file, leaving its goals, widgets and focus
+    /// log untouched. A running Dotline is stopped first, so it can't save over the change, then
+    /// started again to show it. Returns an error message, or null when saved or unchanged.
     /// </summary>
-    public static string ToCallsign(string flight)
+    public static string? WriteDotline(DotlineOptions o)
     {
-        var m = IataFlight().Match(flight);
-        if (!m.Success || !Airlines.TryGetValue(m.Groups[1].Value, out var icao)) return flight;
-        return icao + m.Groups[2].Value.TrimStart('0') + m.Groups[3].Value;
+        if (o == ReadDotline()) return null;
+        // Never replace a file we couldn't read: it holds the user's goals and focus history.
+        if (File.Exists(DotlineState) && LoadState() is null)
+            return "Dotline's saved data couldn't be read, so its settings weren't changed.";
+        var wasRunning = DotlineRunning;
+        if (wasRunning) CloseDotline();
+
+        var s = LoadState() ?? new JsonObject();
+        if (o.Birthday is { } b) { s["Birthday"] = b; s["Example"] = false; }
+        s["Lifespan"] = o.Lifespan;
+        s["LifeUnit"] = o.LifeUnit;
+        s["Glass"] = o.Background;
+        s["Locked"] = o.Locked;
+        if (s["Map"] is not JsonObject map) s["Map"] = map = new JsonObject();
+        map["On"] = o.MapOn;
+
+        Directory.CreateDirectory(Path.GetDirectoryName(DotlineState)!);
+        Settings.WriteAtomic(DotlineState, s.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
+        if (wasRunning) OpenDotline();
+        return null;
     }
 
-    [GeneratedRegex(@"^([A-Z0-9]{2})(\d{1,4})([A-Z]?)$")]
-    private static partial Regex IataFlight();
-
-    [GeneratedRegex(@"^[A-Z0-9]{2,10}$")]
-    private static partial Regex ValidFlight();
-
-    // ponytail: the ~70 carriers people usually fly; ICAO callsigns (AAL100) and others pass through as typed.
-    static readonly Dictionary<string, string> Airlines = new()
+    static JsonObject? LoadState()
     {
-        ["AA"] = "AAL", ["UA"] = "UAL", ["DL"] = "DAL", ["WN"] = "SWA", ["AS"] = "ASA", ["B6"] = "JBU", ["NK"] = "NKS",
-        ["F9"] = "FFT", ["HA"] = "HAL", ["G4"] = "AAY", ["SY"] = "SCX", ["AC"] = "ACA", ["WS"] = "WJA", ["AM"] = "AMX",
-        ["Y4"] = "VOI", ["BA"] = "BAW", ["VS"] = "VIR", ["LH"] = "DLH", ["AF"] = "AFR", ["KL"] = "KLM", ["LX"] = "SWR",
-        ["OS"] = "AUA", ["SN"] = "BEL", ["SK"] = "SAS", ["AY"] = "FIN", ["IB"] = "IBE", ["VY"] = "VLG", ["EI"] = "EIN",
-        ["TP"] = "TAP", ["AZ"] = "ITY", ["LO"] = "LOT", ["FR"] = "RYR", ["U2"] = "EZY", ["W6"] = "WZZ", ["TK"] = "THY",
-        ["PC"] = "PGT", ["EK"] = "UAE", ["QR"] = "QTR", ["EY"] = "ETD", ["SV"] = "SVA", ["GF"] = "GFA", ["WY"] = "OMA",
-        ["FZ"] = "FDB", ["G9"] = "ABY", ["AI"] = "AIC", ["6E"] = "IGO", ["UK"] = "VTI", ["SG"] = "SEJ", ["IX"] = "AXB",
-        ["QP"] = "AKJ", ["SQ"] = "SIA", ["TR"] = "TGW", ["CX"] = "CPA", ["NH"] = "ANA", ["JL"] = "JAL", ["KE"] = "KAL",
-        ["OZ"] = "AAR", ["CA"] = "CCA", ["MU"] = "CES", ["CZ"] = "CSN", ["BR"] = "EVA", ["CI"] = "CAL", ["QF"] = "QFA",
-        ["VA"] = "VOZ", ["JQ"] = "JST", ["NZ"] = "ANZ", ["TG"] = "THA", ["MH"] = "MAS", ["AK"] = "AXM", ["GA"] = "GIA",
-        ["PR"] = "PAL", ["VN"] = "HVN", ["ET"] = "ETH", ["SA"] = "SAA", ["KQ"] = "KQA", ["MS"] = "MSR", ["AT"] = "RAM",
-        ["LA"] = "LAN", ["AV"] = "AVA", ["CM"] = "CMP", ["G3"] = "GLO", ["AD"] = "AZU", ["AR"] = "ARG", ["5X"] = "UPS",
-        ["FX"] = "FDX",
-    };
+        try { return File.Exists(DotlineState) ? JsonNode.Parse(File.ReadAllText(DotlineState)) as JsonObject : null; }
+        catch (Exception e) when (e is IOException or JsonException or UnauthorizedAccessException or InvalidOperationException or FormatException) { return null; }
+    }
 }

@@ -21,20 +21,20 @@
 
 **Short (X / Threads / Bluesky)**
 > I turned my Windows desktop into a HUD. Alt+Space launcher, my life as dots on the
-> wallpaper, a focus timer, time zones you hover, and live flights flying across the world
+> wallpaper, a focus timer and time zones you hover on a world
 > map. Local-first, no telemetry. Open source soon — want it? [link] [clip 6]
 
 **Reddit (r/Windows11, r/desktops, r/csharp, r/productivity)**
-> **Title:** I built a tactical HUD for Windows: launcher + desktop widgets + live flight tracking on the wallpaper
+> **Title:** I built a tactical HUD for Windows: launcher + desktop widgets in one style
 >
 > Two WPF/.NET 10 apps. **Beacon** is a Spotlight-style launcher (apps, files, windows,
 > plain-English commands, local Whisper voice, optional Claude). **Dotline** puts widgets on
 > the desktop layer: life and goals as dots, a focus timer, up to five time-zone dots on a
-> world-map wallpaper, and live flights with route and trail. Everything is stored locally.
+> world-map wallpaper. One look (Tactical, HUD or Classic) across both apps. Everything is stored locally.
 > Looking for feedback before I open-source it — what would you use it for?
 
 **Show HN**
-> Show HN: A HUD for the Windows desktop – launcher, dot widgets, live flights on the wallpaper
+> Show HN: A HUD for the Windows desktop – launcher and dot widgets in one style
 
 **Where:** r/Windows11, r/desktops, r/Rainmeter (similar audience), r/csharp, r/dotnet,
 Hacker News, Product Hunt (after v1.0), a short YouTube/TikTok of clip 6.

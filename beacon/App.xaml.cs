@@ -100,7 +100,6 @@ public partial class App : System.Windows.Application
             new WindowProvider(),
             new CustomCommandProvider(settings, stats),
             new CommandProvider(_registry, stats),
-            new FlightProvider(),
             new AppProvider(apps, stats),
             new BookmarkProvider(bookmarks, stats),
             files,
@@ -126,6 +125,7 @@ public partial class App : System.Windows.Application
 
         BuildTrayIcon(settings);
         ApplyStartupRegistration(settings.RunAtStartup);
+        if (settings.LaunchDotline) Suite.OpenDotline();
 
         // Timers fire on a pool thread; the tray icon belongs to this one. Subscribe before
         // restoring, so reminders that fell due while Beacon was off are announced too.

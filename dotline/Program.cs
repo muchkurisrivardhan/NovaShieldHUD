@@ -17,7 +17,8 @@ static class Program
     [STAThread]
     static int Main(string[] args)
     {
-        if (args is ["--selftest"]) { Units.SelfTest(); Geo.SelfTest(); FlightTracker.SelfTest(); return 0; }
+        if (args is ["--selftest"]) { Units.SelfTest(); Geo.SelfTest(); return 0; }
+        Theme.Load();
 
         using var mutex = new Mutex(true, "Dotline.SingleInstance", out var first);
         if (!first) return 0;
@@ -115,7 +116,6 @@ static class Hub
         timer.Tick += (_, _) =>
         {
             FocusTimer.Tick();
-            FlightTracker.Tick();
             foreach (var w in widgets) w.Tick();
             if (++ticks % 30 == 0) Map.Redraw();
             if (DateTime.Today != day) { day = DateTime.Today; RefreshAll(); }
@@ -295,14 +295,98 @@ static class Units
     }
 }
 
+/// <summary>
+/// Dotline wears Beacon's look: Tactical (gunmetal and amber), HUD (cyan holographic) or Classic
+/// (clean and minimal), with Beacon's accent colour. Read once at start from Beacon's settings;
+/// Beacon restarts Dotline when you change the look there.
+/// </summary>
 static class Theme
 {
-    public static readonly FontFamily Font = new("Agency FB, Bahnschrift, Segoe UI");
-    // Beacon's Tactical skin: machined gunmetal, one amber accent, no glow.
-    public static readonly SolidColorBrush Accent = B(0xFFF0A030), AccentDim = B(0xFF7E5E2E), Line = B(0x40FFFFFF),
-        Steel = B(0xFF8E9298), Empty = B(0xFF3E4146), Hollow = B(0xFF55585E), Now = B(0xFFEDEDED), NowGlow = B(0x40EDEDED),
-        Warn = B(0xFFFF8A7A), Text = B(0xFFE6E6E6), Dim = B(0xFFA4A7AC), Faint = B(0xFF808388),
-        Ink = B(0xFF17181A), Hit = B(0x01000000), Field = B(0xFF141518);
+    public static string Look = "tactical";
+    public static Color AccentColor;
+    public static FontFamily Font = null!;
+    public static SolidColorBrush Accent = null!, Line = null!, Steel = null!, Empty = null!, Hollow = null!, Now = null!,
+        Text = null!, Dim = null!, Faint = null!, Ink = null!, Field = null!, ChipFill = null!, Glow = null!;
+    public static readonly SolidColorBrush Warn = B(0xFFFF8A7A), Hit = B(0x01000000);
+    static (uint Top, uint Bottom) plate;   // panel gradient, RGB only
+
+    // Beacon's "no accent chosen" value: each look then uses its own colour.
+    const string BeaconDefaultAccent = "#5B8DEF";
+
+    public static void Load()
+    {
+        string style = "tactical", accent = BeaconDefaultAccent;
+        try
+        {
+            var path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Beacon", "settings.json");
+            if (File.Exists(path))
+            {
+                using var doc = JsonDocument.Parse(File.ReadAllText(path));
+                if (doc.RootElement.TryGetProperty("OverlayStyle", out var s) && s.ValueKind == JsonValueKind.String) style = s.GetString()!.ToLowerInvariant();
+                if (doc.RootElement.TryGetProperty("AccentColor", out var a) && a.ValueKind == JsonValueKind.String) accent = a.GetString()!.Trim();
+            }
+        }
+        catch (Exception e) when (e is IOException or JsonException or UnauthorizedAccessException) { }   // no Beacon: Tactical
+
+        Look = style is "hud" or "classic" or "cyberpunk" or "crt" or "mono" ? style : "tactical";
+        Color? custom = null;
+        if (!string.Equals(accent, BeaconDefaultAccent, StringComparison.OrdinalIgnoreCase) || Look == "classic")
+            try { custom = (Color)ColorConverter.ConvertFromString(accent); } catch (FormatException) { }
+
+        uint A(uint alpha) => (alpha << 24) | ((uint)AccentColor.R << 16) | ((uint)AccentColor.G << 8) | AccentColor.B;
+        switch (Look)
+        {
+            case "hud":
+                AccentColor = custom ?? Color.FromRgb(0x35, 0xE6, 0xFF);
+                Font = new("Bahnschrift, Segoe UI");
+                Accent = B(A(0xFF)); Line = B(A(0x45)); Steel = B(A(0x80)); Empty = B(A(0x22)); Hollow = B(A(0x55));
+                Now = B(0xFFE8FBFF); Text = B(0xFFE8FBFF); Dim = B(0xC0B8E6EE); Faint = B(A(0x9C));
+                Ink = B(0xFF040B15); Field = B(0xFF06101C); ChipFill = B(0x800A1622);
+                plate = (0x0C1A28, 0x040B15);
+                break;
+            case "classic":
+                AccentColor = custom ?? Color.FromRgb(0x5B, 0x8D, 0xEF);
+                Font = new("Segoe UI Variable Text, Segoe UI");
+                Accent = B(A(0xFF)); Line = B(0x2AFFFFFF); Steel = B(0xFF8C8C92); Empty = B(0xFF3A3A3F); Hollow = B(0xFF55555B);
+                Now = B(0xFFF2F2F2); Text = B(0xF2FFFFFF); Dim = B(0x99FFFFFF); Faint = B(0x70FFFFFF);
+                Ink = B(0xFFFFFFFF); Field = B(0xFF1C1C1F); ChipFill = B(0x80303034);
+                plate = (0x26262A, 0x1C1C1F);
+                break;
+            case "cyberpunk":   // hot pink on deep violet, cyan secondary
+                AccentColor = custom ?? Color.FromRgb(0xFF, 0x2E, 0x97);
+                Font = new("Bahnschrift, Segoe UI");
+                Accent = B(A(0xFF)); Line = B(A(0x50)); Steel = B(0xFF00B8C4); Empty = B(0xFF2A1440); Hollow = B(0xFF4A2A66);
+                Now = B(0xFFF7ECFF); Text = B(0xFFF7ECFF); Dim = B(0xC000F0FF); Faint = B(A(0xA8));
+                Ink = B(0xFF12041F); Field = B(0xFF14062A); ChipFill = B(0x8022093A);
+                plate = (0x1E0838, 0x0E0220);
+                break;
+            case "crt":   // green-screen terminal
+                AccentColor = custom ?? Color.FromRgb(0x33, 0xFF, 0x66);
+                Font = new("Cascadia Mono, Consolas");
+                Accent = B(A(0xFF)); Line = B(A(0x40)); Steel = B(A(0x90)); Empty = B(A(0x1C)); Hollow = B(A(0x48));
+                Now = B(0xFFC8FFD6); Text = B(0xFFC8FFD6); Dim = B(A(0xC8)); Faint = B(A(0x88));
+                Ink = B(0xFF021006); Field = B(0xFF030C05); ChipFill = B(0x80061A0C);
+                plate = (0x061409, 0x020A04);
+                break;
+            case "mono":   // black, white and grey
+                AccentColor = custom ?? Color.FromRgb(0xE8, 0xE8, 0xE8);
+                Font = new("Segoe UI Variable Text, Segoe UI");
+                Accent = B(A(0xFF)); Line = B(0x38FFFFFF); Steel = B(0xFF7A7A7A); Empty = B(0xFF2E2E2E); Hollow = B(0xFF4A4A4A);
+                Now = B(0xFFFFFFFF); Text = B(0xF2FFFFFF); Dim = B(0x99FFFFFF); Faint = B(0x66FFFFFF);
+                Ink = B(0xFF101010); Field = B(0xFF141414); ChipFill = B(0x80262626);
+                plate = (0x1A1A1A, 0x101010);
+                break;
+            default:   // Tactical: machined gunmetal, one amber accent, no glow
+                AccentColor = custom ?? Color.FromRgb(0xF0, 0xA0, 0x30);
+                Font = new("Agency FB, Bahnschrift, Segoe UI");
+                Accent = B(A(0xFF)); Line = B(0x40FFFFFF); Steel = B(0xFF8E9298); Empty = B(0xFF3E4146); Hollow = B(0xFF55585E);
+                Now = B(0xFFEDEDED); Text = B(0xFFE6E6E6); Dim = B(0xFFA4A7AC); Faint = B(0xFF808388);
+                Ink = B(0xFF17181A); Field = B(0xFF141518); ChipFill = B(0x802A2C2F);
+                plate = (0x2C2E31, 0x18191C);
+                break;
+        }
+        Glow = B(A(0x55));
+    }
 
     public static SolidColorBrush B(uint argb)
     {
@@ -311,12 +395,16 @@ static class Theme
         return b;
     }
 
-    // "Clear" keeps 1/255 alpha: fully transparent pixels of a layered window let clicks fall through.
-    public static Brush Plate(int glass) => glass switch { 0 => B(0x01000000), 1 => Gunmetal(0x8C), _ => Gunmetal(0xF6) };
+    /// <summary>The accent at a given opacity, for glows and sweeps.</summary>
+    public static Color AccentAlpha(byte alpha) => Color.FromArgb(alpha, AccentColor.R, AccentColor.G, AccentColor.B);
 
-    static Brush Gunmetal(byte alpha)
+    // "Clear" keeps 1/255 alpha: fully transparent pixels of a layered window let clicks fall through.
+    public static Brush Plate(int glass) => glass switch { 0 => B(0x01000000), 1 => Panel(0x8C), _ => Panel(0xF6) };
+
+    static Brush Panel(byte alpha)
     {
-        var g = new LinearGradientBrush(Color.FromArgb(alpha, 0x2C, 0x2E, 0x31), Color.FromArgb(alpha, 0x18, 0x19, 0x1C), 90);
+        static Color C(byte a, uint rgb) => Color.FromArgb(a, (byte)(rgb >> 16), (byte)(rgb >> 8), (byte)rgb);
+        var g = new LinearGradientBrush(C(alpha, plate.Top), C(alpha, plate.Bottom), 90);
         g.Freeze();
         return g;
     }
@@ -348,7 +436,7 @@ static class Theme
             Child = T(s, 13, on ? Ink : Dim, bold: true),
             Padding = new Thickness(8, 1, 8, 1), Margin = new Thickness(4, 0, 0, 0),
             BorderBrush = on ? Accent : Line, BorderThickness = new Thickness(1),
-            Background = on ? Accent : B(0x802A2C2F), Cursor = Cursors.Hand,
+            Background = on ? Accent : ChipFill, Cursor = Cursors.Hand,
         };
         b.MouseEnter += (_, _) => b.BorderBrush = Accent;
         b.MouseLeave += (_, _) => b.BorderBrush = on ? Accent : Line;

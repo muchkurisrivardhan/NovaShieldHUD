@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### 2026-11-14
+- Three more styles for Beacon and Dotline: **Cyberpunk** (neon pink and cyan on deep violet), **Retro CRT** (phosphor-green terminal, monospace) and **Minimal mono** (black, white and grey).
+- Dotline follows Beacon's look: Tactical, HUD or Classic, with Beacon's accent colour. Changing it in Beacon restarts Dotline in the new style.
+- Beacon Settings has a **Dotline** page: start Dotline with Beacon (on by default), birthday, lifespan, dot size, background, lock positions, time-zone dots.
+- Beacon starts Dotline when it starts, and finds `Dotline.exe` beside itself (ready for one installer).
+- Removed flight tracking from both apps (Beacon's `flight` command, Dotline's plane layer and its adsb.lol / adsb.fi / adsbdb.com calls).
+
 ### 2026-09-22
 - Beacon: `open dotline` / `close dotline`.
 - Beacon: flight tracking (`flight` → Tab → number); IATA → ICAO callsign mapping for ~80 airlines.

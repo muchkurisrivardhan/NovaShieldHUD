@@ -12,11 +12,9 @@ namespace Beacon.Core;
 /// <param name="IconUrl">Any URL on the site; its favicon becomes the chip icon.</param>
 /// <param name="HomeUrl">Opened when Enter is pressed with nothing typed.</param>
 /// <param name="UrlFor">Builds the search URL for a typed term.</param>
-/// <param name="Row">For a scope that isn't a website (Flight): builds its one row from the typed term instead.</param>
 public sealed record SearchScope(
     string Name,
     string Glyph,
     string? IconUrl,
     string? HomeUrl,
-    Func<string, string> UrlFor,
-    Func<string, SearchResult>? Row = null);
+    Func<string, string> UrlFor);

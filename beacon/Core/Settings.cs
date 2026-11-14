@@ -98,6 +98,11 @@ public sealed class Settings
     /// <summary>Row padding: "comfortable" or "compact".</summary>
     public string Density { get; set; } = "comfortable";
 
+    // ---------------------------------------------------------------- dotline
+
+    /// <summary>Start Dotline, the desktop widgets, whenever Beacon starts.</summary>
+    public bool LaunchDotline { get; set; } = true;
+
     // ---------------------------------------------------------------- browsing
 
     /// <summary>

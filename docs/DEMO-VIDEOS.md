@@ -2,7 +2,7 @@
 
 Short clips (10–25 s each) for the README and launch posts. Record with **Win+Shift+R**
 (Snipping Tool → Record) and select only the area shown — keep other windows, notifications
-and personal data (your real birthday, goals, flights) out of frame. Use example data.
+and personal data (your real birthday, goals) out of frame. Use example data.
 
 | # | Clip | Steps | Shows |
 |---|---|---|---|
@@ -11,7 +11,7 @@ and personal data (your real birthday, goals, flights) out of frame. Use example
 | 3 | **Move & resize** | Drag a widget to a screen edge (lock-on + snap) → drag the corner dots to resize → right-click → Move to → Center | HUD motion |
 | 4 | **Focus** | Click FOCUS (new widget opens) → CUSTOM → 0:10:00 → START → Alt+Space to show the amber bar counting down | Focus + Beacon link |
 | 5 | **Time zones** | Right-click → World map… → SHOW Hyderabad, London, Tokyo → hover each dot | Scheduling use case |
-| 6 | **Live flight** | Alt+Space → `flight` → Tab → a flight that's airborne → Enter → hover the plane, then an airport | Headline feature |
+| 6 | **One look** | Beacon Settings → Appearance → switch Tactical → Cyberpunk → Retro CRT → Minimal mono, saving each time; the widgets restyle with the launcher | Suite feel |
 | 7 | **Open/close** | Alt+Space → `close dotline` → `open dotline` | |
 
 Export as MP4 for posts and a trimmed GIF (≤ 10 MB) for the README.

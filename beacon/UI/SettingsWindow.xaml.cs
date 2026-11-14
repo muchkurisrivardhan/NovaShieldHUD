@@ -68,7 +68,7 @@ public partial class SettingsWindow : Window
     }
 
     private static readonly string[] AccentPresetColors =
-        ["#5B8DEF", "#7C6CF0", "#E06C9F", "#E8A33D", "#3FB98C", "#4CC2E0", "#E5554F", "#9AA5B1"];
+        ["#5B8DEF", "#7C6CF0", "#E06C9F", "#E8A33D", "#3FB98C", "#4CC2E0", "#E5554F", "#9AA5B1"];   // #5B8DEF = each style's own colour
 
     private readonly Settings _settings;
     private readonly CommandRegistry _registry;
@@ -131,6 +131,7 @@ public partial class SettingsWindow : Window
             new("General", "", PageGeneral),
             new("All Commands", "", PageLibrary),
             new("Appearance", "", PageAppearance),
+            new("Dotline", "", PageDotline),   // Segoe Fluent Icons: TVMonitor
             new("Search & Index", "", PageSearch),
             new("Shortcuts", "", PageShortcuts),
             new("Custom Commands", "", PageCustom),
@@ -446,6 +447,15 @@ public partial class SettingsWindow : Window
 
         ShowFileIcons.IsChecked = _settings.ShowFileIcons;
         ShowSubtitles.IsChecked = _settings.ShowResultSubtitles;
+
+        LaunchDotline.IsChecked = _settings.LaunchDotline;
+        var dot = Suite.ReadDotline();
+        DotBirthday.Text = dot.Birthday?.ToString("yyyy-MM-dd") ?? "";
+        DotLifespan.Text = dot.Lifespan.ToString();
+        SelectByTag(DotLifeUnit, dot.LifeUnit);
+        SelectByTag(DotBackground, dot.Background.ToString());
+        DotLocked.IsChecked = dot.Locked;
+        DotMap.IsChecked = dot.MapOn;
 
         IndexRoots.Text = string.Join(Environment.NewLine, _settings.IndexRoots);
         ExcludedFolders.Text = string.Join(Environment.NewLine, _settings.ExcludedFolders);
@@ -829,6 +839,7 @@ public partial class SettingsWindow : Window
         _settings.HotkeyVirtualKey = fresh.HotkeyVirtualKey;
         _settings.MaxResults = fresh.MaxResults;
         _settings.RunAtStartup = fresh.RunAtStartup;
+        _settings.LaunchDotline = fresh.LaunchDotline;
         _settings.Theme = fresh.Theme;
         _settings.AccentColor = fresh.AccentColor;
         _settings.WindowWidth = fresh.WindowWidth;
@@ -856,6 +867,7 @@ public partial class SettingsWindow : Window
 
         _settings.Save();
         _onSaved();
+        Suite.RefreshDotline();   // the accent colour may have changed
 
         _draftCommands.Clear();
         _draftBuiltInHotkeys.Clear();
@@ -898,7 +910,17 @@ public partial class SettingsWindow : Window
             }
         }
 
+        if (ReadDotlineForm(out var dotline) is { } dotlineError)
+        {
+            ShowPage(PageDotline);
+            FooterStatus.Text = dotlineError;
+            return;
+        }
+
+        var oldLook = (_settings.OverlayStyle, _settings.AccentColor);
+
         _settings.RunAtStartup = RunAtStartup.IsChecked == true;
+        _settings.LaunchDotline = LaunchDotline.IsChecked == true;
         _settings.HotkeyModifiers = LauncherHotkey.Modifiers;
         _settings.HotkeyVirtualKey = LauncherHotkey.VirtualKey;
 
@@ -961,7 +983,42 @@ public partial class SettingsWindow : Window
         _settings.Save();
         _onSaved();
 
+        // Dotline reads Beacon's look when it starts, so it is restarted after the save above:
+        // by WriteDotline when its own settings changed, otherwise here if only the look did.
+        var dotlineChanged = dotline != Suite.ReadDotline();
+        if (Suite.WriteDotline(dotline) is { } writeError)
+            MessageBox.Show(writeError, "Beacon", MessageBoxButton.OK, MessageBoxImage.Warning);
+        else if (!dotlineChanged && oldLook != (_settings.OverlayStyle, _settings.AccentColor))
+            Suite.RefreshDotline();
+
         Close();
+    }
+
+    /// <summary>The Dotline page as options, or a message saying what to fix.</summary>
+    private string? ReadDotlineForm(out Suite.DotlineOptions options)
+    {
+        options = Suite.ReadDotline();
+        var birthday = options.Birthday;   // left blank: keep what Dotline has
+        var text = DotBirthday.Text.Trim();
+        if (text.Length > 0)
+        {
+            if (!DateTime.TryParseExact(text, ["yyyy-MM-dd", "yyyy-M-d"], System.Globalization.CultureInfo.InvariantCulture,
+                    System.Globalization.DateTimeStyles.None, out var d) || d > DateTime.Today || d.Year < 1900)
+                return "Enter the Dotline birthday as YYYY-MM-DD, e.g. 2001-08-14.";
+            birthday = d;
+        }
+
+        if (!int.TryParse(DotLifespan.Text.Trim(), out var lifespan) || lifespan is < 1 or > 120)
+            return "Dotline lifespan must be a whole number from 1 to 120.";
+
+        options = new Suite.DotlineOptions(
+            birthday,
+            lifespan,
+            TagOf(DotLifeUnit) ?? "week",
+            int.TryParse(TagOf(DotBackground), out var background) ? background : 1,
+            DotLocked.IsChecked == true,
+            DotMap.IsChecked == true);
+        return null;
     }
 
     // --------------------------------------------------------------- helpers

@@ -65,8 +65,8 @@ sealed class Widget : Window
             Height = 44, VerticalAlignment = VerticalAlignment.Top, Opacity = 0, RenderTransform = new TranslateTransform(),
             Background = new LinearGradientBrush(new GradientStopCollection
             {
-                new(Color.FromArgb(0x00, 0xF0, 0xA0, 0x30), 0), new(Color.FromArgb(0x26, 0xF0, 0xA0, 0x30), 0.9),
-                new(Color.FromArgb(0xFF, 0xF0, 0xA0, 0x30), 0.96), new(Color.FromArgb(0x00, 0xF0, 0xA0, 0x30), 1),
+                new(Theme.AccentAlpha(0x00), 0), new(Theme.AccentAlpha(0x26), 0.9),
+                new(Theme.AccentAlpha(0xFF), 0.96), new(Theme.AccentAlpha(0x00), 1),
             }, 90),
         };
         scan.Children.Add(sweep);
@@ -690,7 +690,6 @@ sealed class Widget : Window
         m.Items.Add(new Separator());
 
         Item(m, $"World map ({Hub.Map.Status})…", Hub.EditMap);
-        if (FlightTracker.Flight is { } tracked) Item(m, $"Stop tracking flight {tracked}", FlightTracker.Stop);
         Item(m, "Open in new widget", () => Hub.OpenNew(W.View));
         if (Hub.Count > 1) Item(m, "Close this widget", () => Hub.CloseWidget(this));
         var move = Item(m, "Move to");
@@ -718,7 +717,6 @@ sealed class Widget : Window
 sealed class DotGrid : FrameworkElement
 {
     static readonly Pen Hollow = MakePen();
-    static readonly Brush NowGlow = Theme.B(0x55F0A030);
     readonly int total, done, cols;
     readonly double d, g;
     readonly Func<int, string>? describe;
@@ -753,7 +751,7 @@ sealed class DotGrid : FrameworkElement
             if (i < done) dc.DrawEllipse(Theme.Steel, null, c, r, r);
             else if (i == done)
             {
-                dc.DrawEllipse(NowGlow, null, c, r * 1.9, r * 1.9);
+                dc.DrawEllipse(Theme.Glow, null, c, r * 1.9, r * 1.9);
                 dc.DrawEllipse(Theme.Accent, null, c, r, r);
             }
             else if (d >= 6) dc.DrawEllipse(null, Hollow, c, r - 0.5, r - 0.5);
@@ -782,7 +780,6 @@ sealed class FocusDial : FrameworkElement
     const int Dots = 60;
     static readonly Pen Ring = Frozen(new Pen(Theme.B(0x30FFFFFF), 1));
     static readonly Pen Hollow = Frozen(new Pen(Theme.Hollow, 1));
-    static readonly Brush Glow = Theme.B(0x55F0A030);
     double progress;
     bool running;
 
@@ -811,7 +808,7 @@ sealed class FocusDial : FrameworkElement
             if (i < done) dc.DrawEllipse(Theme.Accent, null, p, big, big);
             else if (i == done && progress > 0)
             {
-                dc.DrawEllipse(Glow, null, p, 8, 8);
+                dc.DrawEllipse(Theme.Glow, null, p, 8, 8);
                 dc.DrawEllipse(running ? Theme.Accent : Theme.Now, null, p, 4, 4);
             }
             else dc.DrawEllipse(null, Hollow, p, big - 0.5, big - 0.5);

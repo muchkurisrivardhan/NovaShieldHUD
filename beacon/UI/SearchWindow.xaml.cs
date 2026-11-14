@@ -748,11 +748,6 @@ public partial class SearchWindow : Window
     private void RenderScopeRows(SearchScope scope, string text)
     {
         var term = text.Trim();
-        if (scope.Row is { } build)
-        {
-            RenderRows(new Dictionary<string, IReadOnlyList<SearchResult>> { ["scope"] = [build(term)] });
-            return;
-        }
         var target = term.Length > 0 ? scope.UrlFor(term) : scope.HomeUrl;
 
         var row = new SearchResult
@@ -1467,10 +1462,12 @@ public partial class SearchWindow : Window
     /// </summary>
     private void ApplyStyle(Settings settings)
     {
-        _look = (settings.OverlayStyle ?? string.Empty).ToLowerInvariant() switch
+        // Cyberpunk and Retro CRT are palettes on the HUD frame; Minimal mono is one on Classic.
+        var style = (settings.OverlayStyle ?? string.Empty).ToLowerInvariant();
+        _look = style switch
         {
-            "classic" => OverlayLook.Classic,
-            "hud" => OverlayLook.Hud,
+            "classic" or "mono" => OverlayLook.Classic,
+            "hud" or "cyberpunk" or "crt" => OverlayLook.Hud,
             _ => OverlayLook.Tactical,
         };
 
@@ -1500,8 +1497,17 @@ public partial class SearchWindow : Window
             case OverlayLook.Tactical:
                 ApplyTactical(accent == DefaultAccent ? TacticalAmber : accent);
                 break;
+            case OverlayLook.Hud when style == "cyberpunk":
+                ApplyCyberpunk(accent == DefaultAccent ? NeonPink : accent);
+                break;
+            case OverlayLook.Hud when style == "crt":
+                ApplyCrt(accent == DefaultAccent ? PhosphorGreen : accent);
+                break;
             case OverlayLook.Hud:
                 ApplyHud(accent == DefaultAccent ? HudCyan : accent);
+                break;
+            case OverlayLook.Classic when style == "mono":
+                ApplyMono(accent == DefaultAccent ? MonoWhite : accent);
                 break;
             default:
                 ApplyClassic(accent);
@@ -1541,6 +1547,8 @@ public partial class SearchWindow : Window
         _defaultPlaceholder = _look switch
         {
             OverlayLook.Tactical => "Enter command — apps, files, sites, or ? for Claude",
+            OverlayLook.Hud when style == "cyberpunk" => "Jack in — apps, files, sites, or ? for Claude",
+            OverlayLook.Hud when style == "crt" => "C:\\> apps, files, sites, or ? for Claude_",
             OverlayLook.Hud => "Awaiting command — apps, files, sites, or ? for Claude",
             _ => "Search apps, files and commands—or ? to ask Claude",
         };
@@ -1669,6 +1677,57 @@ public partial class SearchWindow : Window
         }
 
         ResultRow.GlyphBrush = ResultRow.Frozen(WithAlpha(primary, 0xE6));
+    }
+
+    private static readonly Color NeonPink = Color.FromRgb(0xFF, 0x2E, 0x97);
+    private static readonly Color NeonCyan = Color.FromRgb(0x00, 0xF0, 0xFF);
+    private static readonly Color PhosphorGreen = Color.FromRgb(0x33, 0xFF, 0x66);
+    private static readonly Color MonoWhite = Color.FromRgb(0xE8, 0xE8, 0xE8);
+
+    /// <summary>The HUD frame in neon: hot pink lines on deep violet, cyan secondary text.</summary>
+    private void ApplyCyberpunk(Color pink)
+    {
+        ApplyHud(pink);
+        SetBrush("Surface", Color.FromArgb(0xF6, 0x12, 0x04, 0x22));
+        SetBrush("TextPrimary", Color.FromRgb(0xF7, 0xEC, 0xFF));
+        SetBrush("TextSecondary", WithAlpha(NeonCyan, 0xC0));
+        SetBrush("TextTertiary", WithAlpha(pink, 0xA8));
+        SetBrush("HudDim", WithAlpha(NeonCyan, 0xA0));
+        SetBrush("GlyphTint", NeonCyan);
+        ResultRow.GlyphBrush = ResultRow.Frozen(NeonCyan);
+        HudGlow.Opacity = 0.65;
+        HudGlow.BlurRadius = 34;
+    }
+
+    /// <summary>The HUD frame as an old terminal: phosphor green on black, monospace everywhere.</summary>
+    private void ApplyCrt(Color green)
+    {
+        ApplyHud(green);
+        SetBrush("Surface", Color.FromArgb(0xF8, 0x02, 0x0A, 0x04));
+        SetBrush("TextPrimary", Mix(green, Colors.White, 0.6));
+        SetBrush("TextSecondary", WithAlpha(green, 0xC8));
+        SetBrush("TextTertiary", WithAlpha(green, 0x88));
+        var mono = new FontFamily("Cascadia Mono, Consolas");
+        Resources["UiFont"] = mono;
+        Resources["TitleFont"] = mono;
+        Resources["TagFont"] = mono;
+        Resources["RowCorner"] = new CornerRadius(0);
+        HudGlow.Opacity = 0.6;
+        HudGlow.BlurRadius = 24;
+    }
+
+    /// <summary>Classic with every colour taken out: greys, white text, one light accent.</summary>
+    private void ApplyMono(Color accent)
+    {
+        ApplyClassic(accent);
+        SetBrush("Surface", Color.FromArgb(0xF4, 0x10, 0x10, 0x10));
+        SetBrush("SurfaceBorder", Color.FromArgb(0x38, 0xFF, 0xFF, 0xFF));
+        SetBrush("ChipFill", Color.FromArgb(0x1E, 0xFF, 0xFF, 0xFF));
+        SetBrush("ChipBorder", Color.FromArgb(0x55, 0xFF, 0xFF, 0xFF));
+        SetBrush("ListenFill", Color.FromArgb(0x40, 0xFF, 0xFF, 0xFF));
+        SetBrush("ListenBack", Color.FromArgb(0x24, 0xFF, 0xFF, 0xFF));
+        SetBrush("ListenGlyph", accent);
+        Resources["RowCorner"] = new CornerRadius(4);
     }
 
     private void ApplyClassic(Color accent)
