@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NovaShield HUD: a tactical HUD for your Windows desktop</title>
+  <meta name="description" content="An Alt+Space launcher, widgets on your wallpaper and a matching lock screen for Windows. One look everywhere. Everything stays on your PC.">
+  <meta property="og:title" content="NovaShield HUD">
+  <meta property="og:description" content="A tactical HUD for your Windows desktop: launcher, wallpaper widgets and a matching lock screen.">
+  <meta property="og:image" content="img/lock-amber.jpg">
+  <link rel="icon" href="img/icon-64.png">
+  <link rel="apple-touch-icon" href="img/icon-180.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="nav">
+  <div class="wrap nav-in">
+    <a class="brand" href="#top"><img src="img/icon-64.png" alt="" width="28" height="28"><span>NovaShield <b>HUD</b></span></a>
+    <nav class="links" aria-label="Sections">
+      <a href="#how">How it works</a>
+      <a href="#modules">Modules</a>
+      <a href="#lockscreen">Lock screen</a>
+      <a href="#sponsor">Sponsor</a>
+      <a href="#faq">FAQ</a>
+    </nav>
+    <div class="nav-cta">
+      <a class="gh" href="https://github.com/muchkurisrivardhan/vantage" aria-label="Star on GitHub">
+        <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38v-1.33c-2.23.48-2.7-1.07-2.7-1.07-.36-.92-.89-1.17-.89-1.17-.73-.5.06-.49.06-.49.8.06 1.23.83 1.23.83.72 1.22 1.88.87 2.33.66.07-.52.28-.87.5-1.07-1.78-.2-3.65-.89-3.65-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 0 1 4 0c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48v2.2c0 .21.15.46.55.38A8 8 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>
+        <span>Star</span><span class="stars" id="stars" hidden></span>
+      </a>
+      <a class="btn btn-sm" href="#download">Download</a>
+    </div>
+  </div>
+</header>
+
+<main id="top">
+
+  <!-- ============================== hero ============================== -->
+  <section class="hero">
+    <div class="wrap hero-in">
+      <div class="hero-copy">
+        <a class="badge" href="#lockscreen"><span class="dot"></span>New: a lock screen HUD in six themes, with one-click restore</a>
+        <p class="kicker">For Windows 10 and 11</p>
+        <h1>Type.<br>Glance.<br><span class="grad">Lock.</span></h1>
+        <p class="lede">A tactical HUD for your Windows desktop: an <kbd>Alt</kbd>+<kbd>Space</kbd> launcher, widgets that live on your wallpaper, and a lock screen to match. One look everywhere. No account, no telemetry: it all runs on your PC.</p>
+        <div class="cta">
+          <a class="btn" href="#download">Choose a download</a>
+          <a class="btn btn-ghost" href="#modules">See what's inside</a>
+        </div>
+        <p class="meta"><span>Preview</span> · Windows 10/11 · x64 &amp; ARM64 · Free</p>
+      </div>
+
+      <!-- Try it: a working mock of the launcher -->
+      <div class="tryit" id="tryit" data-style="tactical">
+        <div class="tryit-head">
+          <span class="tag">Try it here</span>
+          <div class="styles" role="radiogroup" aria-label="Launcher style">
+            <button role="radio" aria-checked="true" data-style="tactical">Tactical</button>
+            <button role="radio" aria-checked="false" data-style="hud">HUD</button>
+            <button role="radio" aria-checked="false" data-style="crt">Retro CRT</button>
+            <button role="radio" aria-checked="false" data-style="cyberpunk">Cyberpunk</button>
+            <button role="radio" aria-checked="false" data-style="mono">Mono</button>
+          </div>
+        </div>
+        <div class="bar">
+          <div class="bar-head"><span class="ring" aria-hidden="true"></span><span class="bar-title">BEACON <i>//</i> COMMAND</span><span class="bar-time" id="clock">--:--</span></div>
+          <label class="query">
+            <span class="sr">Type a command</span>
+            <input id="q" type="text" autocomplete="off" spellcheck="false" placeholder="Enter command: apps, files, sites, or ? for Claude">
+          </label>
+          <ul class="results" id="results" role="listbox" aria-label="Results"></ul>
+          <div class="bar-foot"><span>↑↓ to choose · Enter to run</span><span id="status"></span></div>
+        </div>
+        <p class="tryit-hint">Try <button class="chip" data-try="turn the volume to 40 and dim the screen">turn the volume to 40 and dim the screen</button> <button class="chip" data-try="12*8+4">12*8+4</button> <button class="chip" data-try="focus 25">focus 25</button> <button class="chip" data-try="? plan my week">? plan my week</button></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================ steps ============================ -->
+  <section class="section" id="how">
+    <div class="wrap">
+      <p class="eyebrow">How it works</p>
+      <h2>Three keys between you and anything</h2>
+      <ol class="steps">
+        <li><span class="num">1</span><h3>Press <kbd>Alt</kbd>+<kbd>Space</kbd></h3><p>The launcher drops in over whatever you're doing, ready to type. <kbd>Alt</kbd>+<kbd>M</kbd> opens it already listening.</p></li>
+        <li><span class="num">2</span><h3>Type, or just say it</h3><p>Part of an app, file or window name, a sum, or a whole sentence like "turn the volume to 75 and dim the screen". Voice is transcribed on your PC.</p></li>
+        <li><span class="num">3</span><h3>Enter</h3><p>It runs. Anything that closes, deletes or shuts down waits for a second keystroke first (on by default), whoever proposed it.</p></li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- ============================ modules ============================ -->
+  <section class="section alt" id="modules">
+    <div class="wrap">
+      <p class="eyebrow">Modules</p>
+      <h2>Three parts, one look</h2>
+      <p class="sub">Install once and configure everything from one Settings window. Change the style there and the widgets and lock screen follow.</p>
+      <div class="cards3">
+        <article class="card">
+          <div class="card-art art-beacon" aria-hidden="true">
+            <div class="mini-bar"><span></span>Enter command…</div>
+            <div class="mini-row on">Visual Studio Code<em>APP</em></div>
+            <div class="mini-row">Set volume 40% · Dim screen<em>SENTENCE</em></div>
+            <div class="mini-row">Ask Claude: plan my week<em>CLAUDE</em></div>
+          </div>
+          <h3>Beacon <span>launcher</span></h3>
+          <ul>
+            <li>Apps, files, windows, sites and system commands</li>
+            <li>Whole sentences, understood on your PC</li>
+            <li>Local voice (Whisper), timers and reminders</li>
+            <li>Claude for anything else, with your own key</li>
+          </ul>
+        </article>
+        <article class="card">
+          <div class="card-art"><img src="img/focus-timer.png" alt="The focus timer widget: a dial of dots counting down a session" loading="lazy"></div>
+          <h3>Dotline <span>desktop widgets</span></h3>
+          <ul>
+            <li>Your life and goals as dots: weeks, months or years</li>
+            <li>Focus timer with a session log and 7-day history</li>
+            <li>Time-zone dots on a world-map wallpaper</li>
+            <li>Under every window, still there after Win+D</li>
+          </ul>
+        </article>
+        <article class="card">
+          <div class="card-art"><img src="img/lock-amber.jpg" alt="The amber lock screen HUD: rings around an empty centre and four corner readouts" loading="lazy"></div>
+          <h3>Lock screen <span>HUD</span></h3>
+          <ul>
+            <li>A HUD picture for the lock and sign-in screens</li>
+            <li>Six themes, corner text you write, live date tokens</li>
+            <li>A matching padlock account picture</li>
+            <li>Widgets for the Widgets board</li>
+          </ul>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================ lock screen ============================ -->
+  <section class="section" id="lockscreen">
+    <div class="wrap">
+      <p class="eyebrow">Lock screen</p>
+      <h2>Your lock screen, in the same uniform</h2>
+      <p class="sub">Drawn at your monitor's real resolution and set through Windows' own lock screen settings. Signing in with your PIN, password or Windows Hello works exactly as before, and one click puts your old picture back.</p>
+      <div class="themes" role="tablist" aria-label="Lock screen theme">
+        <button role="tab" aria-selected="true" data-theme="amber" style="--c:#FFB000">Amber</button>
+        <button role="tab" aria-selected="false" data-theme="cyan" style="--c:#00E5FF">Cyan</button>
+        <button role="tab" aria-selected="false" data-theme="phosphor" style="--c:#33FF66">Phosphor</button>
+        <button role="tab" aria-selected="false" data-theme="neon" style="--c:#FF2E97">Neon</button>
+        <button role="tab" aria-selected="false" data-theme="redalert" style="--c:#FF3B3B">Red alert</button>
+        <button role="tab" aria-selected="false" data-theme="mono" style="--c:#E8E8E8">Mono</button>
+      </div>
+      <figure class="screen">
+        <img id="lockimg" src="img/lock-amber.jpg" alt="Lock screen HUD in the amber theme" width="1600" height="900">
+      </figure>
+      <div class="lock-extras">
+        <div class="extra">
+          <img id="emblem" src="img/emblem-amber.png" alt="Padlock account picture in the amber theme" width="160" height="160" loading="lazy">
+          <div><h3>Account picture</h3><p>A padlock emblem that sits in the empty centre of the rings on the sign-in screen. Generated in every theme.</p></div>
+        </div>
+        <div class="extra widgets">
+          <img src="img/widget-node.png" alt="Node Status widget: link online, power, uptime" width="150" height="152" loading="lazy">
+          <img src="img/widget-progress.png" alt="Day and year progress widget" width="150" height="152" loading="lazy">
+          <img src="img/widget-countdown.png" alt="Countdown widget: 48 days" width="150" height="152" loading="lazy">
+          <div><h3>Widgets</h3><p>Node status, day and year progress, and a countdown, for the Widgets board. Nothing private: no PC name, no network name, no notifications.</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================ features ============================ -->
+  <section class="section alt">
+    <div class="wrap">
+      <p class="eyebrow">Built in</p>
+      <h2>What NovaShield HUD does</h2>
+      <div class="grid">
+        <div class="feat"><h3>Six looks</h3><p>Tactical, HUD, Classic, Cyberpunk, Retro CRT and Minimal mono, plus any accent colour. The launcher, widgets and lock screen all switch together.</p></div>
+        <div class="feat"><h3>Plain English</h3><p>"Turn the volume to 75 and dim the screen" runs as two steps, worked out on your PC without a model.</p></div>
+        <div class="feat"><h3>Voice on your PC</h3><p>Speak instead of typing. Whisper transcribes on your machine; the audio never leaves it.</p></div>
+        <div class="feat"><h3>Claude when you want it</h3><p>Start with <kbd>?</kbd> for anything else. Claude can only use Beacon's own commands, and destructive ones ask you first.</p></div>
+        <div class="feat"><h3>Focus and time</h3><p>A focus timer on your desktop, its countdown in the launcher, and time zones you can hover on the wallpaper map.</p></div>
+        <div class="feat"><h3>Reversible by design</h3><p>Your original lock screen picture is saved before anything changes, and restored byte for byte.</p></div>
+        <div class="feat"><h3>Private</h3><p>No account, no telemetry, no ads. Settings stay in your profile; your API key is encrypted with Windows.</p></div>
+        <div class="feat"><h3>Light on your PC</h3><p>Ambient animations run at a low frame rate and shadows sit on static layers, so the widgets idle at a few percent of one core.</p></div>
+        <div class="feat"><h3>No hacks</h3><p>No injection, no hooks, no patched system files. Only documented Windows features, and no admin rights for the apps.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================ download ============================ -->
+  <section class="section" id="download">
+    <div class="wrap">
+      <p class="eyebrow">Download</p>
+      <h2>Choose a download</h2>
+      <p class="sub">One installer sets up the launcher and the widgets together. The first release is on its way.</p>
+      <div class="dl">
+        <div class="dl-card">
+          <h3>Windows <span>x64</span></h3>
+          <p>Most desktops and laptops (Intel and AMD).</p>
+          <span class="btn btn-disabled" aria-disabled="true">Coming soon</span>
+        </div>
+        <div class="dl-card">
+          <h3>Windows <span>ARM64</span></h3>
+          <p>Snapdragon and other ARM laptops.</p>
+          <span class="btn btn-disabled" aria-disabled="true">Coming soon</span>
+        </div>
+      </div>
+      <p class="note">Releases will appear on <a href="https://github.com/muchkurisrivardhan/vantage/releases">GitHub</a>. Choose <b>Watch → Custom → Releases</b> on the repository to hear about the first one.</p>
+    </div>
+  </section>
+
+  <!-- ============================ sponsor ============================ -->
+  <section class="section alt" id="sponsor">
+    <div class="wrap narrow">
+      <p class="eyebrow">Sponsor</p>
+      <h2>Keep NovaShield HUD free</h2>
+      <p class="sub">It's made by one person. Sponsors pay for the time it takes to build and fix things.</p>
+
+      <div class="sponsor">
+        <div class="sp-tabs" role="tablist" aria-label="How to sponsor">
+          <span class="sp-label">Select</span>
+          <button role="tab" aria-selected="true" data-tab="monthly">Monthly</button>
+          <button role="tab" aria-selected="false" data-tab="once">One-time</button>
+          <button role="tab" aria-selected="false" data-tab="coffee">Ko-fi</button>
+        </div>
+
+        <div class="sp-panel" data-panel="monthly">
+          <div class="tier custom">
+            <div class="tier-row"><label class="amount"><span>$</span><input id="monthly-amount" type="number" min="1" step="1" value="5" aria-label="Monthly amount in dollars"></label><b>a month</b><a class="btn btn-sm sponsor-link" data-kind="sponsors" href="#">Select</a></div>
+            <p>You'll receive any rewards listed in the matching monthly tier.</p>
+          </div>
+          <div class="tier">
+            <div class="tier-row"><b>$5 a month</b><a class="btn btn-sm sponsor-link" data-kind="sponsors" href="#">Select</a></div>
+            <ul><li>Keeps NovaShield HUD free</li><li>Thank you!</li></ul>
+          </div>
+          <div class="tier">
+            <div class="tier-row"><b>$25 a month</b><a class="btn btn-sm sponsor-link" data-kind="sponsors" href="#">Select</a></div>
+            <ul><li>Your name in the README</li><li>Your name on this website's supporters list</li><li>From the next release, while you're a member</li></ul>
+          </div>
+          <div class="tier">
+            <div class="tier-row"><b>$100 a month</b><a class="btn btn-sm sponsor-link" data-kind="sponsors" href="#">Select</a></div>
+            <ul><li>Everything in the $25 tier</li><li>Your logo and link on this website</li><li>A vote on what gets built next</li></ul>
+          </div>
+        </div>
+
+        <div class="sp-panel" data-panel="once" hidden>
+          <div class="tier">
+            <div class="tier-row amounts">
+              <button class="amt" data-amt="5">$5</button><button class="amt" data-amt="10">$10</button><button class="amt" data-amt="25">$25</button><button class="amt" data-amt="50">$50</button>
+            </div>
+            <p>A one-time thank-you through GitHub Sponsors. No account needed beyond GitHub.</p>
+            <div class="tier-row"><span></span><a class="btn btn-sm sponsor-link" data-kind="sponsors-once" href="#">Sponsor once</a></div>
+          </div>
+        </div>
+
+        <div class="sp-panel" data-panel="coffee" hidden>
+          <div class="tier">
+            <div class="tier-row"><b>Buy me a coffee</b><a class="btn btn-sm sponsor-link" data-kind="kofi" href="#">Open Ko-fi</a></div>
+            <p>Card or PayPal, one-time or monthly, without a GitHub account.</p>
+          </div>
+        </div>
+
+        <p class="sp-soon" id="sp-soon" hidden>Sponsorships open soon. Star the repository to be first to know.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================ faq ============================ -->
+  <section class="section" id="faq">
+    <div class="wrap narrow">
+      <p class="eyebrow">FAQ</p>
+      <h2>Questions</h2>
+      <details><summary>Is it free?</summary><p>Yes. Downloading and using NovaShield HUD is free. Sponsors keep it that way.</p></details>
+      <details><summary>Does it send my data anywhere?</summary><p>No. There's no account and no telemetry. It only goes online when you ask Claude (with your own API key) and to fetch website icons for the launcher, which you can turn off.</p></details>
+      <details><summary>What does the lock screen part change?</summary><p>Only the lock screen picture, through the same setting Windows uses. Your sign-in, PIN, password and Windows Hello are untouched. Your old picture is saved first, and Restore puts it back.</p></details>
+      <details><summary>Does it need admin rights?</summary><p>The launcher, desktop widgets and lock screen picture don't. Installing the Widgets-board widgets asks once, to trust their signing certificate; uninstalling takes it away again.</p></details>
+      <details><summary>Which PCs does it run on?</summary><p>Windows 10 and Windows 11, on x64 (Intel and AMD) and ARM64 (Snapdragon) PCs.</p></details>
+      <details><summary>Can I see the code?</summary><p>Yes, it's public on <a href="https://github.com/muchkurisrivardhan/vantage">GitHub</a>. It isn't open source yet: all rights are reserved for now.</p></details>
+    </div>
+  </section>
+
+</main>
+
+<footer class="foot">
+  <div class="wrap foot-in">
+    <span class="brand"><img src="img/icon-64.png" alt="" width="22" height="22"><span>NovaShield <b>HUD</b></span></span>
+    <span>© 2026 · <a href="https://github.com/muchkurisrivardhan/vantage">GitHub</a> · <a href="#sponsor">Sponsor</a></span>
+    <span class="fine">Not affiliated with Microsoft. Windows is a trademark of Microsoft Corporation.</span>
+  </div>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>
