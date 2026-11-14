@@ -9,6 +9,13 @@ follows Beacon's style, so the lock screen matches the launcher and the widgets.
 **Status: milestone 2 of 6.** The renderer, preview, apply and restore work. The account
 emblem, lock screen widgets and scheduled refresh are not built yet.
 
+## From Beacon
+
+Beacon Settings → Appearance has a **Lock screen** card: pick the style (or match the
+launcher), edit the corner text and effects, then **Preview**, **Apply to lock screen** or
+**Restore my picture**. While the HUD is applied, Beacon's **Save** re-applies it so a changed
+style or text shows. The command line below does the same thing.
+
 ## Set it as your lock screen
 
 1. Your lock screen must show a **Picture** (not Windows Spotlight or a slideshow):

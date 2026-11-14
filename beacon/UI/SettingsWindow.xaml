@@ -696,6 +696,67 @@
                             <CheckBox x:Name="ShowSubtitles" Content="Show the second line under each result" />
                         </StackPanel>
                     </Border>
+
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <TextBlock Text="Lock screen" Style="{StaticResource GroupHeader}" />
+                            <TextBlock Style="{StaticResource Caption}" Margin="0,0,0,12"
+                                       Text="A HUD picture for the Windows lock and sign-in screens. Windows stays fully in charge of signing in; this only sets the background picture." />
+
+                            <TextBlock Text="Style" Style="{StaticResource Label}" />
+                            <ComboBox x:Name="LockTheme" Width="300" HorizontalAlignment="Left" Margin="0,0,0,14">
+                                <ComboBoxItem Content="Match the launcher style above" Tag="beacon" />
+                                <ComboBoxItem Content="Amber" Tag="amber" />
+                                <ComboBoxItem Content="Cyan" Tag="cyan" />
+                                <ComboBoxItem Content="Phosphor green" Tag="phosphor" />
+                                <ComboBoxItem Content="Red alert" Tag="redalert" />
+                                <ComboBoxItem Content="Mono" Tag="mono" />
+                                <ComboBoxItem Content="Neon" Tag="neon" />
+                            </ComboBox>
+
+                            <TextBlock Text="Corner text (title, then the dimmer line under it)" Style="{StaticResource Label}" />
+                            <UniformGrid Columns="2" Margin="0,0,0,4">
+                                <StackPanel Margin="0,0,12,10">
+                                    <TextBlock Text="Top left" Style="{StaticResource Caption}" Margin="0,0,0,3" />
+                                    <TextBox x:Name="LockTL1" MaxLength="40" Margin="0,0,0,4" />
+                                    <TextBox x:Name="LockTL2" MaxLength="40" />
+                                </StackPanel>
+                                <StackPanel Margin="0,0,0,10">
+                                    <TextBlock Text="Top right" Style="{StaticResource Caption}" Margin="0,0,0,3" />
+                                    <TextBox x:Name="LockTR1" MaxLength="40" Margin="0,0,0,4" />
+                                    <TextBox x:Name="LockTR2" MaxLength="40" />
+                                </StackPanel>
+                                <StackPanel Margin="0,0,12,10">
+                                    <TextBlock Text="Bottom left" Style="{StaticResource Caption}" Margin="0,0,0,3" />
+                                    <TextBox x:Name="LockBL1" MaxLength="40" Margin="0,0,0,4" />
+                                    <TextBox x:Name="LockBL2" MaxLength="40" />
+                                </StackPanel>
+                                <StackPanel Margin="0,0,0,10">
+                                    <TextBlock Text="Bottom right" Style="{StaticResource Caption}" Margin="0,0,0,3" />
+                                    <TextBox x:Name="LockBR1" MaxLength="40" Margin="0,0,0,4" />
+                                    <TextBox x:Name="LockBR2" MaxLength="40" />
+                                </StackPanel>
+                            </UniformGrid>
+                            <TextBlock Style="{StaticResource Caption}" Margin="0,0,0,12"
+                                       Text="Fill-ins: {DATE}  {WEEKDAY}  {DAY_OF_YEAR}  {YEAR_PROGRESS}  {UPTIME_DAYS}  {COUNTDOWN:2027-01-01} (days left). Anyone at your PC can read the lock screen, so keep it to things a stranger may see: no names, email or work details." />
+
+                            <WrapPanel Margin="0,0,0,8">
+                                <CheckBox x:Name="LockGrid" Content="Grid" Margin="0,0,18,0" />
+                                <CheckBox x:Name="LockScanlines" Content="Scanlines" Margin="0,0,18,0" />
+                                <CheckBox x:Name="LockVignette" Content="Dark edges" Margin="0,0,18,0" />
+                                <CheckBox x:Name="LockGlow" Content="Glow" />
+                            </WrapPanel>
+
+                            <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                                <Button x:Name="LockPreview" Content="Preview" Margin="0,0,8,0" />
+                                <Button x:Name="LockApply" Content="Apply to lock screen" Margin="0,0,8,0" />
+                                <Button x:Name="LockRestore" Content="Restore my picture" />
+                            </StackPanel>
+                            <TextBlock x:Name="LockStatus" Style="{StaticResource Caption}" TextWrapping="Wrap" />
+                            <TextBlock Style="{StaticResource Caption}"
+                                       Text="Needs your lock screen set to Picture (not Windows Spotlight). To see it behind the PIN box too: Settings > Personalization > Lock screen > Show the lock screen background picture on the sign-in screen. While it's applied, Save updates it." />
+                        </StackPanel>
+                    </Border>
                 </StackPanel>
 
                 <!-- ========================== Dotline ========================= -->

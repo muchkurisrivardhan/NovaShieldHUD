@@ -131,6 +131,106 @@ public static class Suite
         return null;
     }
 
+    // ---------------------------------------------------------------- lock screen
+
+    static readonly string LockDir = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "LockscreenWidget");
+    static readonly string LockConfig = Path.Combine(LockDir, "config.json");
+
+    /// <summary>The HUD is on the lock screen: Lockscreen keeps a backup of your picture until --restore.</summary>
+    public static bool LockscreenApplied => File.Exists(Path.Combine(LockDir, "original", "backup.json"));
+
+    static readonly string[] CornerKeys = ["topLeft", "topRight", "bottomLeft", "bottomRight"];
+
+    /// <summary>The lock screen settings Beacon's Appearance page shows. Corners: TL, TR, BL, BR as [title, subtitle].</summary>
+    public sealed record LockscreenOptions(string Theme, string[][] Corners, bool Grid, bool Scanlines, bool Vignette, bool Glow)
+    {
+        // Records compare arrays by reference; compare the text.
+        public bool Same(LockscreenOptions o) =>
+            (Theme, Grid, Scanlines, Vignette, Glow) == (o.Theme, o.Grid, o.Scanlines, o.Vignette, o.Glow) &&
+            Corners.SelectMany(c => c).SequenceEqual(o.Corners.SelectMany(c => c));
+    }
+
+    static readonly string[][] DefaultCorners =
+    [
+        ["SYSTEM", "SECURE SHELL // v1.0"], ["{DATE}", "{WEEKDAY}"],
+        ["NODE-01", "LINK: LOCAL // ENCRYPTED"], ["STATUS: SEALED", "{UPTIME_DAYS}D UPTIME"],
+    ];
+
+    /// <summary>Lockscreen's config as the form shows it; missing or odd values read as Lockscreen's defaults.</summary>
+    public static LockscreenOptions ReadLockscreen()
+    {
+        var c = LoadJson(LockConfig);
+        string Str(JsonNode? n, string fallback) => n is JsonValue v && v.TryGetValue<string>(out var s) ? s : fallback;
+        bool Bool(JsonNode? n) => n is not JsonValue v || !v.TryGetValue<bool>(out var b) || b;
+        var corners = CornerKeys.Select((k, i) => c?["corners"]?[k] is JsonArray { Count: 2 } a
+            ? new[] { Str(a[0], DefaultCorners[i][0]), Str(a[1], DefaultCorners[i][1]) }
+            : DefaultCorners[i].ToArray()).ToArray();
+        var fx = c?["effects"];
+        return new LockscreenOptions(Str(c?["theme"], "beacon"), corners,
+            Bool(fx?["grid"]), Bool(fx?["scanlines"]), Bool(fx?["vignette"]), Bool(fx?["glow"]));
+    }
+
+    /// <summary>Writes the form's values into Lockscreen's config, keeping every other field. Returns an error or null.</summary>
+    public static string? WriteLockscreen(LockscreenOptions o)
+    {
+        // Never replace a file we couldn't read: it may hold settings this page doesn't show.
+        if (File.Exists(LockConfig) && LoadJson(LockConfig) is null)
+            return "The lock screen's config.json couldn't be read, so it wasn't changed.";
+        var c = LoadJson(LockConfig) ?? new JsonObject();
+        c["theme"] = o.Theme;
+        c["corners"] = new JsonObject(CornerKeys.Select((k, i) =>
+            KeyValuePair.Create(k, (JsonNode?)new JsonArray(o.Corners[i][0], o.Corners[i][1]))));
+        if (c["effects"] is not JsonObject fx) c["effects"] = fx = new JsonObject();
+        fx["grid"] = o.Grid; fx["scanlines"] = o.Scanlines; fx["vignette"] = o.Vignette; fx["glow"] = o.Glow;
+        Directory.CreateDirectory(LockDir);
+        Settings.WriteAtomic(LockConfig, c.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
+        return null;
+    }
+
+    /// <summary>Lockscreen.exe: beside Beacon when installed, otherwise in the source tree's Release build.</summary>
+    public static string? FindLockscreen()
+    {
+        var beside = Path.Combine(AppContext.BaseDirectory, "Lockscreen.exe");
+        if (File.Exists(beside)) return beside;
+        for (var dir = new DirectoryInfo(AppContext.BaseDirectory); dir is not null; dir = dir.Parent)
+        {
+            var bin = Path.Combine(dir.FullName, "lockscreen", "bin", "Release");
+            if (!Directory.Exists(bin)) continue;
+            return Directory.EnumerateFiles(bin, "Lockscreen.exe", SearchOption.AllDirectories)
+                .OrderByDescending(File.GetLastWriteTimeUtc).FirstOrDefault();
+        }
+        return null;
+    }
+
+    /// <summary>Runs Lockscreen.exe with the given arguments, hidden. Returns (ok, what it said).</summary>
+    public static async Task<(bool Ok, string Message)> RunLockscreenAsync(params string[] args)
+    {
+        if (FindLockscreen() is not { } exe) return (false, "Couldn't find Lockscreen.exe next to Beacon.");
+        var psi = new ProcessStartInfo(exe)
+        {
+            UseShellExecute = false, CreateNoWindow = true,
+            RedirectStandardOutput = true, RedirectStandardError = true,
+            WorkingDirectory = Path.GetDirectoryName(exe)!,
+        };
+        foreach (var a in args) psi.ArgumentList.Add(a);
+        using var p = Process.Start(psi)!;
+        var stdout = p.StandardOutput.ReadToEndAsync();
+        var stderr = p.StandardError.ReadToEndAsync();
+        await p.WaitForExitAsync();
+        // The useful line is the last one Lockscreen prints (the first is the file it rendered).
+        var said = ((await stderr).Trim() is { Length: > 0 } err ? err : (await stdout).Trim())
+            .Split('\n', StringSplitOptions.RemoveEmptyEntries).Select(l => l.Trim()).ToArray();
+        var line = said.FirstOrDefault(l => !l.StartsWith("warning:") && !l.Contains(".png  ")) ?? said.LastOrDefault() ?? "";
+        return (p.ExitCode == 0, line);
+    }
+
+    static JsonObject? LoadJson(string path)
+    {
+        try { return File.Exists(path) ? JsonNode.Parse(File.ReadAllText(path)) as JsonObject : null; }
+        catch (Exception e) when (e is IOException or JsonException or UnauthorizedAccessException) { return null; }
+    }
+
     static JsonObject? LoadState()
     {
         try { return File.Exists(DotlineState) ? JsonNode.Parse(File.ReadAllText(DotlineState)) as JsonObject : null; }

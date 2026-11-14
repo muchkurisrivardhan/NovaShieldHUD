@@ -322,6 +322,10 @@ public partial class SettingsWindow : Window
         VoiceDownload.Click += async (_, _) => await DownloadVoiceModelAsync();
         VoiceDelete.Click += (_, _) => DeleteVoiceModel();
         Closed += (_, _) => _voiceDownloadCts?.Cancel();
+
+        LockPreview.Click += async (_, _) => await RunLockscreenAsync("preview");
+        LockApply.Click += async (_, _) => await RunLockscreenAsync("apply");
+        LockRestore.Click += async (_, _) => await RunLockscreenAsync("restore");
     }
 
     // ------------------------------------------------------------------ voice
@@ -456,6 +460,16 @@ public partial class SettingsWindow : Window
         SelectByTag(DotBackground, dot.Background.ToString());
         DotLocked.IsChecked = dot.Locked;
         DotMap.IsChecked = dot.MapOn;
+
+        var lock_ = Suite.ReadLockscreen();
+        SelectByTag(LockTheme, lock_.Theme);
+        var boxes = new[] { LockTL1, LockTL2, LockTR1, LockTR2, LockBL1, LockBL2, LockBR1, LockBR2 };
+        for (var i = 0; i < 4; i++) { boxes[i * 2].Text = lock_.Corners[i][0]; boxes[i * 2 + 1].Text = lock_.Corners[i][1]; }
+        LockGrid.IsChecked = lock_.Grid;
+        LockScanlines.IsChecked = lock_.Scanlines;
+        LockVignette.IsChecked = lock_.Vignette;
+        LockGlow.IsChecked = lock_.Glow;
+        LockStatus.Text = Suite.LockscreenApplied ? "The HUD is on your lock screen now." : "";
 
         IndexRoots.Text = string.Join(Environment.NewLine, _settings.IndexRoots);
         ExcludedFolders.Text = string.Join(Environment.NewLine, _settings.ExcludedFolders);
@@ -992,7 +1006,59 @@ public partial class SettingsWindow : Window
         else if (!dotlineChanged && oldLook != (_settings.OverlayStyle, _settings.AccentColor))
             Suite.RefreshDotline();
 
+        var lockscreen = ReadLockscreenForm();
+        if (Suite.WriteLockscreen(lockscreen) is { } lockError)
+            MessageBox.Show(lockError, "Beacon", MessageBoxButton.OK, MessageBoxImage.Warning);
+        // While the HUD is on the lock screen, re-render it so a changed style or corner text shows.
+        else if (Suite.LockscreenApplied)
+            _ = RefreshLockscreenAsync();
+
         FooterStatus.Text = $"Saved at {DateTime.Now:t}.";
+    }
+
+    /// <summary>The lock screen page as options. Empty corner lines are allowed (a blank line).</summary>
+    private Suite.LockscreenOptions ReadLockscreenForm()
+    {
+        var boxes = new[] { LockTL1, LockTL2, LockTR1, LockTR2, LockBL1, LockBL2, LockBR1, LockBR2 };
+        var corners = Enumerable.Range(0, 4).Select(i => new[] { boxes[i * 2].Text, boxes[i * 2 + 1].Text }).ToArray();
+        return new Suite.LockscreenOptions(TagOf(LockTheme) ?? "beacon", corners,
+            LockGrid.IsChecked == true, LockScanlines.IsChecked == true, LockVignette.IsChecked == true, LockGlow.IsChecked == true);
+    }
+
+    private async Task RefreshLockscreenAsync()
+    {
+        var (ok, message) = await Suite.RunLockscreenAsync("--apply");
+        if (!ok) MessageBox.Show(message, "Beacon", MessageBoxButton.OK, MessageBoxImage.Warning);
+    }
+
+    /// <summary>Preview / apply / restore from the lock screen card; saves the config first, so what runs matches the form.</summary>
+    private async Task RunLockscreenAsync(string action)
+    {
+        if (Suite.WriteLockscreen(ReadLockscreenForm()) is { } error) { LockStatus.Text = error; return; }
+
+        LockPreview.IsEnabled = LockApply.IsEnabled = LockRestore.IsEnabled = false;
+        LockStatus.Text = action switch { "preview" => "Rendering a preview…", "apply" => "Setting your lock screen…", _ => "Putting your picture back…" };
+        try
+        {
+            var (ok, message) = action == "preview"
+                ? await PreviewLockscreenAsync()
+                : await Suite.RunLockscreenAsync("--" + action);
+            LockStatus.Text = message;
+        }
+        finally { LockPreview.IsEnabled = LockApply.IsEnabled = LockRestore.IsEnabled = true; }
+    }
+
+    /// <summary>Renders a preview PNG to the temp folder and opens it, so you can see the HUD before applying.</summary>
+    private static async Task<(bool, string)> PreviewLockscreenAsync()
+    {
+        var png = Path.Combine(Path.GetTempPath(), "lockscreen-preview.png");
+        var (ok, message) = await Suite.RunLockscreenAsync("--preview", png);
+        if (ok && File.Exists(png))
+        {
+            try { Process.Start(new ProcessStartInfo(png) { UseShellExecute = true }); return (true, "Opened a preview."); }
+            catch (Exception e) when (e is System.ComponentModel.Win32Exception or InvalidOperationException) { return (true, "Preview saved to " + png); }
+        }
+        return (ok, message);
     }
 
     /// <summary>The Dotline page as options, or a message saying what to fix.</summary>
