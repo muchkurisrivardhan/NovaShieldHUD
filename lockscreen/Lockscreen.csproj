@@ -1,10 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <!-- The lock screen HUD: renders the background PNG (WPF drawing, no packages).
-       Applying it, widgets and scheduling come in later milestones. -->
+  <!-- The lock screen HUD: renders the background PNG (WPF drawing) and sets it through the
+       documented WinRT lock screen API. The Windows version in the target framework is what
+       brings in the WinRT bindings; no other packages. -->
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net10.0-windows</TargetFramework>
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
     <UseWPF>true</UseWPF>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>

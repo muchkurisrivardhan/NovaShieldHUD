@@ -12,8 +12,10 @@ static class Program
           --theme <name>        amber, cyan, phosphor, redalert, mono, neon, custom, or beacon (default: follow Beacon)
           --size <W>x<H>        render at this size instead of the primary monitor's
           --debug-zones         outline the areas kept clear for the Windows clock and sign-in box
-          --apply               set the HUD as the lock screen      (milestone 2, not built yet)
-          --restore             put back your original lock screen  (milestone 2, not built yet)
+          --apply               render at the monitor's size and set it as the lock screen
+                                (the first apply saves your current picture for --restore)
+          --restore             put back your original lock screen picture
+          --status              show the current lock screen picture and what's saved; changes nothing
           --selftest            run the built-in tests
         """;
 
@@ -34,17 +36,15 @@ static class Program
                 case "--debug-zones": zones = true; break;
                 case "--apply": apply = true; break;
                 case "--restore": restore = true; break;
+                case "--status": return Run(() => Task.FromResult((0, LockScreenApplier.Status())));
                 default:
                     Console.Error.WriteLine($"Don't understand \"{args[i]}\".\n\n{Usage}");
                     return 1;
             }
         }
 
-        if (apply || restore)
-        {
-            Console.Error.WriteLine("--apply and --restore arrive with milestone 2 (they need the packaged app). Nothing was changed.");
-            return 2;
-        }
+        if (restore) return Run(LockScreenApplier.RestoreAsync);
+        if (apply) preview = LockScreenApplier.AppliedPng;
         if (preview is null) { Console.WriteLine(Usage); return 0; }
 
         var warnings = new List<string>();
@@ -52,11 +52,31 @@ static class Program
         var t = Themes.Resolve(cfg, theme, warnings);
         foreach (var warning in warnings) Console.Error.WriteLine("warning: " + warning);
 
-        if (w == 0) (w, h) = PrimaryMonitor();
-        var bmp = HudRenderer.Render(w, h, cfg, t, DateTime.Now, TimeSpan.FromMilliseconds(Environment.TickCount64), zones);
+        // The lock screen is always the monitor's real size; --size is for previews only.
+        if (w == 0 || apply) (w, h) = PrimaryMonitor();
+        var bmp = HudRenderer.Render(w, h, cfg, t, DateTime.Now, TimeSpan.FromMilliseconds(Environment.TickCount64), zones && !apply);
         HudRenderer.SavePng(bmp, preview);
         Console.WriteLine($"{preview}  {w}x{h}  theme {t.Name}");
-        return 0;
+        return apply ? Run(() => LockScreenApplier.ApplyAsync(preview)) : 0;
+    }
+
+    /// <summary>
+    /// Runs a WinRT call on a pool thread (Main is STA for WPF drawing; blocking an STA thread on
+    /// WinRT async work can hang) and turns a refusal from Windows into a plain message.
+    /// </summary>
+    static int Run(Func<Task<(int Code, string Message)>> work)
+    {
+        try
+        {
+            var (code, message) = Task.Run(work).GetAwaiter().GetResult();
+            (code == 0 ? Console.Out : Console.Error).WriteLine(message);
+            return code;
+        }
+        catch (Exception e) when (e is UnauthorizedAccessException or System.Runtime.InteropServices.COMException or InvalidOperationException or System.IO.IOException)
+        {
+            Console.Error.WriteLine($"Windows refused: {e.Message} (0x{e.HResult:X8}). Nothing else was changed.");
+            return 5;
+        }
     }
 
     static bool ParseSize(string s, out int w, out int h)
@@ -172,6 +192,9 @@ static class SelfTest
         Eq(amber.A(0.5).A, (byte)128, "accent at 50%");
         Eq(Themes.Lighten(Themes.Hex("#000000"), 0.5).R, (byte)128, "lighten halfway");
         Eq(Themes.Lighten(Themes.Hex("#102030"), 0), Themes.Hex("#102030"), "lighten by nothing");
+        Eq(LockScreenApplier.ImageExtension([0xFF, 0xD8, 0xFF]), ".jpg", "JPEG sniffed");
+        Eq(LockScreenApplier.ImageExtension([0x89, 0x50, 0x4E, 0x47, 0x0D]), ".png", "PNG sniffed");
+        Eq(LockScreenApplier.ImageExtension([0x42, 0x4D, 0]), ".bmp", "BMP sniffed");
 
         Eq(Themes.FromBeacon("tactical", "#5B8DEF").Name, "amber", "Tactical -> amber");
         Eq(Themes.FromBeacon("hud", "#5b8def").Name, "cyan", "HUD -> cyan");

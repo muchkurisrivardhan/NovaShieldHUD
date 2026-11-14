@@ -6,8 +6,36 @@ follows Beacon's style, so the lock screen matches the launcher and the widgets.
 
 ![Amber](../docs/media/lockscreen-amber.png)
 
-**Status: milestone 1 of 6.** The renderer and preview work. Setting the picture as the lock
-screen, the account emblem, lock screen widgets and scheduled refresh are not built yet.
+**Status: milestone 2 of 6.** The renderer, preview, apply and restore work. The account
+emblem, lock screen widgets and scheduled refresh are not built yet.
+
+## Set it as your lock screen
+
+1. Your lock screen must show a **Picture** (not Windows Spotlight or a slideshow):
+   Settings > Personalization > Lock screen > Personalize your lock screen > Picture.
+   `--apply` checks this and changes nothing if Spotlight is on.
+2. Run `Lockscreen.exe --apply`. It renders the HUD at your monitor's real resolution and sets it.
+3. To see the HUD behind the PIN or password box too, turn on Settings > Personalization >
+   Lock screen > **Show the lock screen background picture on the sign-in screen**.
+   (`--apply` mentions this once; it never changes the setting itself.)
+4. Press Win+L to look.
+
+### Putting it back
+
+`Lockscreen.exe --restore` sets your own picture back and deletes the saved copy.
+
+- The first `--apply` saves the picture you had, exactly as Windows hands it over, to
+  `%LOCALAPPDATA%\LockscreenWidget\original`. Later applies never overwrite it with the HUD.
+- If you set a new picture yourself after applying, the next `--apply` notices and saves that
+  one instead, so `--restore` brings back your latest choice, not an old one.
+- Restored means the same picture, byte for byte (checked by SHA-256 in testing). Windows'
+  own record of where the picture came from may differ; that bookkeeping isn't visible to apps.
+- `--status` shows what's set and what's saved, without changing anything.
+
+The picture is set with the documented `Windows.System.UserProfile.LockScreen` API, which
+works for this program without MSIX packaging, so no certificate, Developer Mode or admin
+rights are needed for it. The spec's admin-only registry fallback (PersonalizationCSP) wasn't
+needed and isn't built.
 
 ## Try it
 
@@ -25,6 +53,9 @@ lockscreen/bin/Release/net10.0-windows/Lockscreen.exe --preview hud.png
 | `--theme <name>` | `amber`, `cyan`, `phosphor`, `redalert`, `mono`, `neon`, `custom`, or `beacon` (default) |
 | `--size <W>x<H>` | Render at this size instead of the primary monitor's real pixels |
 | `--debug-zones` | Outline the areas kept clear for the Windows clock and the sign-in box |
+| `--apply` | Render at the monitor's size and set it as the lock screen (see below) |
+| `--restore` | Put your own lock screen picture back |
+| `--status` | Show what's set and what's saved; changes nothing |
 | `--selftest` | Config parsing, tokens, theme math and a check of the rendered picture |
 
 ## Themes
@@ -85,3 +116,4 @@ names or calendar details.
 - No system files or their permissions; Defender, SmartScreen, UAC and the lock itself stay on.
 - No auto-login, no second password screen.
 - No network calls, no telemetry.
+- Spotlight and the sign-in screen background setting are only read or mentioned, never changed.
