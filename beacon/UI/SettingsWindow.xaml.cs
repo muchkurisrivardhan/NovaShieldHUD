@@ -197,7 +197,7 @@ public partial class SettingsWindow : Window
 
     private void WireEvents()
     {
-        SaveButton.Click += (_, _) => SaveAndClose();
+        SaveButton.Click += (_, _) => Save();
         CancelButton.Click += (_, _) => Close();
 
         // Two recorders, one value: the launcher chord appears on both General and
@@ -882,7 +882,8 @@ public partial class SettingsWindow : Window
 
     // ------------------------------------------------------------------ save
 
-    private void SaveAndClose()
+    /// <summary>Applies and saves everything; the window stays open (Close leaves).</summary>
+    private void Save()
     {
         var invalid = _draftCommands.FirstOrDefault(c => c.Validate() is not null);
         if (invalid is not null)
@@ -991,7 +992,7 @@ public partial class SettingsWindow : Window
         else if (!dotlineChanged && oldLook != (_settings.OverlayStyle, _settings.AccentColor))
             Suite.RefreshDotline();
 
-        Close();
+        FooterStatus.Text = $"Saved at {DateTime.Now:t}.";
     }
 
     /// <summary>The Dotline page as options, or a message saying what to fix.</summary>
