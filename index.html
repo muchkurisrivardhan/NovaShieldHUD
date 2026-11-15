@@ -192,20 +192,20 @@
     <div class="wrap">
       <p class="eyebrow">Download</p>
       <h2>Choose a download</h2>
-      <p class="sub">One installer sets up the launcher and the widgets together. The first release is on its way.</p>
+      <p class="sub">One installer sets up the launcher, the widgets and the lock screen together. It installs for you only, with no admin prompt and nothing else to download. Later updates are one click: Beacon Settings → General → <b>Check for updates</b>.</p>
       <div class="dl">
         <div class="dl-card">
           <h3>Windows <span>x64</span></h3>
           <p>Most desktops and laptops (Intel and AMD).</p>
-          <span class="btn btn-disabled" aria-disabled="true">Coming soon</span>
+          <a class="btn btn-disabled dl-link" data-asset="NovaShieldHUD-Setup-x64.exe" aria-disabled="true">Coming soon</a>
         </div>
         <div class="dl-card">
           <h3>Windows <span>ARM64</span></h3>
           <p>Snapdragon and other ARM laptops.</p>
-          <span class="btn btn-disabled" aria-disabled="true">Coming soon</span>
+          <a class="btn btn-disabled dl-link" data-asset="NovaShieldHUD-Setup-arm64.exe" aria-disabled="true">Coming soon</a>
         </div>
       </div>
-      <p class="note">Releases will appear on <a href="https://github.com/muchkurisrivardhan/vantage/releases">GitHub</a>. Choose <b>Watch → Custom → Releases</b> on the repository to hear about the first one.</p>
+      <p class="note" id="dl-note">Releases appear on <a href="https://github.com/muchkurisrivardhan/vantage/releases">GitHub</a>. Choose <b>Watch → Custom → Releases</b> on the repository to hear about the first one.</p>
     </div>
   </section>
 
@@ -221,7 +221,7 @@
           <span class="sp-label">Select</span>
           <button role="tab" aria-selected="true" data-tab="monthly">Monthly</button>
           <button role="tab" aria-selected="false" data-tab="once">One-time</button>
-          <button role="tab" aria-selected="false" data-tab="coffee">Ko-fi</button>
+          <button role="tab" aria-selected="false" data-tab="coffee">Buy Me a Coffee</button>
         </div>
 
         <div class="sp-panel" data-panel="monthly">
@@ -255,12 +255,12 @@
 
         <div class="sp-panel" data-panel="coffee" hidden>
           <div class="tier">
-            <div class="tier-row"><b>Buy me a coffee</b><a class="btn btn-sm sponsor-link" data-kind="kofi" href="#">Open Ko-fi</a></div>
+            <div class="tier-row"><b>Buy me a coffee</b><a class="btn btn-sm sponsor-link" data-kind="coffee" href="#">Open Buy Me a Coffee</a></div>
             <p>Card or PayPal, one-time or monthly, without a GitHub account.</p>
           </div>
         </div>
 
-        <p class="sp-soon" id="sp-soon" hidden>Sponsorships open soon. Star the repository to be first to know.</p>
+        <p class="sp-soon" id="sp-soon" hidden>GitHub Sponsors opens soon. Buy Me a Coffee works today.</p>
       </div>
     </div>
   </section>
@@ -275,7 +275,9 @@
       <details><summary>What does the lock screen part change?</summary><p>Only the lock screen picture, through the same setting Windows uses. Your sign-in, PIN, password and Windows Hello are untouched. Your old picture is saved first, and Restore puts it back.</p></details>
       <details><summary>Does it need admin rights?</summary><p>The launcher, desktop widgets and lock screen picture don't. Installing the Widgets-board widgets asks once, to trust their signing certificate; uninstalling takes it away again.</p></details>
       <details><summary>Which PCs does it run on?</summary><p>Windows 10 and Windows 11, on x64 (Intel and AMD) and ARM64 (Snapdragon) PCs.</p></details>
-      <details><summary>Can I see the code?</summary><p>Yes, it's public on <a href="https://github.com/muchkurisrivardhan/vantage">GitHub</a>. It isn't open source yet: all rights are reserved for now.</p></details>
+      <details><summary>How do updates work?</summary><p>Beacon never checks on its own. In Settings → General, <b>Check for updates</b> looks at the latest GitHub release; <b>Update</b> downloads it, checks its SHA-256 against the release, installs it and restarts Beacon. Your settings stay as they are.</p></details>
+      <details><summary>How do I uninstall it?</summary><p>Settings → Apps → Installed apps → NovaShield HUD → Uninstall. That puts your own lock screen picture back and removes its scheduled refresh. Your settings folders are left in case you reinstall.</p></details>
+      <details><summary>Can I see the code?</summary><p>Yes, it's public to read on <a href="https://github.com/muchkurisrivardhan/vantage">GitHub</a>. It isn't open source: the app is free to install and use, and all other rights are reserved. The open-source parts it's built on are listed, with their licences, in THIRD-PARTY-NOTICES.txt.</p></details>
     </div>
   </section>
 
@@ -285,7 +287,7 @@
   <div class="wrap foot-in">
     <span class="brand"><img src="img/icon-64.png" alt="" width="22" height="22"><span>NovaShield <b>HUD</b></span></span>
     <span>© 2026 · <a href="https://github.com/muchkurisrivardhan/vantage">GitHub</a> · <a href="#sponsor">Sponsor</a></span>
-    <span class="fine">Not affiliated with Microsoft. Windows is a trademark of Microsoft Corporation.</span>
+    <span class="fine">Not affiliated with Microsoft, Anthropic or GitHub. Windows is a trademark of Microsoft Corporation; Claude is a trademark of Anthropic, PBC.</span>
   </div>
 </footer>
 

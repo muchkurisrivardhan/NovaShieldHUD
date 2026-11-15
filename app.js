@@ -5,8 +5,28 @@
 const LINKS = {
   repo: 'muchkurisrivardhan/vantage',
   sponsors: null,   // e.g. 'https://github.com/sponsors/muchkurisrivardhan' once GitHub Sponsors approves the profile
-  kofi: null,       // e.g. 'https://ko-fi.com/yourname'
+  coffee: 'https://buymeacoffee.com/srivardhanmuchuri',
 };
+
+// ---- download buttons: live once a GitHub release with the installers exists ----
+fetch(`https://api.github.com/repos/${LINKS.repo}/releases/latest`)
+  .then(r => (r.ok ? r.json() : null))
+  .then(rel => {
+    if (!rel) return;
+    for (const a of document.querySelectorAll('.dl-link')) {
+      const asset = (rel.assets || []).find(x => x.name === a.dataset.asset);
+      if (!asset) continue;
+      a.href = asset.browser_download_url;
+      a.textContent = `Download ${rel.tag_name}`;
+      a.classList.remove('btn-disabled');
+      a.removeAttribute('aria-disabled');
+    }
+    const note = document.getElementById('dl-note');
+    note.textContent = '';
+    note.append(`${rel.tag_name}, released ${new Date(rel.published_at).toLocaleDateString()}. Checksums and release notes are on `,
+      Object.assign(document.createElement('a'), { href: rel.html_url, textContent: 'GitHub' }), '.');
+  })
+  .catch(() => {});
 
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
@@ -157,7 +177,7 @@ $$('.amt').forEach(b => b.addEventListener('click', () => {
 $('.amt[data-amt="10"]').setAttribute('aria-pressed', 'true');
 
 function hrefFor(kind) {
-  if (kind === 'kofi') return LINKS.kofi;
+  if (kind === 'coffee') return LINKS.coffee;
   if (!LINKS.sponsors) return null;
   if (kind === 'sponsors-once') return `${LINKS.sponsors}?frequency=one-time&amount=${onceAmount}`;
   return LINKS.sponsors;
