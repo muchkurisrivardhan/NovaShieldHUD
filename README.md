@@ -162,4 +162,4 @@ NovaShield HUD isn't affiliated with either.
 
 ## Support it
 
-It's made by one person. [Buy me a coffee](https://buymeacoffee.com/srivardhanmuchuri).
+It's made by one person. [Sponsor on GitHub](https://github.com/sponsors/muchkurisrivardhan) or [buy me a coffee](https://buymeacoffee.com/srivardhanmuchuri).

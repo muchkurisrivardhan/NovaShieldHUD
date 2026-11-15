@@ -1,5 +1,5 @@
 # Shows a "Sponsor" button on the GitHub repository page (read from the default branch).
-# Uncomment each line once that account exists:
-# github: muchkurisrivardhan    # after GitHub Sponsors approves the profile
+# Platforms listed here appear in the Sponsor button.
+github: muchkurisrivardhan
 buy_me_a_coffee: srivardhanmuchuri
-custom: ["https://muchkurisrivardhan.github.io/vantage/#sponsor"]
+custom: ["https://muchkurisrivardhan.github.io/NovaShieldHUD/#sponsor"]
