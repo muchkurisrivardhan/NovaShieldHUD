@@ -4,7 +4,7 @@
 // ---- links: fill these in when the accounts exist; until then the buttons say "Coming soon" ----
 const LINKS = {
   repo: 'muchkurisrivardhan/vantage',
-  sponsors: null,   // e.g. 'https://github.com/sponsors/muchkurisrivardhan' once GitHub Sponsors approves the profile
+  sponsors: 'https://github.com/sponsors/muchkurisrivardhan',
   coffee: 'https://buymeacoffee.com/srivardhanmuchuri',
 };
 
@@ -176,15 +176,17 @@ $$('.amt').forEach(b => b.addEventListener('click', () => {
 }));
 $('.amt[data-amt="10"]').setAttribute('aria-pressed', 'true');
 
-function hrefFor(kind) {
+function hrefFor(kind, a) {
   if (kind === 'coffee') return LINKS.coffee;
   if (!LINKS.sponsors) return null;
   if (kind === 'sponsors-once') return `${LINKS.sponsors}?frequency=one-time&amount=${onceAmount}`;
-  return LINKS.sponsors;
+  // monthly: fixed tiers carry data-amt, the custom tier reads the input
+  const amt = Math.max(1, Math.round(+(a && a.dataset.amt || $('#monthly-amount').value) || 5));
+  return `${LINKS.sponsors}?frequency=recurring&amount=${amt}`;
 }
 let anyMissing = false;
 $$('.sponsor-link').forEach(a => {
-  const ready = Boolean(hrefFor(a.dataset.kind));
+  const ready = Boolean(hrefFor(a.dataset.kind, a));
   if (!ready) {
     anyMissing = true;
     a.textContent = 'Coming soon';
@@ -194,7 +196,7 @@ $$('.sponsor-link').forEach(a => {
     return;
   }
   a.target = '_blank'; a.rel = 'noopener';
-  a.addEventListener('click', () => { a.href = hrefFor(a.dataset.kind); });
-  a.href = hrefFor(a.dataset.kind);
+  a.addEventListener('click', () => { a.href = hrefFor(a.dataset.kind, a); });
+  a.href = hrefFor(a.dataset.kind, a);
 });
 $('#sp-soon').hidden = !anyMissing;
