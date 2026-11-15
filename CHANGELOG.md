@@ -3,6 +3,15 @@
 ## Unreleased
 
 ### 2026-11-14
+- Renamed to **NovaShield HUD** (was Vantage). The focus hand-off file moved to `%APPDATA%\NovaShieldHUD\`. The widget package keeps its old identity and certificate name so installed copies still work.
+- **Installer:** `installer/build.ps1` makes `NovaShieldHUD-Setup-x64.exe` / `-arm64.exe` (Inno Setup, self-contained, per-user, no admin). Uninstall restores your lock screen picture and removes the scheduled refresh.
+- **Releases:** pushing a `v*` tag builds both installers, runs the self-tests and publishes them with `SHA256SUMS.txt` (`.github/workflows/release.yml`).
+- **Beacon updates:** Settings > General > **Check for updates** / **Update**: downloads the latest release's installer, checks its SHA-256, installs silently and restarts Beacon.
+- Lockscreen milestone 5: **scheduled refresh**. `--apply` adds a per-user task that re-applies the HUD at sign-in, at lock and every `refreshMinutes` (hidden, no admin, no downloads); `--refresh` leaves a picture you've set yourself alone; `--restore` removes the task. Tested on this PC: registered without a prompt, ran with result 0, removed by restore.
+- Lockscreen milestone 6: README setup guide, the scheduled task, and "what this does NOT touch".
+- Licence: decided not to open-source. LICENSE now lets anyone install and use the app for free; the source stays all rights reserved. New `THIRD-PARTY-NOTICES.txt` lists the MIT-licensed components and the trademark notices, and ships in the installer.
+- Website: working download buttons once a release exists, Buy Me a Coffee in place of Ko-fi, FAQ on updates and uninstalling.
+- Fix: the Lockscreen project no longer compiles the widget provider's sources (they broke its build).
 - Beacon Settings → Appearance has a **Lock screen** card: style, the eight corner text lines (with {DATE}/{COUNTDOWN} fill-ins), effect toggles, and Preview / Apply / Restore buttons. Save re-applies the HUD while it's on your lock screen.
 - Lockscreen milestone 4: widgets. A packaged, signed, out-of-process COM widget provider (Windows App SDK 1.8, Widgets component only) with Node Status, Day / Year Progress and Countdown in small and medium sizes (Adaptive Cards, monospace). `widgets/build-package.ps1` packs and signs the MSIX with a self-signed development certificate; `install.ps1` trusts it (one admin prompt) and installs; `uninstall.ps1` removes both. Verified on this PC: installs, COM activation starts the provider from its package, Windows lists it as a widget provider, and the widgets appear in Win+W > Add widgets. Lock screen placement is up to Windows (not yet checked).
 - Lockscreen milestone 3: `--emblem <dir>` writes the account-picture padlock PNGs (448 and 1080 px) in every theme. A charcoal disc with transparent corners, so Windows' circular crop is clean. Windows can't set the account picture from a desktop app, so the README gives the manual step.

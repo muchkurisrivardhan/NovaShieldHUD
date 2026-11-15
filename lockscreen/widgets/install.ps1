@@ -1,4 +1,4 @@
-# Installs the Vantage Widgets package built by build-package.ps1.
+# Installs the NovaShield HUD Widgets package built by build-package.ps1.
 #
 # Windows only installs a package whose signature it trusts. The package is signed with your
 # own development certificate, so this trusts that one certificate on this PC by adding it to
@@ -22,5 +22,5 @@ if (-not (Test-Path "Cert:\LocalMachine\TrustedPeople\$thumb")) {
 Write-Host 'Installing the package...'
 Add-AppxPackage -Path $msix -ForceUpdateFromAnyVersion
 Get-AppxPackage Vantage.LockscreenWidgets | Select-Object Name, Version, InstallLocation | Format-List
-Write-Host 'Installed. Add the widgets: Win+W > + (Add widgets) > Vantage.'
+Write-Host 'Installed. Add the widgets: Win+W > + (Add widgets) > NovaShield HUD.'
 Write-Host 'Lock screen: Settings > Personalization > Lock screen > widgets (if Windows offers them there).'

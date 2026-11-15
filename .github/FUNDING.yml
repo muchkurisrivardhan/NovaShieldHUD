@@ -1,5 +1,5 @@
 # Shows a "Sponsor" button on the GitHub repository page (read from the default branch).
 # Uncomment each line once that account exists:
 # github: muchkurisrivardhan    # after GitHub Sponsors approves the profile
-# ko_fi: your-ko-fi-name        # your Ko-fi page name
+buy_me_a_coffee: srivardhanmuchuri
 custom: ["https://muchkurisrivardhan.github.io/vantage/#sponsor"]

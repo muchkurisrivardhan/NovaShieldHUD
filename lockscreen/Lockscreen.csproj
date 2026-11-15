@@ -13,4 +13,9 @@
     <RootNamespace>Vantage.Lockscreen</RootNamespace>
   </PropertyGroup>
 
+  <ItemGroup>
+    <!-- widgets\ is its own project (the packaged widget provider). -->
+    <Compile Remove="widgets\**" />
+  </ItemGroup>
+
 </Project>

@@ -44,6 +44,7 @@ public static class LockScreenApplier
             Current lock screen picture: {size:n0} bytes{(File.Exists(AppliedPng) && HasBackup ? " (the HUD, if nothing changed it since)" : "")}
             Windows Spotlight on the lock screen: {(SpotlightOn() ? "ON" : "off")}
             Original saved for --restore: {(HasBackup ? ReadBackup().SavedUtc.ToLocalTime().ToString("g") : "no (the first --apply saves it)")}
+            Scheduled refresh (sign-in, lock, hourly): {(RefreshTask.Installed ? "on" : "off")}
             """;
     }
 
@@ -72,6 +73,18 @@ public static class LockScreenApplier
             try { File.WriteAllText(HintedFile, DateTime.UtcNow.ToString("o")); } catch (IOException) { }
         }
         return (0, msg);
+    }
+
+    /// <summary>
+    /// For the scheduled refresh: null when the HUD is still the lock screen picture, otherwise why
+    /// to leave it alone. A picture you set yourself since the last apply is never painted over.
+    /// </summary>
+    public static async Task<string?> WhyNotRefreshAsync()
+    {
+        if (!HasBackup) return "The HUD isn't applied, so there's nothing to refresh.";
+        if (SpotlightOn()) return "Windows Spotlight is on, so the lock screen was left alone.";
+        if (ReadBackup().AppliedSha != Sha(await CurrentPictureAsync())) return "You've set a different lock screen picture since, so it was left alone.";
+        return null;
     }
 
     /// <summary>
@@ -115,7 +128,8 @@ public static class LockScreenApplier
 
     public static async Task<(int Code, string Message)> RestoreAsync()
     {
-        if (!HasBackup) return (0, "Nothing to restore: the lock screen was never changed by Lockscreen (or it was already restored).");
+        if (!HasBackup) RefreshTask.Remove();
+        if (!HasBackup) return (0,"Nothing to restore: the lock screen was never changed by Lockscreen (or it was already restored).");
         var info = ReadBackup();
         var image = Path.Combine(BackupDir, info.Image);
         if (!File.Exists(image)) return (4, $"The saved original picture is missing ({image}). Nothing was changed.");
@@ -123,7 +137,8 @@ public static class LockScreenApplier
         await LockScreen.SetImageFileAsync(await StorageFile.GetFileFromPathAsync(image));
         Directory.Delete(BackupDir, recursive: true);
         try { File.Delete(AppliedPng); } catch (IOException) { }
-        return (0, "Your original lock screen picture is back.");
+        var taskError = RefreshTask.Remove();
+        return (0, "Your original lock screen picture is back." + (taskError is null ? "" : $"\nCouldn't remove the scheduled refresh: {taskError}"));
     }
 }
 

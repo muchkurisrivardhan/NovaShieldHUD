@@ -29,14 +29,14 @@ public sealed class FocusState
 
 /// <summary>
 /// The focus timer. Runs on the Hub's one-second tick whether or not a widget shows it, logs
-/// finished sessions, and publishes the live session to %APPDATA%\Vantage\focus.json for Beacon.
+/// finished sessions, and publishes the live session to %APPDATA%\NovaShieldHUD\focus.json for Beacon.
 /// </summary>
 static class FocusTimer
 {
     static FocusState F => Hub.S.Focus;
 
     static readonly string SharedFile = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Vantage", "focus.json");
+        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "NovaShieldHUD", "focus.json");
 
     [DllImport("user32.dll")] static extern bool MessageBeep(uint type);
 

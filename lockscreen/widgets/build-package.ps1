@@ -1,4 +1,4 @@
-# Builds the Vantage Widgets MSIX: compiles the provider, renders the icons and widget-picker
+# Builds the NovaShield HUD Widgets MSIX: compiles the provider, renders the icons and widget-picker
 # screenshots, lays out the package, packs it with makeappx and signs it with a self-signed
 # development certificate (created in your user store on first run; no admin needed here).
 # Installing needs that certificate trusted once: see install.ps1.
@@ -87,7 +87,7 @@ Write-Host '5/5 Signing...'
 $cert = Get-ChildItem Cert:\CurrentUser\My | Where-Object { $_.Subject -eq $subject -and $_.NotAfter -gt (Get-Date) } | Select-Object -First 1
 if (-not $cert) {
     $cert = New-SelfSignedCertificate -Type CodeSigningCert -Subject $subject -CertStoreLocation Cert:\CurrentUser\My `
-        -KeyUsage DigitalSignature -FriendlyName 'Vantage Widgets development signing' -NotAfter (Get-Date).AddYears(2) `
+        -KeyUsage DigitalSignature -FriendlyName 'NovaShield HUD Widgets development signing' -NotAfter (Get-Date).AddYears(2) `
         -TextExtension @('2.5.29.37={text}1.3.6.1.5.5.7.3.3', '2.5.29.19={text}')
     Write-Host "   Created signing certificate $($cert.Thumbprint) in your user store."
 }

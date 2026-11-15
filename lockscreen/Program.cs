@@ -6,15 +6,17 @@ namespace Vantage.Lockscreen;
 static class Program
 {
     const string Usage = """
-        Lockscreen - the Vantage lock screen HUD
+        Lockscreen - the NovaShield HUD lock screen
 
           --preview <out.png>   render the HUD to a file; changes nothing on the PC
           --theme <name>        amber, cyan, phosphor, redalert, mono, neon, custom, or beacon (default: follow Beacon)
           --size <W>x<H>        render at this size instead of the primary monitor's
           --debug-zones         outline the areas kept clear for the Windows clock and sign-in box
           --apply               render at the monitor's size and set it as the lock screen
-                                (the first apply saves your current picture for --restore)
-          --restore             put back your original lock screen picture
+                                (the first apply saves your current picture for --restore), and add a
+                                scheduled task (you only, no admin) that refreshes it at sign-in, at lock and hourly
+          --refresh             what that task runs: re-apply, only if the HUD is still your lock screen
+          --restore             put back your original lock screen picture and remove the task
           --emblem <dir>        write the account-picture padlock PNGs (448 and 1080 px);
                                 every theme, or just --theme <name>. Changes nothing on the PC
           --status              show the current lock screen picture and what's saved; changes nothing
@@ -26,7 +28,7 @@ static class Program
     {
         string? preview = null, theme = null, emblemDir = null;
         int w = 0, h = 0;
-        bool zones = false, apply = false, restore = false;
+        bool zones = false, apply = false, restore = false, refresh = false;
         for (var i = 0; i < args.Length; i++)
         {
             switch (args[i])
@@ -38,6 +40,10 @@ static class Program
                 case "--emblem" when i + 1 < args.Length: emblemDir = args[++i]; break;
                 case "--debug-zones": zones = true; break;
                 case "--apply": apply = true; break;
+                case "--refresh":
+                    if (Task.Run(LockScreenApplier.WhyNotRefreshAsync).GetAwaiter().GetResult() is { } why) { Console.WriteLine(why); return 0; }
+                    apply = refresh = true;
+                    break;
                 case "--restore": restore = true; break;
                 case "--status": return Run(() => Task.FromResult((0, LockScreenApplier.Status())));
                 default:
@@ -76,7 +82,11 @@ static class Program
         var bmp = HudRenderer.Render(w, h, cfg, t, DateTime.Now, TimeSpan.FromMilliseconds(Environment.TickCount64), zones && !apply);
         HudRenderer.SavePng(bmp, preview);
         Console.WriteLine($"{preview}  {w}x{h}  theme {t.Name}");
-        return apply ? Run(() => LockScreenApplier.ApplyAsync(preview)) : 0;
+        if (!apply) return 0;
+        var code = Run(() => LockScreenApplier.ApplyAsync(preview));
+        if (code == 0 && !refresh && RefreshTask.Install(cfg.RefreshMinutes) is { } taskError)
+            Console.Error.WriteLine($"warning: the lock screen is set, but the scheduled refresh couldn't be added: {taskError}");
+        return code;
     }
 
     /// <summary>
@@ -137,6 +147,10 @@ static class SelfTest
         ThemeTests();
         RenderTests();
         EmblemTests();
+        var task = System.Xml.Linq.XDocument.Parse(RefreshTask.Xml(@"C:\a&b\Lockscreen.exe", 60)).Root!;
+        Eq(task.Descendants().Count(e => e.Name.LocalName.EndsWith("Trigger")), 3, "refresh task: sign-in, lock and timer triggers");
+        Check(task.Descendants().Any(e => e.Value == "PT60M") && task.Descendants().Any(e => e.Value == "SessionLock"), "refresh task: hourly and on lock");
+        Check(task.Descendants().First(e => e.Name.LocalName == "Arguments").Value.Contains(@"""C:\a&b\Lockscreen.exe"" --refresh"), "refresh task: exe path escaped and quoted");
         Console.WriteLine(failed == 0 ? "selftest ok" : $"selftest: {failed} failed");
         return failed == 0 ? 0 : 1;
     }

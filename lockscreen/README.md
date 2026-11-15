@@ -6,8 +6,9 @@ follows Beacon's style, so the lock screen matches the launcher and the widgets.
 
 ![Amber](../docs/media/lockscreen-amber.png)
 
-**Status: milestone 4 of 6.** The renderer, preview, apply, restore, the account emblem and
-the widgets work. Scheduled refresh is not built yet.
+**Status: all six milestones done.** The renderer, preview, apply and restore, the account
+emblem, the widgets and the scheduled refresh work. It ships in the NovaShield HUD installer;
+the full setup guide is in the [main README](../README.md#setup-guide).
 
 ## From Beacon
 
@@ -29,7 +30,7 @@ style or text shows. The command line below does the same thing.
 
 ### Putting it back
 
-`Lockscreen.exe --restore` sets your own picture back and deletes the saved copy.
+`Lockscreen.exe --restore` sets your own picture back, deletes the saved copy and removes the scheduled refresh.
 
 - The first `--apply` saves the picture you had, exactly as Windows hands it over, to
   `%LOCALAPPDATA%\LockscreenWidget\original`. Later applies never overwrite it with the HUD.
@@ -60,8 +61,9 @@ lockscreen/bin/Release/net10.0-windows/Lockscreen.exe --preview hud.png
 | `--theme <name>` | `amber`, `cyan`, `phosphor`, `redalert`, `mono`, `neon`, `custom`, or `beacon` (default) |
 | `--size <W>x<H>` | Render at this size instead of the primary monitor's real pixels |
 | `--debug-zones` | Outline the areas kept clear for the Windows clock and the sign-in box |
-| `--apply` | Render at the monitor's size and set it as the lock screen (see below) |
-| `--restore` | Put your own lock screen picture back |
+| `--apply` | Render at the monitor's size, set it as the lock screen, and add the scheduled refresh (see below) |
+| `--refresh` | What the scheduled task runs: re-apply, but only while the HUD is still your lock screen |
+| `--restore` | Put your own lock screen picture back and remove the scheduled refresh |
 | `--emblem <dir>` | Write the account-picture padlock PNGs (448 and 1080 px) for every theme, or just `--theme <name>`. Changes nothing |
 | `--status` | Show what's set and what's saved; changes nothing |
 | `--selftest` | Config parsing, tokens, theme math and a check of the rendered picture |
@@ -111,6 +113,20 @@ Corner text tokens: `{DATE}`, `{WEEKDAY}`, `{DAY_OF_YEAR}`, `{YEAR_PROGRESS}`,
 `{UPTIME_DAYS}`, `{COUNTDOWN:YYYY-MM-DD}`. There is no time-of-day token: Windows shows a
 live clock, and a time baked into a picture goes stale.
 
+## Scheduled refresh
+
+A picture can't update itself, so `--apply` adds one Task Scheduler task,
+**NovaShield HUD lock screen refresh**, for your account only. It runs `Lockscreen.exe --refresh`
+when you sign in, when you lock the PC, and every `refreshMinutes` (default 60), so `{DATE}`,
+`{WEEKDAY}`, `{UPTIME_DAYS}` and `{COUNTDOWN:...}` stay current.
+
+- Runs as you, with normal rights (no admin, no stored password, no downloads), hidden
+  (through `conhost --headless`), limited to 2 minutes, on battery too.
+- Only re-applies while the HUD is still the picture Windows shows. If you set a picture of
+  your own afterwards, or turn Spotlight on, it leaves the lock screen alone.
+- `--status` shows whether it's on; `--restore` (or uninstalling) removes it. It's made with
+  Windows' own `schtasks.exe`, so it also shows in Task Scheduler.
+
 ## Account picture emblem
 
 A matching padlock emblem for your Windows account picture. On the sign-in screen it sits in
@@ -159,17 +175,18 @@ powershell -ExecutionPolicy Bypass -File lockscreen\widgets\install.ps1
 ```
 
 `build-package.ps1` compiles the provider, renders its icons from the padlock emblem, packs the
-MSIX with `makeappx` and signs it. It creates the certificate (`CN=Vantage Dev`) in your user
+MSIX with `makeappx` and signs it. It creates the certificate (`CN=Vantage Dev`, the project's old name, kept so installed
+copies keep working) in your user
 store on first run. `install.ps1` adds that one certificate to Local Machine > Trusted People,
 which takes **one admin prompt**, then installs the package as you. It needs the Windows App
 Runtime 1.8, which Windows usually already has.
 
 ### Add them
 
-- **Widgets board:** Win+W > **+** (Add widgets) > **Vantage**.
+- **Widgets board:** Win+W > **+** (Add widgets) > **NovaShield HUD**.
 - **Lock screen:** Settings > Personalization > Lock screen > **Your widgets** > **Add widget**,
-  if Windows lists Vantage there. Windows decides which widgets may appear on the lock screen,
-  and on some builds it only offers its own. When it doesn't offer Vantage, the widgets still
+  if Windows lists NovaShield HUD there. Windows decides which widgets may appear on the lock screen,
+  and on some builds it only offers its own. When it doesn't offer them, the widgets still
   work on the Widgets board, and the rest of the lock screen HUD is unaffected.
 
 ![Lock screen widgets](widgets-lockscreen-placeholder.png) <!-- screenshot to be added -->
@@ -195,6 +212,8 @@ names or calendar details.
 - No system files or their permissions; Defender, SmartScreen, UAC and the lock itself stay on.
 - No auto-login, no second password screen.
 - No network calls, no telemetry.
+- The scheduled refresh is one task for your account, with your normal rights; it only re-sets
+  the HUD picture, and `--restore` removes it.
 - Spotlight and the sign-in screen background setting are only read or mentioned, never changed.
 - The widgets read only: your config, network up/down, battery and uptime. The one admin
   step trusts your own signing certificate, and `uninstall.ps1` takes it away again.

@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.IO;
+using System.Net.Http;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -326,6 +327,56 @@ public partial class SettingsWindow : Window
         LockPreview.Click += async (_, _) => await RunLockscreenAsync("preview");
         LockApply.Click += async (_, _) => await RunLockscreenAsync("apply");
         LockRestore.Click += async (_, _) => await RunLockscreenAsync("restore");
+
+        UpdateStatus.Text = $"This is version {Updater.Current}.";
+        CheckUpdates.Click += async (_, _) => await CheckForUpdateAsync();
+        InstallUpdate.Click += async (_, _) => await InstallUpdateAsync();
+    }
+
+    // ---------------------------------------------------------------- updates
+
+    private Updater.Release? _update;
+
+    private async Task CheckForUpdateAsync()
+    {
+        CheckUpdates.IsEnabled = false;
+        UpdateStatus.Text = "Checking GitHub…";
+        try
+        {
+            _update = await Updater.CheckAsync(CancellationToken.None);
+            UpdateStatus.Text = _update is null
+                ? $"You're up to date (version {Updater.Current})."
+                : $"Version {_update.Version} is available (you have {Updater.Current}).";
+            InstallUpdate.Visibility = _update is null ? Visibility.Collapsed : Visibility.Visible;
+            if (_update is not null) InstallUpdate.Content = $"Update to {_update.Version}";
+        }
+        catch (Exception e) when (e is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException or InvalidDataException or KeyNotFoundException or InvalidOperationException)
+        {
+            UpdateStatus.Text = e is HttpRequestException { StatusCode: System.Net.HttpStatusCode.NotFound }
+                ? "No release has been published yet."
+                : "Couldn't check for updates: " + e.Message;
+        }
+        finally { CheckUpdates.IsEnabled = true; }
+    }
+
+    private async Task InstallUpdateAsync()
+    {
+        if (_update is null) return;
+        CheckUpdates.IsEnabled = InstallUpdate.IsEnabled = false;
+        try
+        {
+            var setup = await Updater.DownloadAsync(_update,
+                new Progress<double>(p => UpdateStatus.Text = $"Downloading {_update.Version}… {p:P0}"), CancellationToken.None);
+            UpdateStatus.Text = "Installing. Beacon will restart by itself.";
+            Updater.Install(setup);
+            Suite.CloseDotline();
+            ((App)Application.Current).Quit();
+        }
+        catch (Exception e) when (e is HttpRequestException or TaskCanceledException or InvalidDataException or IOException or System.ComponentModel.Win32Exception)
+        {
+            UpdateStatus.Text = "Update failed, nothing was changed: " + e.Message;
+            CheckUpdates.IsEnabled = InstallUpdate.IsEnabled = true;
+        }
     }
 
     // ------------------------------------------------------------------ voice

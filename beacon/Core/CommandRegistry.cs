@@ -41,7 +41,7 @@ public sealed partial class CommandRegistry
         Add(ProductivityCommands(), "Productivity");
         Add(SearchCommands(apps, files), "Claude");
         Add(IndexCommands(rebuildIndex, openSettings), "Beacon");
-        Add(SuiteCommands(), "Vantage");
+        Add(SuiteCommands(), "NovaShield HUD");
 
         // Bindable in Settings > Shortcuts: one chord that opens the bar already listening.
         commands.Add(new BeaconCommand

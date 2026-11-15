@@ -4,7 +4,7 @@ using System.Text.Json;
 namespace Beacon.Core;
 
 /// <summary>
-/// Reads the focus session Dotline publishes to %APPDATA%\Vantage\focus.json, so the amber bar
+/// Reads the focus session Dotline publishes to %APPDATA%\NovaShieldHUD\focus.json, so the amber bar
 /// under the command input can show it. Missing, stale or unreadable file = no session.
 /// </summary>
 public static class FocusLink
@@ -12,7 +12,7 @@ public static class FocusLink
     public sealed record Session(int Seconds, DateTime EndsUtc, int? PausedLeftSeconds);
 
     static readonly string FilePath = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Vantage", "focus.json");
+        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "NovaShieldHUD", "focus.json");
 
     static DateTime _stamp;
     static Session? _cached;

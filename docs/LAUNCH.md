@@ -2,14 +2,17 @@
 
 ## Before going public
 
-1. **Rename** — done: *Vantage* (was a private working name that borrowed a trademark).
-2. **Licence** — currently all rights reserved. Later: keep source-available but all rights reserved for now, or open source
-   (MIT = simplest, Apache-2.0 = patent grant, GPL-3.0 = forks must stay open).
-3. **Security tests** in [SECURITY.md](../SECURITY.md) — at least 1–5 and 10.
-4. **Wallpaper.** Don't ship the map wallpaper (third-party image); document how to calibrate
+1. **Rename** — done: *NovaShield HUD* (was *Vantage*). Check the name before launch: a
+   Novashield, Inc. has filed NOVASHIELD for PC security software in the US (Class 9).
+2. **Licence** — decided: not open source. Free to install and use, source public to read, all
+   other rights reserved (LICENSE). Third-party licences in THIRD-PARTY-NOTICES.txt.
+3. **Code signing** — needed: Smart App Control blocks the unsigned installer and exes
+   outright. Azure Trusted Signing or an OV certificate, wired into installer/build.ps1.
+4. **Security tests** in [SECURITY.md](../SECURITY.md) — at least 1–5 and 10.
+5. **Wallpaper.** Don't ship the map wallpaper (third-party image); document how to calibrate
    another map, or ship a public-domain map (Natural Earth).
-5. **Releases.** GitHub Actions: build, self-tests, zip `Beacon` + `Dotline`, SHA-256 checksums.
-6. **Record the clips** in [DEMO-VIDEOS.md](DEMO-VIDEOS.md).
+6. **Releases** — done: push a `v*` tag; .github/workflows/release.yml builds both installers, runs the self-tests and publishes them with SHA256SUMS.txt.
+7. **Record the clips** in [DEMO-VIDEOS.md](DEMO-VIDEOS.md).
 
 ## Release & patch policy
 
@@ -22,7 +25,7 @@
 **Short (X / Threads / Bluesky)**
 > I turned my Windows desktop into a HUD. Alt+Space launcher, my life as dots on the
 > wallpaper, a focus timer and time zones you hover on a world
-> map. Local-first, no telemetry. Open source soon — want it? [link] [clip 6]
+> map. Local-first, no telemetry. Free download: [link] [clip 6]
 
 **Reddit (r/Windows11, r/desktops, r/csharp, r/productivity)**
 > **Title:** I built a tactical HUD for Windows: launcher + desktop widgets in one style
@@ -31,7 +34,7 @@
 > plain-English commands, local Whisper voice, optional Claude). **Dotline** puts widgets on
 > the desktop layer: life and goals as dots, a focus timer, up to five time-zone dots on a
 > world-map wallpaper. One look (Tactical, HUD or Classic) across both apps. Everything is stored locally.
-> Looking for feedback before I open-source it — what would you use it for?
+> Free to download. Looking for feedback — what would you use it for?
 
 **Show HN**
 > Show HN: A HUD for the Windows desktop – launcher and dot widgets in one style
@@ -40,4 +43,4 @@
 Hacker News, Product Hunt (after v1.0), a short YouTube/TikTok of clip 6.
 
 **Gauge demand:** GitHub stars/watchers, "Notify me" issue, comments asking for a download.
-Open-source when there's clear interest.
+

@@ -1,4 +1,4 @@
-# Removes the Vantage Widgets package and the development certificate install.ps1 trusted,
+# Removes the NovaShield HUD Widgets package and the development certificate install.ps1 trusted,
 # leaving the PC as it was. Removing the trusted certificate needs one admin prompt.
 $ErrorActionPreference = 'Stop'
 $subject = 'CN=Vantage Dev'

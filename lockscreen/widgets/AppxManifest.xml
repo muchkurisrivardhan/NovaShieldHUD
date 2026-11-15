@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Vantage Widgets: a headless, full-trust package whose only job is to host the widget
+  NovaShield HUD Widgets: a headless, full-trust package whose only job is to host the widget
   provider (an out-of-process COM server) for the Widgets board and, where Windows allows
   it, the lock screen. No Start menu entry (AppListEntry="none").
   Publisher must match the signing certificate's subject (see build-package.ps1).
@@ -16,8 +16,8 @@
   <Identity Name="Vantage.LockscreenWidgets" Publisher="CN=Vantage Dev" Version="1.0.0.0" ProcessorArchitecture="arm64" />
 
   <Properties>
-    <DisplayName>Vantage Widgets</DisplayName>
-    <PublisherDisplayName>Vantage</PublisherDisplayName>
+    <DisplayName>NovaShield HUD Widgets</DisplayName>
+    <PublisherDisplayName>NovaShield HUD</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
   </Properties>
 
@@ -37,20 +37,20 @@
 
   <Applications>
     <Application Id="App" Executable="VantageWidgets.exe" EntryPoint="Windows.FullTrustApplication">
-      <uap:VisualElements DisplayName="Vantage Widgets" Description="HUD widgets: node status, day and year progress, countdown"
+      <uap:VisualElements DisplayName="NovaShield HUD Widgets" Description="HUD widgets: node status, day and year progress, countdown"
                           BackgroundColor="transparent" AppListEntry="none"
                           Square150x150Logo="Assets\Square150x150Logo.png" Square44x44Logo="Assets\Square44x44Logo.png" />
       <Extensions>
         <com:Extension Category="windows.comServer">
           <com:ComServer>
-            <com:ExeServer Executable="VantageWidgets.exe" Arguments="-RegisterProcessAsComServer" DisplayName="Vantage Widgets">
-              <com:Class Id="7E3F9A20-5C84-4E1B-9D6F-2A1C3B4D5E6F" DisplayName="Vantage Widget Provider" />
+            <com:ExeServer Executable="VantageWidgets.exe" Arguments="-RegisterProcessAsComServer" DisplayName="NovaShield HUD Widgets">
+              <com:Class Id="7E3F9A20-5C84-4E1B-9D6F-2A1C3B4D5E6F" DisplayName="NovaShield HUD Widget Provider" />
             </com:ExeServer>
           </com:ComServer>
         </com:Extension>
 
         <uap3:Extension Category="windows.appExtension">
-          <uap3:AppExtension Name="com.microsoft.windows.widgets" DisplayName="Vantage" Id="VantageWidgets" PublicFolder="Public">
+          <uap3:AppExtension Name="com.microsoft.windows.widgets" DisplayName="NovaShield HUD" Id="VantageWidgets" PublicFolder="Public">
             <uap3:Properties>
               <WidgetProvider>
                 <ProviderIcons>

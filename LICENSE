@@ -1,4 +1,18 @@
-﻿Copyright (c) 2026 muchkurisrivardhan. All rights reserved.
+﻿NovaShield HUD
+Copyright (c) 2026 muchkurisrivardhan. All rights reserved.
 
-The source is published for review and feedback. No licence is granted to use, copy,
-modify or distribute it until an open-source licence is added to this repository.
+This is not open-source software.
+
+Using the app: you may download the official NovaShield HUD installer from the project's
+GitHub Releases page, install it, and use it free of charge on your own computers.
+
+Everything else is reserved: the source code is published so it can be read and reviewed,
+but no licence is granted to copy, modify, redistribute, sell or publish it or the installer,
+or works based on them, without written permission.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY CLAIM, DAMAGES
+OR OTHER LIABILITY ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR ITS USE.
+
+Third-party components are under their own licences: see THIRD-PARTY-NOTICES.txt.

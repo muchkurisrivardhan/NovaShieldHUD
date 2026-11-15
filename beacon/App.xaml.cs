@@ -545,6 +545,9 @@ public partial class App : System.Windows.Application
         _tray.ShowBalloonTip(4000);
     }
 
+    /// <summary>For the updater: leave so the installer can replace Beacon's files.</summary>
+    public void Quit() => ExitCleanly();
+
     private void ExitCleanly()
     {
         _hotkeys?.Dispose();

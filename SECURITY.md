@@ -18,10 +18,12 @@ Only the latest release gets security fixes.
 | **Claude integration** | Model output chooses commands to run — prompt injection risk (e.g. from clipboard or page text) | Only registered commands can be called, with typed parameters; destructive ones gated. API key stored with Windows DPAPI (current user) |
 | **Local voice** | Microphone audio | Transcribed on the PC with Whisper; not uploaded |
 | **Network calls** | Claude API; favicons fetched directly from each site | Responses parsed as data, never executed |
-| **Hand-off files** in `%APPDATA%\Vantage` | Any program running as you can write them | Treated as untrusted: malformed files ignored |
+| **Hand-off files** in `%APPDATA%\NovaShieldHUD` | Any program running as you can write them | Treated as untrusted: malformed files ignored |
 | **Beacon starts Dotline** | Finds `dotline\` by walking up from Beacon's folder | Same-user only; the path is not taken from any file or input |
 | **Beacon closes Dotline** | Ends processes named `Dotline` | Same-user processes only |
 | **Beacon edits Dotline's settings** | Writes `%APPDATA%\Dotline\state.json`; Dotline reads Beacon's style from `%APPDATA%\Beacon\settings.json` | Same-user files; only known fields are changed, a file that can't be read is never overwritten, Dotline is stopped before the write so it can't save over it |
+| **Check for updates** (Beacon) | Downloads and runs an installer | Only when you click. GitHub over HTTPS; the installer must match the SHA-256 in the same release's `SHA256SUMS.txt` or it's deleted. Per-user install, no elevation. Not code-signed yet: checksums catch corruption, not a compromised GitHub account |
+| **Scheduled refresh** (Lockscreen) | A task that runs `Lockscreen.exe` at sign-in, lock and hourly | Current user only, least privilege, no stored password. Points at the installed exe by full path; re-applies only while the HUD is still the lock screen. Removed by `--restore` and uninstall |
 | **State files** | Settings, goals, focus log | Local only; atomic writes; damaged files are kept aside, not overwritten |
 
 ## Checked so far (2026-09-22)

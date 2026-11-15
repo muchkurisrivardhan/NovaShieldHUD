@@ -5,3 +5,4 @@ dist/
 .vs/
 *.tmp
 lockscreen/widgets/out/
+installer/out/

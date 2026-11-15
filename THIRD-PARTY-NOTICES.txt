@@ -1,0 +1,52 @@
+NovaShield HUD - third-party software notices
+=============================================
+
+NovaShield HUD itself is not open source (see LICENSE). It includes the open-source
+components below, each used under its own licence. Their copyright notices and licence
+text are reproduced here as those licences require.
+
+Component                              Licence  Copyright
+-------------------------------------  -------  ------------------------------------------------
+Anthropic C# SDK (Anthropic)           MIT      Copyright 2026 Anthropic
+NAudio (NAudio.Core, .WinMM, .Midi)    MIT      Copyright (c) Mark Heath
+Whisper.net, Whisper.net.Runtime       MIT      Copyright (c) 2024 sandrohanea
+whisper.cpp / ggml (inside Whisper.net.Runtime)
+                                       MIT      Copyright (c) 2023-2024 The ggml authors
+Microsoft.Extensions.AI.Abstractions   MIT      Copyright (c) Microsoft Corporation
+System.Numerics.Tensors                MIT      Copyright (c) .NET Foundation and Contributors
+.NET runtime, WPF and Windows Forms    MIT      Copyright (c) .NET Foundation and Contributors
+  (bundled because the apps are self-contained; the runtime's own notices:
+   https://github.com/dotnet/runtime/blob/main/THIRD-PARTY-NOTICES.TXT)
+C#/WinRT (WinRT.Runtime) and the
+Windows SDK projection                 MIT      Copyright (c) Microsoft Corporation
+
+Not bundled: Whisper speech models are downloaded only when you choose one in Beacon's
+Voice settings (OpenAI Whisper, MIT, Copyright (c) 2022 OpenAI). The optional Widgets-board
+package uses the Windows App SDK, installed by Windows, not by this installer.
+
+MIT License (applies to each component above)
+---------------------------------------------
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this
+software and associated documentation files (the "Software"), to deal in the Software
+without restriction, including without limitation the rights to use, copy, modify, merge,
+publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons
+to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or
+substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE
+FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE.
+
+Trademarks
+----------
+
+Windows, Windows Hello and Windows Spotlight are trademarks of Microsoft Corporation.
+Claude and Anthropic are trademarks of Anthropic, PBC. GitHub is a trademark of GitHub, Inc.
+Buy Me a Coffee is a trademark of its owner. NovaShield HUD is not affiliated with or
+endorsed by any of them; the names are used only to say what the software works with.

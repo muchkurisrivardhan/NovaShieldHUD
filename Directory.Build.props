@@ -1,0 +1,9 @@
+<Project>
+  <!-- One version for every app. Releases override it from the git tag (v1.2.3 -> 1.2.3);
+       Beacon's "Check for updates" compares against it. -->
+  <PropertyGroup>
+    <Version>0.5.0</Version>
+    <Product>NovaShield HUD</Product>
+    <Copyright>Copyright (c) 2026 muchkurisrivardhan. All rights reserved.</Copyright>
+  </PropertyGroup>
+</Project>

@@ -391,6 +391,19 @@
 
                     <Border Style="{StaticResource Card}">
                         <StackPanel>
+                            <TextBlock Text="Updates" Style="{StaticResource GroupHeader}" />
+                            <StackPanel Orientation="Horizontal">
+                                <Button x:Name="CheckUpdates" Content="Check for updates" Margin="0,0,8,0" />
+                                <Button x:Name="InstallUpdate" Content="Update" Visibility="Collapsed" />
+                            </StackPanel>
+                            <TextBlock x:Name="UpdateStatus" Style="{StaticResource Caption}" TextWrapping="Wrap" />
+                            <TextBlock Style="{StaticResource Caption}"
+                                       Text="Looks for a newer release on GitHub only when you click. Update downloads the installer, checks it against the release's published SHA-256, installs it for you only (no admin) and restarts Beacon. Your settings are kept." />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
                             <TextBlock Text="Launcher shortcut" Style="{StaticResource GroupHeader}" />
                             <StackPanel Orientation="Horizontal">
                                 <ui:HotkeyBox x:Name="LauncherHotkey" MinWidth="190" />

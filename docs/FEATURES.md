@@ -6,7 +6,7 @@ Everything the two apps do, how it works, and why you'd use it. Dates are when e
 
 Beacon's own feature table is in [beacon/README.md](../beacon/README.md): apps, files, windows,
 system commands, sites, calculator, plain-English sentences, local voice (Whisper), Claude
-(`?`), custom commands, timers and reminders, quick answers. Added for Vantage:
+(`?`), custom commands, timers and reminders, quick answers. Added for NovaShield HUD:
 
 | Feature | How it works | Use case | Added |
 |---|---|---|---|

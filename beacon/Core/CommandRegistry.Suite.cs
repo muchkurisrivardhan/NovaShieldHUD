@@ -2,7 +2,7 @@ namespace Beacon.Core;
 
 public sealed partial class CommandRegistry
 {
-    /// <summary>The other Vantage apps: Dotline (desktop widgets, focus timer, wallpaper map).</summary>
+    /// <summary>The other NovaShield HUD apps: Dotline (desktop widgets, focus timer, wallpaper map).</summary>
     private static IEnumerable<BeaconCommand> SuiteCommands()
     {
         yield return new BeaconCommand
