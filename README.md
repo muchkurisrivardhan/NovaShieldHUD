@@ -4,7 +4,7 @@ A tactical HUD layer for the Windows desktop: a keyboard launcher, desktop widge
 timer, a live world map on your wallpaper and a matching lock screen, all in one
 gunmetal-and-amber style.
 
-**Website and downloads:** <https://muchkurisrivardhan.github.io/vantage/>
+**Website and downloads:** <https://muchkurisrivardhan.github.io/NovaShieldHUD/>
 
 | Part | What it is |
 |---|---|
