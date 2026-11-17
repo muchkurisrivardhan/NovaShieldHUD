@@ -4,10 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>NovaShield HUD: a tactical HUD for your Windows desktop</title>
-  <meta name="description" content="An Alt+Space launcher, widgets on your wallpaper and a matching lock screen for Windows. One look everywhere. Everything stays on your PC.">
+  <meta name="description" content="An Alt+Space launcher, and widgets on your wallpaper for Windows. One look everywhere. Everything stays on your PC.">
   <meta property="og:title" content="NovaShield HUD">
-  <meta property="og:description" content="A tactical HUD for your Windows desktop: launcher, wallpaper widgets and a matching lock screen.">
-  <meta property="og:image" content="img/lock-amber.jpg">
+  <meta property="og:description" content="A tactical HUD for your Windows desktop: a launcher and wallpaper widgets.">
+  <meta property="og:image" content="img/focus-timer.png">
   <link rel="icon" href="img/icon-64.png">
   <link rel="apple-touch-icon" href="img/icon-180.png">
   <link rel="stylesheet" href="style.css">
@@ -20,7 +20,6 @@
     <nav class="links" aria-label="Sections">
       <a href="#how">How it works</a>
       <a href="#modules">Modules</a>
-      <a href="#lockscreen">Lock screen</a>
       <a href="#sponsor">Sponsor</a>
       <a href="#faq">FAQ</a>
     </nav>
@@ -40,10 +39,9 @@
   <section class="hero">
     <div class="wrap hero-in">
       <div class="hero-copy">
-        <a class="badge" href="#lockscreen"><span class="dot"></span>New: a lock screen HUD in six themes, with one-click restore</a>
         <p class="kicker">For Windows 10 and 11</p>
-        <h1>Type.<br>Glance.<br><span class="grad">Lock.</span></h1>
-        <p class="lede">A tactical HUD for your Windows desktop: an <kbd>Alt</kbd>+<kbd>Space</kbd> launcher, widgets that live on your wallpaper, and a lock screen to match. One look everywhere. No account, no telemetry: it all runs on your PC.</p>
+        <h1>Type.<br>Glance.<br><span class="grad">Focus.</span></h1>
+        <p class="lede">A tactical HUD for your Windows desktop: an <kbd>Alt</kbd>+<kbd>Space</kbd> launcher and widgets that live on your wallpaper. One look everywhere. No account, no telemetry: it all runs on your PC.</p>
         <div class="cta">
           <a class="btn" href="#download">Choose a download</a>
           <a class="btn btn-ghost" href="#modules">See what's inside</a>
@@ -94,8 +92,8 @@
   <section class="section alt" id="modules">
     <div class="wrap">
       <p class="eyebrow">Modules</p>
-      <h2>Three parts, one look</h2>
-      <p class="sub">Install once and configure everything from one Settings window. Change the style there and the widgets and lock screen follow.</p>
+      <h2>Two parts, one look</h2>
+      <p class="sub">Install once and configure everything from one Settings window. Change the style there and the widgets follow.</p>
       <div class="cards3">
         <article class="card">
           <div class="card-art art-beacon" aria-hidden="true">
@@ -122,48 +120,6 @@
             <li>Under every window, still there after Win+D</li>
           </ul>
         </article>
-        <article class="card">
-          <div class="card-art"><img src="img/lock-amber.jpg" alt="The amber lock screen HUD: rings around an empty centre and four corner readouts" loading="lazy"></div>
-          <h3>Lock screen <span>HUD</span></h3>
-          <ul>
-            <li>A HUD picture for the lock and sign-in screens</li>
-            <li>Six themes, corner text you write, live date tokens</li>
-            <li>A matching padlock account picture</li>
-            <li>Widgets for the Widgets board</li>
-          </ul>
-        </article>
-      </div>
-    </div>
-  </section>
-
-  <!-- ============================ lock screen ============================ -->
-  <section class="section" id="lockscreen">
-    <div class="wrap">
-      <p class="eyebrow">Lock screen</p>
-      <h2>Your lock screen, in the same uniform</h2>
-      <p class="sub">Drawn at your monitor's real resolution and set through Windows' own lock screen settings. Signing in with your PIN, password or Windows Hello works exactly as before, and one click puts your old picture back.</p>
-      <div class="themes" role="tablist" aria-label="Lock screen theme">
-        <button role="tab" aria-selected="true" data-theme="amber" style="--c:#FFB000">Amber</button>
-        <button role="tab" aria-selected="false" data-theme="cyan" style="--c:#00E5FF">Cyan</button>
-        <button role="tab" aria-selected="false" data-theme="phosphor" style="--c:#33FF66">Phosphor</button>
-        <button role="tab" aria-selected="false" data-theme="neon" style="--c:#FF2E97">Neon</button>
-        <button role="tab" aria-selected="false" data-theme="redalert" style="--c:#FF3B3B">Red alert</button>
-        <button role="tab" aria-selected="false" data-theme="mono" style="--c:#E8E8E8">Mono</button>
-      </div>
-      <figure class="screen">
-        <img id="lockimg" src="img/lock-amber.jpg" alt="Lock screen HUD in the amber theme" width="1600" height="900">
-      </figure>
-      <div class="lock-extras">
-        <div class="extra">
-          <img id="emblem" src="img/emblem-amber.png" alt="Padlock account picture in the amber theme" width="160" height="160" loading="lazy">
-          <div><h3>Account picture</h3><p>A padlock emblem that sits in the empty centre of the rings on the sign-in screen. Generated in every theme.</p></div>
-        </div>
-        <div class="extra widgets">
-          <img src="img/widget-node.png" alt="Node Status widget: link online, power, uptime" width="150" height="152" loading="lazy">
-          <img src="img/widget-progress.png" alt="Day and year progress widget" width="150" height="152" loading="lazy">
-          <img src="img/widget-countdown.png" alt="Countdown widget: 48 days" width="150" height="152" loading="lazy">
-          <div><h3>Widgets</h3><p>Node status, day and year progress, and a countdown, for the Widgets board. Nothing private: no PC name, no network name, no notifications.</p></div>
-        </div>
       </div>
     </div>
   </section>
@@ -174,12 +130,11 @@
       <p class="eyebrow">Built in</p>
       <h2>What NovaShield HUD does</h2>
       <div class="grid">
-        <div class="feat"><h3>Six looks</h3><p>Tactical, HUD, Classic, Cyberpunk, Retro CRT and Minimal mono, plus any accent colour. The launcher, widgets and lock screen all switch together.</p></div>
+        <div class="feat"><h3>Six looks</h3><p>Tactical, HUD, Classic, Cyberpunk, Retro CRT and Minimal mono, plus any accent colour. The launcher and widgets switch together.</p></div>
         <div class="feat"><h3>Plain English</h3><p>"Turn the volume to 75 and dim the screen" runs as two steps, worked out on your PC without a model.</p></div>
         <div class="feat"><h3>Voice on your PC</h3><p>Speak instead of typing. Whisper transcribes on your machine; the audio never leaves it.</p></div>
         <div class="feat"><h3>Claude when you want it</h3><p>Start with <kbd>?</kbd> for anything else. Claude can only use Beacon's own commands, and destructive ones ask you first.</p></div>
         <div class="feat"><h3>Focus and time</h3><p>A focus timer on your desktop, its countdown in the launcher, and time zones you can hover on the wallpaper map.</p></div>
-        <div class="feat"><h3>Reversible by design</h3><p>Your original lock screen picture is saved before anything changes, and restored byte for byte.</p></div>
         <div class="feat"><h3>Private</h3><p>No account, no telemetry, no ads. Settings stay in your profile; your API key is encrypted with Windows.</p></div>
         <div class="feat"><h3>Light on your PC</h3><p>Ambient animations run at a low frame rate and shadows sit on static layers, so the widgets idle at a few percent of one core.</p></div>
         <div class="feat"><h3>No hacks</h3><p>No injection, no hooks, no patched system files. Only documented Windows features, and no admin rights for the apps.</p></div>
@@ -192,7 +147,7 @@
     <div class="wrap">
       <p class="eyebrow">Download</p>
       <h2>Choose a download</h2>
-      <p class="sub">One installer sets up the launcher, the widgets and the lock screen together. It installs for you only, with no admin prompt and nothing else to download. Later updates are one click: Beacon Settings → General → <b>Check for updates</b>.</p>
+      <p class="sub">One installer sets up the launcher and the widgets together. It installs for you only, with no admin prompt and nothing else to download. Later updates are one click: Beacon Settings → General → <b>Check for updates</b>.</p>
       <div class="dl">
         <div class="dl-card">
           <h3>Windows <span>x64</span></h3>
@@ -272,11 +227,10 @@
       <h2>Questions</h2>
       <details><summary>Is it free?</summary><p>Yes. Downloading and using NovaShield HUD is free. Sponsors keep it that way.</p></details>
       <details><summary>Does it send my data anywhere?</summary><p>No. There's no account and no telemetry. It only goes online when you ask Claude (with your own API key) and to fetch website icons for the launcher, which you can turn off.</p></details>
-      <details><summary>What does the lock screen part change?</summary><p>Only the lock screen picture, through the same setting Windows uses. Your sign-in, PIN, password and Windows Hello are untouched. Your old picture is saved first, and Restore puts it back.</p></details>
-      <details><summary>Does it need admin rights?</summary><p>The launcher, desktop widgets and lock screen picture don't. Installing the Widgets-board widgets asks once, to trust their signing certificate; uninstalling takes it away again.</p></details>
+      <details><summary>Does it need admin rights?</summary><p>No. It installs for you only and runs with your normal rights.</p></details>
       <details><summary>Which PCs does it run on?</summary><p>Windows 10 and Windows 11, on x64 (Intel and AMD) and ARM64 (Snapdragon) PCs.</p></details>
       <details><summary>How do updates work?</summary><p>Beacon never checks on its own. In Settings → General, <b>Check for updates</b> looks at the latest GitHub release; <b>Update</b> downloads it, checks its SHA-256 against the release, installs it and restarts Beacon. Your settings stay as they are.</p></details>
-      <details><summary>How do I uninstall it?</summary><p>Settings → Apps → Installed apps → NovaShield HUD → Uninstall. That puts your own lock screen picture back and removes its scheduled refresh. Your settings folders are left in case you reinstall.</p></details>
+      <details><summary>How do I uninstall it?</summary><p>Settings → Apps → Installed apps → NovaShield HUD → Uninstall. Your settings folders are left in case you reinstall.</p></details>
       <details><summary>Can I see the code?</summary><p>Yes, it's public to read on <a href="https://github.com/muchkurisrivardhan/vantage">GitHub</a>. It isn't open source: the app is free to install and use, and all other rights are reserved. The open-source parts it's built on are listed, with their licences, in THIRD-PARTY-NOTICES.txt.</p></details>
     </div>
   </section>
