@@ -64,5 +64,23 @@ Filename: "{app}\Beacon.exe"; Description: "Start NovaShield HUD"; Flags: nowait
 
 [UninstallRun]
 Filename: "{sys}\taskkill.exe"; Parameters: "/F /IM Beacon.exe /IM Dotline.exe"; Flags: runhidden; RunOnceId: "StopApps"
-; Puts your own lock screen picture back and removes the scheduled refresh.
-Filename: "{app}\Lockscreen.exe"; Parameters: "--restore"; Flags: runhidden; RunOnceId: "RestoreLockScreen"
+
+[Code]
+// ponytail: v0.5.0 shipped a lock screen HUD that has since been removed. When updating over
+// it, put the user's own picture back, remove its scheduled task, then delete the old program.
+// Drop this block once nobody is left on 0.5.0.
+procedure CurStepChanged(CurStep: TSetupStep);
+var
+  Old: String;
+  Rc: Integer;
+begin
+  Old := ExpandConstant('{app}\Lockscreen');
+  if (CurStep = ssInstall) and FileExists(Old + '.exe') then
+  begin
+    Exec(Old + '.exe', '--restore', '', SW_HIDE, ewWaitUntilTerminated, Rc);
+    DeleteFile(Old + '.exe');
+    DeleteFile(Old + '.dll');
+    DeleteFile(Old + '.deps.json');
+    DeleteFile(Old + '.runtimeconfig.json');
+  end;
+end;

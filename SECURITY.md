@@ -23,7 +23,6 @@ Only the latest release gets security fixes.
 | **Beacon closes Dotline** | Ends processes named `Dotline` | Same-user processes only |
 | **Beacon edits Dotline's settings** | Writes `%APPDATA%\Dotline\state.json`; Dotline reads Beacon's style from `%APPDATA%\Beacon\settings.json` | Same-user files; only known fields are changed, a file that can't be read is never overwritten, Dotline is stopped before the write so it can't save over it |
 | **Check for updates** (Beacon) | Downloads and runs an installer | Only when you click. GitHub over HTTPS; the installer must match the SHA-256 in the same release's `SHA256SUMS.txt` or it's deleted. Per-user install, no elevation. Not code-signed yet: checksums catch corruption, not a compromised GitHub account |
-| **Scheduled refresh** (Lockscreen) | A task that runs `Lockscreen.exe` at sign-in, lock and hourly | Current user only, least privilege, no stored password. Points at the installed exe by full path; re-applies only while the HUD is still the lock screen. Removed by `--restore` and uninstall |
 | **State files** | Settings, goals, focus log | Local only; atomic writes; damaged files are kept aside, not overwritten |
 
 ## Checked so far (2026-09-22)

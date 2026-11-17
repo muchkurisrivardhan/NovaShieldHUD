@@ -1,4 +1,4 @@
-# Builds installer\out\NovaShieldHUD-Setup-<arch>.exe: publishes Beacon, Dotline and Lockscreen
+# Builds installer\out\NovaShieldHUD-Setup-<arch>.exe: publishes Beacon and Dotline
 # self-contained (no .NET install needed) into one folder, then packs it with Inno Setup 6.
 #   powershell -ExecutionPolicy Bypass -File installer\build.ps1 -Arch x64 -Version 0.5.0
 param(
@@ -10,7 +10,7 @@ $root = Split-Path $PSScriptRoot
 $stage = Join-Path $PSScriptRoot "out\stage-$Arch"
 if (Test-Path $stage) { Remove-Item $stage -Recurse -Force }
 
-foreach ($proj in 'beacon\Beacon.csproj', 'dotline\Dotline.csproj', 'lockscreen\Lockscreen.csproj') {
+foreach ($proj in 'beacon\Beacon.csproj', 'dotline\Dotline.csproj') {
     dotnet publish (Join-Path $root $proj) -c Release -r "win-$Arch" --self-contained -o $stage -p:Version=$Version -nologo -v q
     if ($LASTEXITCODE) { throw "publish failed: $proj" }
 }

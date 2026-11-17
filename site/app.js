@@ -53,8 +53,7 @@ const APPS = ['Visual Studio Code', 'Spotify', 'Microsoft Edge', 'File Explorer'
 const DEFAULTS = [
   { g: 'D', t: 'Open Dotline', s: 'Life, goals, focus timer and the wallpaper map', src: 'SUITE', run: 'Opened Dotline' },
   { g: '25', t: 'Start a 25 minute focus session', s: 'The countdown shows in this bar', src: 'FOCUS', run: 'Focus: 25:00 left' },
-  { g: 'L', t: 'Lock screen: apply the HUD', s: 'Your current picture is saved first', src: 'LOCK', run: 'Lock screen set (demo)' },
-  { g: 'S', t: 'Settings', s: 'Style, accent colour, widgets and lock screen', src: 'BEACON', run: 'Opened Settings (demo)' },
+  { g: 'S', t: 'Settings', s: 'Style, accent colour and widgets', src: 'BEACON', run: 'Opened Settings (demo)' },
 ];
 
 const fuzzy = (q, s) => {
@@ -141,27 +140,12 @@ input.addEventListener('keydown', e => {
 $$('.chip[data-try]').forEach(b => b.addEventListener('click', () => { input.value = b.dataset.try; sel = 0; render(); input.focus(); }));
 render();
 
-// ---- launcher style chips: re-skin the mock, and show the matching lock screen theme ----
-const STYLE_TO_THEME = { tactical: 'amber', hud: 'cyan', crt: 'phosphor', cyberpunk: 'neon', mono: 'mono' };
+// ---- launcher style chips: re-skin the mock ----
 const tryit = $('#tryit');
 $$('.styles button').forEach(b => b.addEventListener('click', () => {
   tryit.dataset.style = b.dataset.style;
   $$('.styles button').forEach(x => x.setAttribute('aria-checked', String(x === b)));
-  setTheme(STYLE_TO_THEME[b.dataset.style]);
 }));
-
-// ---- lock screen theme tabs ----
-const lockImg = $('#lockimg'), emblem = $('#emblem');
-function setTheme(theme) {
-  const tab = $(`.themes button[data-theme="${theme}"]`);
-  if (!tab) return;
-  $$('.themes button').forEach(x => x.setAttribute('aria-selected', String(x === tab)));
-  lockImg.src = `img/lock-${theme}.jpg`;
-  lockImg.alt = `Lock screen HUD in the ${tab.textContent.toLowerCase()} theme`;
-  emblem.src = `img/emblem-${theme}.png`;
-}
-$$('.themes button').forEach(b => b.addEventListener('click', () => setTheme(b.dataset.theme)));
-['amber', 'cyan', 'phosphor', 'neon', 'redalert', 'mono'].forEach(t => { new Image().src = `img/lock-${t}.jpg`; });
 
 // ---- sponsor tabs and links ----
 $$('.sp-tabs button').forEach(b => b.addEventListener('click', () => {

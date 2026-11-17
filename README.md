@@ -1,7 +1,7 @@
 # NovaShield HUD
 
 A tactical HUD layer for the Windows desktop: a keyboard launcher, desktop widgets, a focus
-timer, a live world map on your wallpaper and a matching lock screen, all in one
+timer and a live world map on your wallpaper, all in one
 gunmetal-and-amber style.
 
 **Website and downloads:** <https://muchkurisrivardhan.github.io/NovaShieldHUD/>
@@ -10,7 +10,6 @@ gunmetal-and-amber style.
 |---|---|
 | **[Beacon](beacon/)** | A Spotlight-style launcher. `Alt+Space`, type, Enter. Apps, files, windows, system commands, timers, plain-English sentences, local voice, and Claude for anything else. |
 | **[Dotline](dotline/)** | Desktop widgets that sit on your wallpaper: your life and your goals as dots, a focus timer, and time zones on a world-map wallpaper. Set up through Beacon, always in Beacon's style. |
-| **[Lockscreen](lockscreen/)** | A HUD picture for the Windows lock and sign-in screens, in Beacon's style, kept current by a scheduled refresh. Plus a matching account picture and Widgets-board widgets. |
 
 ![Focus timer](docs/media/focus-timer.png)
 
@@ -37,30 +36,12 @@ Everything is in **Beacon Settings** (tray icon > Settings, or type `settings`):
 | Page | What to set |
 |---|---|
 | **General** | Start Beacon when you sign in, the launcher shortcut, **Check for updates** |
-| **Appearance** | The style (Tactical, HUD, Classic, Cyberpunk, Retro CRT, Minimal mono) and accent colour. Dotline and the lock screen follow |
+| **Appearance** | The style (Tactical, HUD, Classic, Cyberpunk, Retro CRT, Minimal mono) and accent colour. Dotline follows |
 | **Dotline** | Your birthday and lifespan, dot size, background, lock positions, time-zone dots |
 | **Voice** | Download a Whisper model to speak instead of typing (`Alt+M`) |
 | **Plain English** | Your Anthropic API key, only if you want `?` / Claude |
 
-### 3. The lock screen
-
-1. Windows must show a **Picture** on the lock screen, not Windows Spotlight:
-   Settings > Personalization > Lock screen > Personalize your lock screen > **Picture**.
-2. Beacon Settings > Appearance > **Lock screen**: pick a style, edit the corner text,
-   **Preview**, then **Apply to lock screen**. Your own picture is saved first.
-3. Optional: Settings > Personalization > Lock screen > **Show the lock screen background
-   picture on the sign-in screen**, to see the HUD behind the PIN box too.
-4. Press `Win+L`.
-
-Applying also adds a **scheduled refresh** (below), so the date and uptime on the picture
-stay current. **Restore my picture** puts your own picture back byte for byte and removes the
-refresh.
-
-Optional extras, in [lockscreen/README.md](lockscreen/README.md): a matching padlock account
-picture, and widgets for the Widgets board (that one asks for admin once, to trust its
-signing certificate).
-
-### 4. Updates
+### 3. Updates
 
 Beacon never checks by itself. Settings > General > **Check for updates** asks GitHub for the
 latest release; **Update** downloads the installer, checks it against the SHA-256 published
@@ -69,29 +50,10 @@ with the release, installs it over the old version and restarts Beacon. Settings
 For maintainers: push a tag like `v0.6.0` and [the release workflow](.github/workflows/release.yml)
 builds both installers, runs the self-tests and publishes the release that Update offers.
 
-### 5. Uninstall
+### 4. Uninstall
 
-Settings > Apps > Installed apps > **NovaShield HUD** > Uninstall. It stops the apps, puts your
-own lock screen picture back and removes the scheduled refresh. Your settings folders (below)
+Settings > Apps > Installed apps > **NovaShield HUD** > Uninstall. It stops the apps. Your settings folders (below)
 are left for a reinstall; delete them to remove every trace.
-
-## Auto-refresh: the scheduled task
-
-`Lockscreen.exe --apply` (and Beacon's Apply button) registers one Task Scheduler task,
-**NovaShield HUD lock screen refresh**, for your account only:
-
-| When | What |
-|---|---|
-| You sign in | re-renders the HUD and sets it again |
-| You lock the PC (`Win+L`) | same |
-| Every hour (`refreshMinutes` in the config, 15 to 1440) | same |
-
-- It runs as you, with your normal rights: no admin, no stored password, no downloads.
-- It runs `Lockscreen.exe --refresh` hidden, which only re-applies while the HUD is still your
-  lock screen. If you've since set another picture yourself, or turned Spotlight on, it
-  changes nothing.
-- See it in Task Scheduler (Task Scheduler Library), or with `Lockscreen.exe --status`.
-- **Restore my picture**, `Lockscreen.exe --restore` or uninstalling removes it.
 
 ## What this does NOT touch
 
@@ -99,17 +61,11 @@ are left for a reinstall; delete them to remove every trace.
   untouched. No auto-login, no second password screen.
 - **Windows itself.** No code injected into, hooked into or replaced in any Windows process. No
   system files or their permissions. Defender, SmartScreen, UAC and the lock itself stay on.
-- **Admin rights.** The apps, the lock screen picture and the scheduled refresh need none.
-  The only admin step is the optional Widgets-board package trusting its own certificate.
-- **Your settings.** Spotlight and the sign-in-screen background setting are only read or
-  mentioned, never changed. Only the lock screen picture is set, through Windows' documented
-  lock screen API, and your own picture is saved first.
-- **Other users.** Everything is per user: the install, the settings, the scheduled task.
+- **Admin rights.** The apps need none.
+- **Other users.** Everything is per user: the install and the settings.
 - **The network,** except: Claude (only when you ask it, with your own key), website icons in
   the launcher (can be turned off), the Whisper model you choose to download, and GitHub
   when you click Check for updates. No telemetry, no account, no ads.
-- **What's on the lock screen.** Only the corner text you type and the date/uptime fill-ins: no
-  user name, PC name, IP address, email, notifications, file names or calendar.
 
 ## Where your data lives
 
@@ -120,7 +76,6 @@ All state is local, per Windows user:
 | `%APPDATA%\Beacon\` | settings (API key encrypted with Windows DPAPI), timers, usage counts |
 | `%APPDATA%\Dotline\state.json` | birthday, goals, widget layout, focus log, map zones |
 | `%APPDATA%\NovaShieldHUD\` | hand-off file between the apps: the running focus session |
-| `%LOCALAPPDATA%\LockscreenWidget\` | lock screen config, the rendered picture, your saved original |
 
 Details in [SECURITY.md](SECURITY.md).
 
@@ -131,7 +86,6 @@ Windows 10/11, .NET 10 SDK.
 ```bash
 dotnet build -c Release beacon/Beacon.csproj
 dotnet publish -c Release -o dotline/dist dotline/Dotline.csproj
-dotnet build -c Release lockscreen/Lockscreen.csproj
 ```
 
 Run `beacon/bin/Release/net10.0-windows/Beacon.exe`; it finds and starts the others.
@@ -140,7 +94,6 @@ Self-tests:
 
 ```bash
 dotnet dotline/bin/Release/net10.0-windows/Dotline.dll --selftest
-lockscreen/bin/Release/net10.0-windows10.0.19041.0/Lockscreen.exe --selftest
 ```
 
 The installer (needs [Inno Setup 6](https://jrsoftware.org/isinfo.php): `winget install JRSoftware.InnoSetup`):

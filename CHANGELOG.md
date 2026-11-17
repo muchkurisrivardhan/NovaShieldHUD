@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### 2026-11-16
+- **Removed the lock screen HUD** (the Lockscreen app, its Widgets-board widgets, and the Lock screen card in Beacon Settings → Appearance). Updating over 0.5.0 puts your own lock screen picture back and removes the scheduled refresh. If you installed the Widgets-board package, remove it in Settings → Apps. The older lock screen entries below are history.
+
 ### 2026-11-14
 - Renamed to **NovaShield HUD** (was Vantage). The focus hand-off file moved to `%APPDATA%\NovaShieldHUD\`. The widget package keeps its old identity and certificate name so installed copies still work.
 - **Installer:** `installer/build.ps1` makes `NovaShieldHUD-Setup-x64.exe` / `-arm64.exe` (Inno Setup, self-contained, per-user, no admin). Uninstall restores your lock screen picture and removes the scheduled refresh.
