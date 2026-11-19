@@ -47,6 +47,7 @@ Everything is in **Beacon Settings** (tray icon > Settings, or type `settings`):
 | **Dotline** | Your birthday and lifespan, dot size, background, lock positions, time-zone dots |
 | **Filee** | Start with Beacon, follow Beacon's look (with a live preview of the ring), ring size and opacity, captions, pause |
 | **Voice** | Download a Whisper model to speak instead of typing (`Alt+M`) |
+| **Brain** | Which AI thinks for Nova: on this PC (free), your Claude subscription through Claude Code, your ChatGPT plan through Codex, OpenRouter (one-click Authorize) or a Claude API key; and the effort level |
 | **Nova Assistant** | Speak replies and which voice, listen for answers, your email address and app password (optional) |
 | **Prompt Ring** | Download a free AI model (1–2.5 GB) so `Ctrl+Alt+P` rewrites selected text into a structured prompt, on your PC |
 | **Plain English** | Your Anthropic API key, only if you want `?` / Claude |

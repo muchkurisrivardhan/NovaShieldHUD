@@ -1178,6 +1178,34 @@
                     <StackPanel x:Name="BrainAccounts" Visibility="Collapsed">
                         <Border Style="{StaticResource Card}">
                             <StackPanel>
+                                <TextBlock Text="Your Claude subscription (through Claude Code)" Style="{StaticResource GroupHeader}" />
+                                <TextBlock TextWrapping="Wrap" Foreground="{StaticResource TextSecondary}" FontSize="12.5"
+                                           Text="Nova talks through the Claude Code app installed on this PC, signed in with your own Claude account on Anthropic's own page. NovaShield never sees your login. Use counts against your plan's monthly Agent SDK credit, not your normal chat limits." />
+                                <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                                    <Button x:Name="ClaudeCodeSignIn" Content="Sign in" Style="{StaticResource PrimaryButton}" Margin="0,0,8,0" />
+                                    <Button x:Name="ClaudeCodeCheck" Content="Check" Margin="0,0,8,0" />
+                                    <Button x:Name="ClaudeCodeInstall" Content="Get Claude Code" />
+                                </StackPanel>
+                                <TextBlock x:Name="ClaudeCodeStatus" Style="{StaticResource Caption}" />
+                            </StackPanel>
+                        </Border>
+
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel>
+                                <TextBlock Text="Your ChatGPT plan (through Codex)" Style="{StaticResource GroupHeader}" />
+                                <TextBlock TextWrapping="Wrap" Foreground="{StaticResource TextSecondary}" FontSize="12.5"
+                                           Text="Nova talks through OpenAI's Codex app installed on this PC, signed in with your own ChatGPT account on OpenAI's own page. NovaShield never sees your login. Uses your ChatGPT plan's Codex limits." />
+                                <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                                    <Button x:Name="CodexSignIn" Content="Sign in" Style="{StaticResource PrimaryButton}" Margin="0,0,8,0" />
+                                    <Button x:Name="CodexCheck" Content="Check" Margin="0,0,8,0" />
+                                    <Button x:Name="CodexInstall" Content="Get Codex" />
+                                </StackPanel>
+                                <TextBlock x:Name="CodexStatus" Style="{StaticResource Caption}" />
+                            </StackPanel>
+                        </Border>
+
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel>
                                 <TextBlock Text="OpenRouter" Style="{StaticResource GroupHeader}" />
                                 <TextBlock TextWrapping="Wrap" Foreground="{StaticResource TextSecondary}" FontSize="12.5"
                                            Text="One click: your browser opens OpenRouter, you sign in and press Authorize, and Nova is connected. Free models cost nothing; Claude, GPT, Gemini and others are paid from your OpenRouter balance." />

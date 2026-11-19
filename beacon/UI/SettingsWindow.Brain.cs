@@ -79,7 +79,30 @@ public partial class SettingsWindow
                 BrainClaudeStatus.Text = "Didn't work: " + e.Message;
             }
         };
+        ClaudeCodeSignIn.Click += (_, _) => SignInCli(CliBrains.Cli.ClaudeCode, ClaudeCodeStatus);
+        CodexSignIn.Click += (_, _) => SignInCli(CliBrains.Cli.Codex, CodexStatus);
+        ClaudeCodeCheck.Click += async (_, _) => await CheckCliAsync(CliBrains.Cli.ClaudeCode, ClaudeCodeStatus);
+        CodexCheck.Click += async (_, _) => await CheckCliAsync(CliBrains.Cli.Codex, CodexStatus);
+        ClaudeCodeInstall.Click += (_, _) => OpenUrl("https://code.claude.com/docs/en/setup");
+        CodexInstall.Click += (_, _) => OpenUrl("https://developers.openai.com/codex/cli");
         Closed += (_, _) => _openRouterCts?.Cancel();
+    }
+
+    private static void OpenUrl(string url) =>
+        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url) { UseShellExecute = true });
+
+    private void SignInCli(CliBrains.Cli cli, System.Windows.Controls.TextBlock status)
+    {
+        status.Text = CliBrains.StartSignIn(cli)
+            ? "A window opened: follow it, and press Authorize on the page your browser shows. Then press Check."
+            : (cli == CliBrains.Cli.ClaudeCode ? "Claude Code" : "Codex") + " isn't installed yet: press Get, install it, then Sign in.";
+    }
+
+    private async Task CheckCliAsync(CliBrains.Cli cli, System.Windows.Controls.TextBlock status)
+    {
+        status.Text = "Checking…";
+        try { status.Text = (await CliBrains.StatusAsync(cli, CancellationToken.None)).Status; }
+        catch (Exception e) when (e is not OutOfMemoryException) { status.Text = "Couldn't check: " + e.Message; }
     }
 
     private void ShowBrainTab(bool accounts)
@@ -96,6 +119,8 @@ public partial class SettingsWindow
         BrainClaudeStatus.Text = _settings.ApiKey is { Length: > 0 } ? "A key is saved." : "No key yet.";
         RefreshOpenRouterState();
         _ = FillBrainPickerAsync();
+        _ = CheckCliAsync(CliBrains.Cli.ClaudeCode, ClaudeCodeStatus);
+        _ = CheckCliAsync(CliBrains.Cli.Codex, CodexStatus);
     }
 
     private void RefreshOpenRouterState()
@@ -114,7 +139,9 @@ public partial class SettingsWindow
             new("local", "", "On this PC: " + (local?.Label ?? "no model downloaded yet"),
                 local is null ? "Free and private. Download Qwen 3 4B on the Prompt Ring page first." : "Free and private: nothing leaves this PC."),
         };
-        choices.AddRange(CloudBrains.ClaudeModels.Select(m => new BrainChoice("claude", m.Id, m.Label, m.Note + " Needs your API key (Accounts).")));
+        choices.AddRange(CliBrains.ClaudeCodeModels.Select(m => new BrainChoice("claudecode", m.Id, m.Label, m.Note + " Sign in on the Accounts tab.")));
+        choices.Add(new BrainChoice("codex", "", "ChatGPT (your ChatGPT plan)", "Through OpenAI's Codex app, with your Codex model. Sign in on the Accounts tab."));
+        choices.AddRange(CloudBrains.ClaudeModels.Select(m => new BrainChoice("claude", m.Id, m.Label + " (API key)", m.Note + " Needs your API key (Accounts).")));
 
         if (_settings.OpenRouterKey is { Length: > 0 })
         {
@@ -132,7 +159,12 @@ public partial class SettingsWindow
 
         BrainPicker.ItemsSource = choices;
         BrainPicker.SelectedItem = choices.FirstOrDefault(c => c.Kind == _settings.Brain
-            && (c.Kind == "local" || c.Model == (c.Kind == "claude" ? _settings.BrainClaudeModel : _settings.BrainOpenRouterModel)))
+            && (c.Kind is "local" or "codex" || c.Model == c.Kind switch
+            {
+                "claude" => _settings.BrainClaudeModel,
+                "claudecode" => _settings.BrainClaudeCodeModel,
+                _ => _settings.BrainOpenRouterModel,
+            }))
             ?? choices[0];
     }
 
@@ -143,6 +175,7 @@ public partial class SettingsWindow
             _settings.Brain = choice.Kind;
             if (choice.Kind == "claude") _settings.BrainClaudeModel = choice.Model;
             if (choice.Kind == "openrouter") _settings.BrainOpenRouterModel = choice.Model;
+            if (choice.Kind == "claudecode") _settings.BrainClaudeCodeModel = choice.Model;
         }
         _settings.BrainEffort = CloudBrains.EffortLevels[(int)Math.Clamp(BrainEffort.Value, 0, 3)];
     }

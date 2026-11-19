@@ -7,7 +7,9 @@
   - **On this PC** (free, private), the default.
   - **OpenRouter, one click:** Connect opens OpenRouter's page in your browser, you press Authorize, and Nova is connected (OAuth with PKCE; the key is encrypted for your Windows account). Free models cost nothing; "Free Models Router" is the default. Claude, GPT, Gemini and the rest are paid from your OpenRouter balance.
   - **Claude by your own API key** (Haiku 5.5, Sonnet 5.5, Opus 5.5), billed per use to your Anthropic account.
-  - Not offered: signing in with a claude.ai subscription. Anthropic's terms don't allow other apps to use people's Claude subscriptions.
+  - **Your Claude subscription, through Claude Code:** Nova talks through the Claude Code app installed on your PC. You sign in once in Claude Code, on Anthropic's own page (Settings → Brain → Accounts → Sign in opens it). NovaShield starts the unmodified program, text only, and never sees the login. Anthropic's terms allow this ("an end user signing in to the unmodified Claude Code binary with their own Claude subscription"); it uses the plan's monthly Agent SDK credit. Pick Claude Haiku, Sonnet or Opus.
+  - **Your ChatGPT plan, through Codex:** the same with OpenAI's Codex app and your ChatGPT sign-in. OpenAI's docs don't say whether another app may do this; confirm with OpenAI before relying on it in a public release.
+  - Not offered: a NovaShield "Sign in with Claude" button of its own. Anthropic doesn't allow other apps to collect claude.ai logins without its approval.
 
 ### 2026-11-19 (night)
 - **Nova, the talking assistant** (`Ctrl+Alt+N`, the "Talk to Nova" command). A panel in the corner in your Beacon style, with an orb that shows when it's listening, thinking and speaking. Talk (Whisper, on this PC) or type; Nova answers out loud with a Windows voice and, when it ends on a question, listens for your answer. It keeps the conversation, so "summarize the second one" means the email it just listed.

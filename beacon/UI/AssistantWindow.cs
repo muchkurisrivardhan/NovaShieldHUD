@@ -180,6 +180,11 @@ public sealed class AssistantWindow : Window
             case "claude":
                 SayLine("Claude is picked as my brain, but there's no API key yet. Add it in Settings > Brain > Accounts.");
                 return null;
+            case "claudecode":
+                var ccModel = _settings.BrainClaudeCodeModel;
+                return (messages, ct) => CliBrains.ChatAsync(CliBrains.Cli.ClaudeCode, ccModel, effort, messages, ct);
+            case "codex":
+                return (messages, ct) => CliBrains.ChatAsync(CliBrains.Cli.Codex, null, effort, messages, ct);
             case "openrouter" when _settings.OpenRouterKey is { Length: > 0 } orKey && _settings.BrainOpenRouterModel.Length > 0:
                 var orModel = _settings.BrainOpenRouterModel;
                 return (messages, ct) => CloudBrains.OpenRouterAsync(orKey, orModel, effort, messages, ct);

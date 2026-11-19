@@ -222,10 +222,16 @@ public sealed class Settings
 
     // -------------------------------------------------------------- assistant
 
-    /// <summary>Which brain answers Nova: "local" (this PC), "claude" (API key) or "openrouter".</summary>
+    /// <summary>
+    /// Which brain answers Nova: "local" (this PC), "claude" (API key), "openrouter",
+    /// "claudecode" (the user's Claude Code sign-in) or "codex" (the user's Codex sign-in).
+    /// </summary>
     public string Brain { get; set; } = "local";
 
     public string BrainClaudeModel { get; set; } = "claude-haiku-5-5";
+
+    /// <summary>Claude Code model alias: "haiku", "sonnet" or "opus".</summary>
+    public string BrainClaudeCodeModel { get; set; } = "haiku";
 
     /// <summary>"openrouter/free" picks among OpenRouter's free models by itself.</summary>
     public string BrainOpenRouterModel { get; set; } = "openrouter/free";
