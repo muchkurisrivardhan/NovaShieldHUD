@@ -822,6 +822,21 @@
                                        Text="Formats, presets, the trigger keys and watch folders are in Filee's own settings (Open Filee). Saving here restarts a running Filee to apply the ring options; nothing is lost. Upstream releases don't carry the NovaShield look; NovaShield updates bring Filee along." />
                         </StackPanel>
                     </Border>
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <TextBlock Text="Credits" Style="{StaticResource GroupHeader}" />
+                            <TextBlock TextWrapping="Wrap" Foreground="{StaticResource TextSecondary}" FontSize="12.5">
+                                Filee is made by Myeonggu Kim (KnifeLemon) and the Filee contributors, and is free
+                                and open source under the MIT licence. NovaShield HUD ships a fork of it, styled to
+                                match Beacon. All credit for the converter goes to them.
+                            </TextBlock>
+                            <TextBlock Margin="0,8,0,0" FontSize="12.5">
+                                <Hyperlink x:Name="FileeCreditLink" NavigateUri="https://github.com/KnifeLemon/Filee">github.com/KnifeLemon/Filee</Hyperlink>
+                                <Run Text="  ·  " Foreground="{StaticResource TextTertiary}" />
+                                <Hyperlink x:Name="FileeSiteLink" NavigateUri="https://filee.sh">filee.sh</Hyperlink>
+                            </TextBlock>
+                        </StackPanel>
+                    </Border>
                 </StackPanel>
 
                 <!-- ===================== Search and index ==================== -->

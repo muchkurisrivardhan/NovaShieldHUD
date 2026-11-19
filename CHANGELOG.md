@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### 2026-11-19 (later)
+- **Installer asks about Filee:** a Select Components page, with Filee ticked by default ("NovaShield HUD with Filee") or left out ("NovaShield HUD only"). Unticking it on an update removes the copy installed before. Filee gets its own Start menu entry.
+- **Credits:** Beacon Settings → Filee has a Credits card for Filee's author, Myeonggu Kim (KnifeLemon), with links; the README has a Credits section.
+- **Smart App Control:** with it on, Windows blocks Filee's unsigned files one by one ("Part of this app has been blocked"), so the ring can't open and Filee closes. Beacon now reads its state, doesn't start Filee by itself while it's on, and says so on the Filee page.
+- `filee/` now holds all of upstream Filee: tests, docs, installers and the contributor guides too.
+
 ### 2026-11-19
 - **New app: Filee**, the drag-and-drop file converter, forked from [KnifeLemon/Filee](https://github.com/KnifeLemon/Filee) (MIT, upstream commit `cf96cd5`) into `filee/`. Hold `Ctrl`, drag files, drop them on a format in the ring at the cursor.
 - **Filee wears Beacon's look, live.** Beacon writes its style into `%APPDATA%\Filee\theme.json` (surfaces, text, accent, light/dark, corner radius, font); the fork watches that file and restyles in place. Tactical is gunmetal and amber with square corners in Bahnschrift, HUD cyan on navy, Cyberpunk pink on violet, Retro CRT phosphor green in Cascadia Mono, Minimal mono greys, Classic keeps Filee's own rounded surfaces with Beacon's accent.

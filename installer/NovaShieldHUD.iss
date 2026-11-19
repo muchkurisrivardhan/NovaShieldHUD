@@ -42,17 +42,32 @@ ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 #endif
 
+[Types]
+Name: "full"; Description: "NovaShield HUD with Filee (recommended)"
+Name: "compact"; Description: "NovaShield HUD only"
+Name: "custom"; Description: "Choose"; Flags: iscustom
+
+[Components]
+Name: "core"; Description: "NovaShield HUD: Beacon launcher and Dotline widgets"; Types: full compact custom; Flags: fixed
+Name: "filee"; Description: "Filee: drag-and-drop file converter (hold Ctrl and drag files). By Myeonggu Kim (KnifeLemon), MIT licence, styled for NovaShield"; Types: full custom
+
 [Tasks]
 Name: desktopicon; Description: "Create a desktop shortcut"; Flags: unchecked
 
 [Files]
-Source: "{#Source}\*"; DestDir: "{app}"; Flags: recursesubdirs ignoreversion
+Source: "{#Source}\*"; DestDir: "{app}"; Excludes: "\filee\*"; Flags: recursesubdirs ignoreversion
+Source: "{#Source}\filee\*"; DestDir: "{app}\filee"; Components: filee; Flags: recursesubdirs ignoreversion
 Source: "..\LICENSE"; DestDir: "{app}"; DestName: "LICENSE.txt"
 Source: "..\THIRD-PARTY-NOTICES.txt"; DestDir: "{app}"
+
+[InstallDelete]
+; Updating with Filee unticked removes the copy an earlier install put there.
+Type: filesandordirs; Name: "{app}\filee"; Check: not WizardIsComponentSelected('filee')
 
 [Icons]
 Name: "{userprograms}\NovaShield HUD"; Filename: "{app}\Beacon.exe"
 Name: "{userdesktop}\NovaShield HUD"; Filename: "{app}\Beacon.exe"; Tasks: desktopicon
+Name: "{userprograms}\Filee (NovaShield HUD)"; Filename: "{app}\filee\Filee.exe"; Parameters: "--settings"; Components: filee
 
 [Registry]
 ; Beacon writes this itself when "Start Beacon when I sign in" is on; uninstall removes it.

@@ -29,6 +29,32 @@ public static partial class Suite
     public static bool FileeRunning => Process.GetProcessesByName("Filee").Length > 0;
 
     /// <summary>
+    /// Smart App Control is on (enforcing). It blocks the unsigned parts of an app one file at a
+    /// time ("Part of this app has been blocked"), which leaves Filee without its input hook (no
+    /// ring) and closes it when a page needs a blocked file. Until releases are code-signed,
+    /// Beacon doesn't start Filee by itself while it is on. 0 = off, 1 = on, 2 = evaluation.
+    /// </summary>
+    public static bool SmartAppControlOn
+    {
+        get
+        {
+            try
+            {
+                using var key = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Control\CI\Policy");
+                return key?.GetValue("VerifiedAndReputablePolicyState") is int state && state == 1;
+            }
+            catch (Exception e) when (e is System.Security.SecurityException or UnauthorizedAccessException or IOException)
+            {
+                return false;
+            }
+        }
+    }
+
+    public const string SmartAppControlNote =
+        "Smart App Control is on, and it blocks the parts of Filee that aren't code-signed yet, so the ring can't open " +
+        "and Filee may close. Beacon won't start Filee by itself while it's on.";
+
+    /// <summary>
     /// Filee's exe: in the filee folder beside Beacon when installed, otherwise its build in the
     /// source tree (filee/src/Filee.App).
     /// </summary>

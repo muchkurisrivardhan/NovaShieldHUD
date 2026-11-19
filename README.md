@@ -23,11 +23,15 @@ gunmetal-and-amber style.
    - `NovaShieldHUD-Setup-x64.exe`: Intel and AMD PCs
    - `NovaShieldHUD-Setup-arm64.exe`: Snapdragon and other ARM PCs
    (Not sure? Settings > System > About > *System type*.)
-2. Run it. It installs for you only, in `%LOCALAPPDATA%\Programs\NovaShield HUD`: no admin
+2. Run it. On the **Select Components** page, keep **Filee** ticked to get the drag-and-drop
+   converter too (untick it for NovaShield HUD only; run the installer again to change your mind). It installs for you only, in `%LOCALAPPDATA%\Programs\NovaShield HUD`: no admin
    prompt, and nothing else to download (.NET is included).
 3. Windows may warn about an unrecognised app, because the installer isn't code-signed yet:
    **More info > Run anyway**. If **Smart App Control** is on, Windows blocks unsigned apps
    outright and there's no Run anyway; it can't be installed on that PC until releases are signed.
+   The same goes for parts of an installed app: with Smart App Control on, Windows shows
+   "Part of this app has been blocked" for Filee's unsigned files, its Ctrl+drag ring can't open and
+   it may close. Beacon then doesn't start Filee by itself, and its Filee page says why.
 4. Finish starts Beacon. Its icon is in the tray; press `Alt+Space`.
 
 ### 2. Make it yours
@@ -108,6 +112,13 @@ powershell -ExecutionPolicy Bypass -File installer/build.ps1 -Arch x64 -Version 
 ```
 
 Every feature, with how it works: [docs/FEATURES.md](docs/FEATURES.md). History: [CHANGELOG.md](CHANGELOG.md).
+
+## Credits
+
+**Filee**, the converter in `filee/`, is made by **Myeonggu Kim ([KnifeLemon](https://github.com/KnifeLemon))**
+and the Filee contributors: <https://github.com/KnifeLemon/Filee> · <https://filee.sh>. It is free and open
+source under the MIT licence; NovaShield HUD ships a fork of it, styled to match Beacon. All credit for the
+converter is theirs. What the fork changes is listed in [filee/NOVASHIELD.md](filee/NOVASHIELD.md).
 
 ## Licence
 

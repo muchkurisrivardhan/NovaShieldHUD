@@ -2,8 +2,14 @@
 
 This folder is a fork of [Filee](https://github.com/KnifeLemon/Filee) by Myeonggu Kim (KnifeLemon) and the Filee
 contributors, MIT licensed (see [LICENSE](LICENSE)), taken at upstream commit
-`cf96cd5caa34e5122be8621639dd4ff529344f81`. The app's sources, build scripts and notices are copied as they were;
-upstream's tests, docs, installers and website are not (get them from upstream).
+`cf96cd5caa34e5122be8621639dd4ff529344f81`. Everything in upstream's repository is copied as it was (sources,
+tests, docs, build scripts, installers, notices), except its `.github/` workflows, which wouldn't run from a
+subfolder. Run its tests with `dotnet test filee/Filee.slnx`.
+
+## Credits
+
+Filee is made by Myeonggu Kim ([KnifeLemon](https://github.com/KnifeLemon)) and the Filee contributors
+(<https://github.com/KnifeLemon/Filee>, <https://filee.sh>). All credit for the converter is theirs.
 
 ## What the fork changes
 
@@ -33,5 +39,4 @@ A `theme.json` without a `suite` section is the user's own, and Beacon leaves it
 git clone https://github.com/KnifeLemon/Filee /tmp/filee-upstream
 ```
 
-Copy `src/`, `build/`, the props files, `global.json`, `LICENSE`, `THIRD-PARTY-NOTICES.md` and `README.md` over this
-folder, re-apply the three changes above, and update the commit hash here.
+Copy everything except `.git/` and `.github/` over this folder, re-apply the three changes above, and update the commit hash here.
