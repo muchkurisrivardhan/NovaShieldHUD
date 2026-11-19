@@ -76,7 +76,8 @@ public partial class App : System.Windows.Application
             files,
             rebuildIndex: () => _ = fileIndex.BuildAsync(BuildIndexOptions(settings)),
             openSettings: OpenSettings,
-            startVoice: StartVoiceSearch);
+            startVoice: StartVoiceSearch,
+            promptRing: target => (_promptRing ??= new LocalAi.PromptRing(settings, Notify)).RunAsync(target));
 
         var planner = new AiPlanner(_registry, settings);
         var ai = new AiProvider(planner, settings);
@@ -144,6 +145,7 @@ public partial class App : System.Windows.Application
         // launch, even while the app list is still filling in.
         // Once the app list is complete, render every app icon in the background so the
         // first search that shows them is instant rather than drawing icons on demand.
+        apps.WatchForInstalls();   // apps installed while Beacon runs open by name too
         _ = apps.BuildAsync().ContinueWith(
             _ => IconCache.Prewarm(apps.Entries.Select(a => a.IconSource)),
             TaskScheduler.Default);
@@ -211,6 +213,8 @@ public partial class App : System.Windows.Application
     /// Windows refused. Conflicts are surfaced rather than swallowed - a hotkey that
     /// silently does nothing is indistinguishable from a broken app.
     /// </summary>
+    private LocalAi.PromptRing? _promptRing;
+
     private void ApplyHotkeys()
     {
         if (_hotkeys is null || _settings is null) return;

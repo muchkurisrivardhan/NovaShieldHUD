@@ -597,15 +597,12 @@ public sealed class NlParser
 
     private string? BestApp(string name)
     {
-        var best = _apps.Entries
-            .Select(a => (a.Name, Score: FuzzyMatcher.Score(a.Name, name)))
-            .Where(x => x.Score != FuzzyMatcher.NoMatch)
-            .OrderByDescending(x => x.Score)
-            .FirstOrDefault();
-
-        // Word-start tier or better: "code" may find "Visual Studio Code", but a stray
-        // subsequence match like "pin" inside "Snipping Tool" must not launch anything.
-        return best.Name is not null && best.Score >= 860 ? best.Name : null;
+        // Spoken names, spacing, misheard letters: see AppNames. Nothing found may mean the app
+        // was installed a moment ago (a Store app has no shortcut to watch): rescan now, so
+        // saying it again finds it.
+        var app = AppNames.Best(_apps.Entries, name);
+        if (app is null) _apps.RequestRefresh(TimeSpan.Zero);
+        return app;
     }
 
     // ------------------------------------------------------- commands by name

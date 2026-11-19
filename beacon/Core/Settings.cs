@@ -183,14 +183,33 @@ public sealed class Settings
 
     public void ApplyDefaultShortcuts()
     {
-        if (BuiltInHotkeys.ContainsKey(VoiceCommandId)) return;
-
-        BuiltInHotkeys[VoiceCommandId] = new HotkeyBinding
+        BuiltInHotkeys.TryAdd(VoiceCommandId, new HotkeyBinding
         {
             Modifiers = NativeMethods.MOD_ALT,
             VirtualKey = 0x4D,   // M
-        };
+        });
+
+        // Added once: a binding the user clears afterwards stays cleared (see PromptRingOffered).
+        if (!PromptRingOffered)
+        {
+            BuiltInHotkeys.TryAdd(PromptRingCommandId, new HotkeyBinding
+            {
+                Modifiers = NativeMethods.MOD_CONTROL | NativeMethods.MOD_ALT,
+                VirtualKey = 0x50,   // P
+            });
+            PromptRingOffered = true;
+        }
     }
+
+    public const string PromptRingCommandId = "prompt_ring";
+
+    /// <summary>Set once Ctrl+Alt+P has been given to the prompt ring, so clearing it sticks.</summary>
+    public bool PromptRingOffered { get; set; }
+
+    // -------------------------------------------------------------- local ai
+
+    /// <summary>Which free local model the prompt ring uses (LocalModels id).</summary>
+    public string LocalModel { get; set; } = "qwen2.5-1.5b";
 
     // -------------------------------------------------------------------- ai
 

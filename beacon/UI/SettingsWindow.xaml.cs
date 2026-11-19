@@ -139,6 +139,7 @@ public partial class SettingsWindow : Window
             new("Custom Commands", "", PageCustom),
             new("Plain English", "", PageAi),
             new("Voice", "", PageVoice),
+            new("Prompt Ring", "\uE8BD", PageLocalAi),
             new("Advanced", "", PageAdvanced),
         };
 
@@ -246,6 +247,7 @@ public partial class SettingsWindow : Window
 
         AccentColor.TextChanged += (_, _) => UpdateAccentSwatch();
         InitFileePage();
+        InitLocalAiPage();
 
         ModelPicker.SelectionChanged += (_, _) =>
         {
@@ -325,6 +327,7 @@ public partial class SettingsWindow : Window
         VoiceDownload.Click += async (_, _) => await DownloadVoiceModelAsync();
         VoiceDelete.Click += (_, _) => DeleteVoiceModel();
         Closed += (_, _) => _voiceDownloadCts?.Cancel();
+        Closed += (_, _) => _localDownloadCts?.Cancel();
 
         UpdateStatus.Text = $"This is version {Updater.Current}.";
         CheckUpdates.Click += async (_, _) => await CheckForUpdateAsync();
@@ -503,6 +506,7 @@ public partial class SettingsWindow : Window
         ShowSubtitles.IsChecked = _settings.ShowResultSubtitles;
 
         LoadFileePage();
+        LoadLocalAiPage();
         LaunchDotline.IsChecked = _settings.LaunchDotline;
         var dot = Suite.ReadDotline();
         DotBirthday.Text = dot.Birthday?.ToString("yyyy-MM-dd") ?? "";
@@ -1024,6 +1028,7 @@ public partial class SettingsWindow : Window
         _settings.VoiceAutoStop = VoiceAutoStop.IsChecked == true;
         _settings.VoiceAutoRun = VoiceAutoRun.IsChecked == true;
         if (SelectedVoiceModel is { } voiceModel) _settings.VoiceModel = voiceModel.Id;
+        if (LocalModelPicker.SelectedItem is LocalModelChoice localModel) _settings.LocalModel = localModel.Model.Id;
         if (VoiceDevice.SelectedItem is DeviceChoice device) _settings.VoiceDevice = device.Index;
 
         _settings.FaviconMode = TagOf(FaviconMode) ?? "direct";
