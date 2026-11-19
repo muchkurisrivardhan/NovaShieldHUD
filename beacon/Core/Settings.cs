@@ -103,6 +103,14 @@ public sealed class Settings
     /// <summary>Start Dotline, the desktop widgets, whenever Beacon starts.</summary>
     public bool LaunchDotline { get; set; } = true;
 
+    // ------------------------------------------------------------------ filee
+
+    /// <summary>Start Filee, the drag-and-drop converter, whenever Beacon starts.</summary>
+    public bool LaunchFilee { get; set; } = true;
+
+    /// <summary>Filee wears Beacon's style and accent (written to Filee's theme.json).</summary>
+    public bool FileeFollowsLook { get; set; } = true;
+
     // ---------------------------------------------------------------- browsing
 
     /// <summary>

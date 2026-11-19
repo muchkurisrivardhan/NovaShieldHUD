@@ -12,7 +12,7 @@ namespace Beacon.Core;
 /// Dotline reads Beacon's look (style and accent) from Beacon's settings file when it starts,
 /// and saves its own state on every change, so a restart is how a change made here reaches it.
 /// </summary>
-public static class Suite
+public static partial class Suite
 {
     static readonly string DotlineState = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Dotline", "state.json");

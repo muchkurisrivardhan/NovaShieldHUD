@@ -14,6 +14,9 @@ whisper.cpp / ggml (inside Whisper.net.Runtime)
                                        MIT      Copyright (c) 2023-2024 The ggml authors
 Microsoft.Extensions.AI.Abstractions   MIT      Copyright (c) Microsoft Corporation
 System.Numerics.Tensors                MIT      Copyright (c) .NET Foundation and Contributors
+Filee (forked in filee\)               MIT      Copyright (c) 2026 Myeonggu Kim (KnifeLemon) and Filee contributors
+  (Filee's own components - Avalonia, SkiaSharp, Magick.NET, rhwp, 7-Zip and others - are
+   listed with their licences in filee\THIRD-PARTY-NOTICES.md, installed beside Filee.exe)
 .NET runtime, WPF and Windows Forms    MIT      Copyright (c) .NET Foundation and Contributors
   (bundled because the apps are self-contained; the runtime's own notices:
    https://github.com/dotnet/runtime/blob/main/THIRD-PARTY-NOTICES.TXT)

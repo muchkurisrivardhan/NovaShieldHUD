@@ -133,6 +133,7 @@ public partial class SettingsWindow : Window
             new("All Commands", "", PageLibrary),
             new("Appearance", "", PageAppearance),
             new("Dotline", "", PageDotline),   // Segoe Fluent Icons: TVMonitor
+            new("Filee", "\uE8AB", PageFilee),   // Segoe Fluent Icons: Switch (convert)
             new("Search & Index", "", PageSearch),
             new("Shortcuts", "", PageShortcuts),
             new("Custom Commands", "", PageCustom),
@@ -244,6 +245,7 @@ public partial class SettingsWindow : Window
             FontScaleValue.Text = $"{FontScale.Value * 100:N0}%";
 
         AccentColor.TextChanged += (_, _) => UpdateAccentSwatch();
+        InitFileePage();
 
         ModelPicker.SelectionChanged += (_, _) =>
         {
@@ -366,6 +368,7 @@ public partial class SettingsWindow : Window
             UpdateStatus.Text = "Installing. Beacon will restart by itself.";
             Updater.Install(setup);
             Suite.CloseDotline();
+            Suite.CloseFilee();
             ((App)Application.Current).Quit();
         }
         catch (Exception e) when (e is HttpRequestException or TaskCanceledException or InvalidDataException or IOException or System.ComponentModel.Win32Exception)
@@ -499,6 +502,7 @@ public partial class SettingsWindow : Window
         ShowFileIcons.IsChecked = _settings.ShowFileIcons;
         ShowSubtitles.IsChecked = _settings.ShowResultSubtitles;
 
+        LoadFileePage();
         LaunchDotline.IsChecked = _settings.LaunchDotline;
         var dot = Suite.ReadDotline();
         DotBirthday.Text = dot.Birthday?.ToString("yyyy-MM-dd") ?? "";
@@ -891,6 +895,8 @@ public partial class SettingsWindow : Window
         _settings.MaxResults = fresh.MaxResults;
         _settings.RunAtStartup = fresh.RunAtStartup;
         _settings.LaunchDotline = fresh.LaunchDotline;
+        _settings.LaunchFilee = fresh.LaunchFilee;
+        _settings.FileeFollowsLook = fresh.FileeFollowsLook;
         _settings.Theme = fresh.Theme;
         _settings.AccentColor = fresh.AccentColor;
         _settings.WindowWidth = fresh.WindowWidth;
@@ -919,6 +925,7 @@ public partial class SettingsWindow : Window
         _settings.Save();
         _onSaved();
         Suite.RefreshDotline();   // the accent colour may have changed
+        Suite.SyncFileeLook(_settings);
 
         _draftCommands.Clear();
         _draftBuiltInHotkeys.Clear();
@@ -973,6 +980,8 @@ public partial class SettingsWindow : Window
 
         _settings.RunAtStartup = RunAtStartup.IsChecked == true;
         _settings.LaunchDotline = LaunchDotline.IsChecked == true;
+        _settings.LaunchFilee = LaunchFilee.IsChecked == true;
+        _settings.FileeFollowsLook = FileeFollowsLook.IsChecked == true;
         _settings.HotkeyModifiers = LauncherHotkey.Modifiers;
         _settings.HotkeyVirtualKey = LauncherHotkey.VirtualKey;
 
@@ -1042,6 +1051,12 @@ public partial class SettingsWindow : Window
             MessageBox.Show(writeError, "Beacon", MessageBoxButton.OK, MessageBoxImage.Warning);
         else if (!dotlineChanged && oldLook != (_settings.OverlayStyle, _settings.AccentColor))
             Suite.RefreshDotline();
+
+        // Filee follows the look by itself (it watches theme.json); its ring options need a restart.
+        if (Suite.SyncFileeLook(_settings) is { } lookError)
+            MessageBox.Show(lookError, "Beacon", MessageBoxButton.OK, MessageBoxImage.Warning);
+        if (Suite.WriteFilee(ReadFileeForm()) is { } fileeError)
+            MessageBox.Show(fileeError, "Beacon", MessageBoxButton.OK, MessageBoxImage.Warning);
 
         FooterStatus.Text = $"Saved at {DateTime.Now:t}.";
     }

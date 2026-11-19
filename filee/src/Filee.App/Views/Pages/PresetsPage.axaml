@@ -1,0 +1,95 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Filee.App.ViewModels.Pages"
+             xmlns:views="using:Filee.App.Views"
+             xmlns:controls="using:Filee.App.Controls"
+             x:Class="Filee.App.Views.Pages.PresetsPage"
+             x:DataType="vm:PresetsPageViewModel">
+  <!-- Keep editor columns usable on narrow windows; the page still scrolls vertically in MainWindow. -->
+  <ScrollViewer x:Name="EditorScroller" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+    <Grid RowDefinitions="Auto,*" ColumnDefinitions="260,20,*" MinWidth="680" Width="{Binding #EditorScroller.Viewport.Width}" HorizontalAlignment="Left">
+      <TextBlock Grid.ColumnSpan="3" Classes="h1" Text="{DynamicResource presets.title}" Margin="0,0,0,18" />
+
+      <!-- List: fits the window height and scrolls on its own (the page itself does not scroll, IFitsWindowHeight) -->
+      <DockPanel Grid.Row="1">
+        <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,8">
+          <!-- An empty preset, or a ready-made one for where the file goes (#553). -->
+          <Button x:Name="AddPresetButton" Classes="accent" Margin="0,0,6,6">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <PathIcon Width="12" Height="12" Data="{StaticResource Icon.Plus}" />
+              <TextBlock Text="{DynamicResource presets.add}" />
+            </StackPanel>
+            <Button.Flyout>
+              <!-- The ready-made presets are added below the heading from PlacePresets (code-behind). -->
+              <MenuFlyout Placement="BottomEdgeAlignedLeft">
+                <MenuItem Header="{DynamicResource presets.add_empty}" Command="{Binding AddCommand}" />
+                <Separator />
+                <MenuItem Header="{DynamicResource presets.add_ready}" IsEnabled="False" />
+              </MenuFlyout>
+            </Button.Flyout>
+          </Button>
+          <Button x:Name="DuplicatePresetButton" Command="{Binding DuplicateCommand}" Margin="0,0,6,6"
+                  ToolTip.Tip="{DynamicResource presets.duplicate}" AutomationProperties.Name="{DynamicResource presets.duplicate}">
+            <PathIcon Width="14" Height="14" Data="{StaticResource Icon.Copy}" />
+          </Button>
+          <Button x:Name="DeletePresetButton" Classes="danger" Command="{Binding DeleteCommand}" Margin="0,0,6,6"
+                  ToolTip.Tip="{DynamicResource presets.delete}" AutomationProperties.Name="{DynamicResource presets.delete}">
+            <PathIcon Width="14" Height="14" Data="{StaticResource Icon.Delete}" />
+          </Button>
+          <!-- Presets other people shared on filee.sh (#1530). -->
+          <Button x:Name="GalleryButton" Command="{Binding OpenGalleryCommand}" Margin="0,0,6,6"
+                  ToolTip.Tip="{DynamicResource gallery.open_tip}" AutomationProperties.Name="{DynamicResource gallery.title}">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <PathIcon Width="13" Height="13" Data="{StaticResource Icon.Download}" />
+              <TextBlock Text="{DynamicResource gallery.open}" />
+            </StackPanel>
+          </Button>
+          <!-- A preset.json of the chosen presets for a submission to the gallery. -->
+          <Button x:Name="GalleryExportButton" Command="{Binding ExportForGalleryCommand}" Margin="0,0,6,6"
+                  ToolTip.Tip="{DynamicResource gallery.export_title}" AutomationProperties.Name="{DynamicResource gallery.export}">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <PathIcon Width="13" Height="13" Data="{StaticResource Icon.Upload}" />
+              <TextBlock Text="{DynamicResource gallery.export}" />
+            </StackPanel>
+          </Button>
+        </WrapPanel>
+        <TextBox Classes="search clearButton" DockPanel.Dock="Top" Margin="0,0,0,8" Text="{Binding Search}" Watermark="{DynamicResource common.search}">
+              <TextBox.InnerLeftContent>
+                <PathIcon Width="14" Height="14" Margin="10,0,0,0" Data="{StaticResource Icon.Search}" Foreground="{DynamicResource TextSecondaryBrush}" />
+              </TextBox.InnerLeftContent>
+        </TextBox>
+        <ListBox Classes="soft" ItemsSource="{Binding VisiblePresets}" SelectedItem="{Binding SelectedPreset}">
+          <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="vm:PresetListItem">
+              <StackPanel>
+                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                <TextBlock Classes="caption" Text="{Binding Target}" />
+              </StackPanel>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </DockPanel>
+
+      <!-- Editor (same control as the donut's preset popup): scrolls on its own, Save stays visible below it -->
+      <DockPanel Grid.Row="1" Grid.Column="2">
+        <Grid DockPanel.Dock="Bottom" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8" Margin="0,12,0,0"
+                    IsVisible="{Binding Editor, Converter={x:Static ObjectConverters.IsNotNull}}">
+          <TextBlock x:Name="SaveErrorMessage" Text="{Binding SaveError}" VerticalAlignment="Center" TextWrapping="Wrap"
+                     Classes="danger" AutomationProperties.LiveSetting="Polite" />
+          <Button Grid.Column="1" Content="{DynamicResource presets.revert}" Command="{Binding RevertCommand}" />
+          <Button x:Name="SavePresetButton" Grid.Column="2" Classes="accent" Command="{Binding SaveCommand}"
+                  AutomationProperties.Name="{DynamicResource presets.save}" AutomationProperties.HelpText="{Binding SaveStatus}"
+                  ToolTip.Tip="{Binding SaveStatus}">
+            <controls:SaveFeedback x:Name="SavePresetFeedback" Text="{DynamicResource presets.save}" Result="{Binding SaveResult}" />
+          </Button>
+        </Grid>
+        <ScrollViewer>
+          <StackPanel Spacing="12" Margin="0,0,12,0">
+            <TextBlock Classes="muted" Text="{DynamicResource presets.select}" IsVisible="{Binding Editor, Converter={x:Static ObjectConverters.IsNull}}" />
+            <views:PresetEditorView x:Name="PresetEditor" DataContext="{Binding Editor}" IsVisible="{Binding $parent[UserControl].((vm:PresetsPageViewModel)DataContext).Editor, Converter={x:Static ObjectConverters.IsNotNull}}" />
+          </StackPanel>
+        </ScrollViewer>
+      </DockPanel>
+    </Grid>
+  </ScrollViewer>
+</UserControl>
