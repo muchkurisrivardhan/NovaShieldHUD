@@ -10,6 +10,7 @@ gunmetal-and-amber style.
 |---|---|
 | **[Beacon](beacon/)** | A Spotlight-style launcher. `Alt+Space`, type, Enter. Apps, files, windows, system commands, timers, plain-English sentences, local voice, and Claude for anything else. |
 | **[Dotline](dotline/)** | Desktop widgets that sit on your wallpaper: your life and your goals as dots, a focus timer, and time zones on a world-map wallpaper. Set up through Beacon, always in Beacon's style. |
+| **Nova** | The talking assistant (`Ctrl+Alt+N`). Talk or type; it answers out loud, asks what you'd like next ("You've got two emails, summarize or open?"), opens apps and sites, and reads your inbox. Runs on your PC with a free AI model: no account, no key. Part of Beacon. |
 | **Prompt Ring** | Dictate a request, select it, press `Ctrl+Alt+P` and pick what it's for (Build, Fix, Workflow, Research, Write, Explain, Plan, Clean up). A free AI model on your PC rewrites it into a well-structured prompt, in place. Part of Beacon. |
 | **[Filee](filee/)** | Drag-and-drop file converter. Hold `Ctrl`, drag files, drop them on a format in the ring that opens at your cursor: 270 formats, offline. A fork of the open-source [Filee](https://github.com/KnifeLemon/Filee) (MIT) that wears Beacon's style, live. |
 
@@ -46,6 +47,7 @@ Everything is in **Beacon Settings** (tray icon > Settings, or type `settings`):
 | **Dotline** | Your birthday and lifespan, dot size, background, lock positions, time-zone dots |
 | **Filee** | Start with Beacon, follow Beacon's look (with a live preview of the ring), ring size and opacity, captions, pause |
 | **Voice** | Download a Whisper model to speak instead of typing (`Alt+M`) |
+| **Nova Assistant** | Speak replies and which voice, listen for answers, your email address and app password (optional) |
 | **Prompt Ring** | Download a free AI model (1–2.5 GB) so `Ctrl+Alt+P` rewrites selected text into a structured prompt, on your PC |
 | **Plain English** | Your Anthropic API key, only if you want `?` / Claude |
 
@@ -71,7 +73,7 @@ are left for a reinstall; delete them to remove every trace.
   system files or their permissions. Defender, SmartScreen, UAC and the lock itself stay on.
 - **Admin rights.** The apps need none.
 - **Other users.** Everything is per user: the install and the settings.
-- **The network,** except: the Prompt Ring's AI model, downloaded once from Hugging Face when you choose it; Filee's optional engine downloads (FFmpeg, LibreOffice, ... only when a
+- **The network,** except: your own mail server, when you add your email for Nova (read-only, over IMAP); the AI model, downloaded once from Hugging Face when you choose it; Filee's optional engine downloads (FFmpeg, LibreOffice, ... only when a
   conversion needs one and you agree), Claude (only when you ask it, with your own key), website icons in
   the launcher (can be turned off), the Whisper model you choose to download, and GitHub
   when you click Check for updates. No telemetry, no account, no ads.

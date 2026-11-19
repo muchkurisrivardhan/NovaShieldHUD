@@ -21,7 +21,7 @@ public sealed partial class CommandRegistry
 
     public CommandRegistry(
         AppIndex apps, IFileSearch files, Action rebuildIndex, Action openSettings, Action startVoice,
-        Func<IntPtr, Task> promptRing)
+        Func<IntPtr, Task> promptRing, Action<IntPtr> assistant)
     {
         var commands = new List<BeaconCommand>();
 
@@ -59,6 +59,25 @@ public sealed partial class CommandRegistry
             {
                 startVoice();
                 return Task.FromResult("Listening.");
+            },
+        });
+
+        // Bindable in Settings > Shortcuts (Ctrl+Alt+N by default): the talking assistant.
+        commands.Add(new BeaconCommand
+        {
+            Id = Settings.AssistantCommandId,
+            Title = "Talk to Nova",
+            Subtitle = "The assistant: talk or type, it answers out loud, checks email, opens things",
+            Description = "Open Nova, the voice assistant that runs on this PC.",
+            Glyph = "\uE720",
+            Keywords = ["nova", "assistant", "talk", "jarvis", "chat", "ask", "voice assistant", "hey nova"],
+            ExposeToAi = false,
+            Category = "Beacon",
+            RunAsync = ctx =>
+            {
+                ctx.Dismiss();
+                assistant(ctx.TargetWindow);
+                return Task.FromResult("Nova.");
             },
         });
 

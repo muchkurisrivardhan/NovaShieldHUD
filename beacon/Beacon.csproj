@@ -25,6 +25,9 @@
     <!-- Local AI: llama.cpp on the CPU, for the prompt ring. Free models, downloaded in Settings. -->
     <PackageReference Include="LLamaSharp" Version="0.30.0" />
     <PackageReference Include="LLamaSharp.Backend.Cpu" Version="0.30.0" />
+    <!-- Assistant: reading the inbox over IMAP, and Windows' own voices for speaking. -->
+    <PackageReference Include="MailKit" Version="4.18.2" />
+    <PackageReference Include="System.Speech" Version="10.0.15" />
     <PackageReference Include="NAudio.WinMM" Version="3.1.0" />
     <PackageReference Include="Whisper.net" Version="1.9.1" />
     <PackageReference Include="Whisper.net.Runtime" Version="1.9.1" />

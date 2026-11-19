@@ -139,6 +139,7 @@ public partial class SettingsWindow : Window
             new("Custom Commands", "", PageCustom),
             new("Plain English", "", PageAi),
             new("Voice", "", PageVoice),
+            new("Nova Assistant", "\uE720", PageAssistant),
             new("Prompt Ring", "\uE8BD", PageLocalAi),
             new("Advanced", "", PageAdvanced),
         };
@@ -248,6 +249,7 @@ public partial class SettingsWindow : Window
         AccentColor.TextChanged += (_, _) => UpdateAccentSwatch();
         InitFileePage();
         InitLocalAiPage();
+        InitAssistantPage();
 
         ModelPicker.SelectionChanged += (_, _) =>
         {
@@ -507,6 +509,7 @@ public partial class SettingsWindow : Window
 
         LoadFileePage();
         LoadLocalAiPage();
+        LoadAssistantPage();
         LaunchDotline.IsChecked = _settings.LaunchDotline;
         var dot = Suite.ReadDotline();
         DotBirthday.Text = dot.Birthday?.ToString("yyyy-MM-dd") ?? "";
@@ -1029,6 +1032,7 @@ public partial class SettingsWindow : Window
         _settings.VoiceAutoRun = VoiceAutoRun.IsChecked == true;
         if (SelectedVoiceModel is { } voiceModel) _settings.VoiceModel = voiceModel.Id;
         if (LocalModelPicker.SelectedItem is LocalModelChoice localModel) _settings.LocalModel = localModel.Model.Id;
+        SaveAssistantPage();
         if (VoiceDevice.SelectedItem is DeviceChoice device) _settings.VoiceDevice = device.Index;
 
         _settings.FaviconMode = TagOf(FaviconMode) ?? "direct";

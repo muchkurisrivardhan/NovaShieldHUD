@@ -11,7 +11,7 @@ namespace Beacon.LocalAi;
 /// </summary>
 public sealed class PromptRing(Settings settings, Action<string> notify)
 {
-    readonly LocalLlm _llm = new();
+    readonly LocalLlm _llm = LocalLlm.Shared;
     bool _busy;
 
     public async Task RunAsync(IntPtr target)
@@ -52,8 +52,9 @@ public sealed class PromptRing(Settings settings, Action<string> notify)
                 try
                 {
                     using var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(3));
-                    result = await _llm.CompleteAsync(LocalModels.PathFor(model), PromptStyles.SystemPrompt(style),
-                        PromptStyles.UserMessage(text), maxTokens: 1200, timeout.Token);
+                    // Off the UI thread: sampling is CPU work that would freeze the ring's spinner.
+                    result = await Task.Run(() => _llm.CompleteAsync(LocalModels.PathFor(model), PromptStyles.SystemPrompt(style),
+                        PromptStyles.UserMessage(text), maxTokens: 1200, timeout.Token));
                     if (string.IsNullOrWhiteSpace(result)) result = PromptStyles.Template(style, text);
                 }
                 catch (Exception e) when (e is not OutOfMemoryException)

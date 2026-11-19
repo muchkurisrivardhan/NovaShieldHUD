@@ -1140,6 +1140,66 @@
                     </Border>
                 </StackPanel>
 
+                <!-- ======================== Assistant ======================== -->
+                <StackPanel x:Name="PageAssistant" Visibility="Collapsed">
+                    <TextBlock Text="Nova Assistant" Style="{StaticResource PageTitle}" />
+                    <TextBlock Style="{StaticResource PageSubtitle}"
+                               Text="Press Ctrl+Alt+N and talk. Nova answers out loud, asks what you'd like next, opens apps and sites, and checks your email. It runs on this PC: free, no account, nothing sent to an AI company." />
+
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <TextBlock Text="What Nova needs" Style="{StaticResource GroupHeader}" />
+                            <TextBlock x:Name="AssistantReadiness" TextWrapping="Wrap" FontSize="12.5" LineHeight="19"
+                                       Foreground="{StaticResource TextSecondary}" />
+                            <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                                <Button x:Name="AssistantGoModel" Content="AI model…" Margin="0,0,8,0" />
+                                <Button x:Name="AssistantGoVoice" Content="Speech model…" Margin="0,0,8,0" />
+                                <Button x:Name="AssistantOpen" Content="Talk to Nova" />
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <TextBlock Text="Voice" Style="{StaticResource GroupHeader}" />
+                            <CheckBox x:Name="AssistantSpeaks" Content="Speak Nova's replies" />
+                            <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                                <ComboBox x:Name="AssistantVoicePicker" Width="300" />
+                                <Button x:Name="AssistantVoiceTest" Content="Test" Margin="8,0,0,0" />
+                            </StackPanel>
+                            <TextBlock Style="{StaticResource Caption}"
+                                       Text="Windows' own voices. More (and more natural ones) can be added in Windows Settings > Time &amp; language > Speech." />
+                            <CheckBox x:Name="AssistantListens" Margin="0,12,0,0"
+                                      Content="When Nova asks a question, listen for my answer" />
+                            <TextBlock Style="{StaticResource Caption}"
+                                       Text="So a conversation flows: “You've got two emails, summarize or open?” and you just answer. Press Esc to stop listening." />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <TextBlock Text="Email" Style="{StaticResource GroupHeader}" />
+                            <TextBlock Text="Email address" Style="{StaticResource Label}" />
+                            <TextBox x:Name="EmailAddress" Width="320" HorizontalAlignment="Left" Margin="0,0,0,12" />
+                            <TextBlock Text="App password" Style="{StaticResource Label}" />
+                            <PasswordBox x:Name="EmailPassword" Width="320" HorizontalAlignment="Left" Margin="0,0,0,4" />
+                            <TextBlock x:Name="EmailPasswordState" Style="{StaticResource Caption}" Margin="0,0,0,10" />
+                            <TextBlock Text="Mail server (leave empty to pick it from the address)" Style="{StaticResource Label}" />
+                            <TextBox x:Name="EmailServer" Width="320" HorizontalAlignment="Left" />
+                            <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                                <Button x:Name="EmailTest" Content="Test sign-in" Margin="0,0,8,0" />
+                                <Button x:Name="EmailForget" Content="Remove account" />
+                                <TextBlock x:Name="EmailStatus" Margin="14,0,0,0" VerticalAlignment="Center" TextWrapping="Wrap" MaxWidth="320"
+                                           Foreground="{StaticResource TextSecondary}" FontSize="12.5" />
+                            </StackPanel>
+                            <TextBlock Style="{StaticResource Caption}" Margin="0,12,0,0"
+                                       Text="Nova reads your inbox directly from your mail server (IMAP), so it's free and nothing passes through anyone else. It only reads: nothing is marked as read, moved, deleted or sent. Replies open as a draft that you send yourself. The password is encrypted for your Windows account and never leaves this PC except to sign in to your mail server." />
+                            <TextBlock Style="{StaticResource Caption}" Margin="0,8,0,0"
+                                       Text="Gmail: turn on 2-Step Verification, then create an app password at myaccount.google.com/apppasswords and paste it here. Yahoo and iCloud have app passwords too. Outlook and Hotmail no longer allow app passwords, so they can't be added yet." />
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
                 <!-- ======================== Local AI ========================= -->
                 <StackPanel x:Name="PageLocalAi" Visibility="Collapsed">
                     <TextBlock Text="Prompt Ring" Style="{StaticResource PageTitle}" />

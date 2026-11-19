@@ -190,6 +190,16 @@ public sealed class Settings
         });
 
         // Added once: a binding the user clears afterwards stays cleared (see PromptRingOffered).
+        if (!AssistantOffered)
+        {
+            BuiltInHotkeys.TryAdd(AssistantCommandId, new HotkeyBinding
+            {
+                Modifiers = NativeMethods.MOD_CONTROL | NativeMethods.MOD_ALT,
+                VirtualKey = 0x4E,   // N
+            });
+            AssistantOffered = true;
+        }
+
         if (!PromptRingOffered)
         {
             BuiltInHotkeys.TryAdd(PromptRingCommandId, new HotkeyBinding
@@ -202,14 +212,63 @@ public sealed class Settings
     }
 
     public const string PromptRingCommandId = "prompt_ring";
+    public const string AssistantCommandId = "nova_assistant";
+
+    /// <summary>Set once Ctrl+Alt+N has been given to Nova, so clearing it sticks.</summary>
+    public bool AssistantOffered { get; set; }
 
     /// <summary>Set once Ctrl+Alt+P has been given to the prompt ring, so clearing it sticks.</summary>
     public bool PromptRingOffered { get; set; }
 
+    // -------------------------------------------------------------- assistant
+
+    /// <summary>Speak Nova's replies aloud.</summary>
+    public bool AssistantSpeaks { get; set; } = true;
+
+    /// <summary>After Nova asks a question, listen for the answer without a key press.</summary>
+    public bool AssistantListensForReply { get; set; } = true;
+
+    /// <summary>Which Windows voice speaks (its name), or null for the default.</summary>
+    public string? AssistantVoice { get; set; }
+
+    public string EmailAddress { get; set; } = "";
+
+    /// <summary>IMAP server; empty means the one EmailInbox.HostFor picks from the address.</summary>
+    public string EmailImapHost { get; set; } = "";
+
+    public int EmailImapPort { get; set; } = 993;
+
+    /// <summary>The app password, encrypted for this Windows user (DPAPI), like the API key.</summary>
+    public string? EmailPasswordProtected { get; set; }
+
+    public void SetEmailPassword(string? plaintext) => EmailPasswordProtected = string.IsNullOrWhiteSpace(plaintext)
+        ? null
+        : Convert.ToBase64String(ProtectedData.Protect(Encoding.UTF8.GetBytes(plaintext.Trim()), null, DataProtectionScope.CurrentUser));
+
+    /// <summary>The account to sign in with, or null when it isn't set up (or can't be decrypted here).</summary>
+    public Assistant.EmailAccount? EmailAccount()
+    {
+        if (string.IsNullOrWhiteSpace(EmailAddress) || string.IsNullOrWhiteSpace(EmailPasswordProtected)) return null;
+        var host = string.IsNullOrWhiteSpace(EmailImapHost) ? Assistant.EmailInbox.HostFor(EmailAddress) : EmailImapHost.Trim();
+        if (host is null) return null;
+        try
+        {
+            var password = Encoding.UTF8.GetString(ProtectedData.Unprotect(
+                Convert.FromBase64String(EmailPasswordProtected), null, DataProtectionScope.CurrentUser));
+            // Google shows app passwords in groups of four ("abcd efgh ijkl mnop"); spaces are not part of it.
+            if (host == "imap.gmail.com") password = password.Replace(" ", "");
+            return new Assistant.EmailAccount(EmailAddress.Trim(), password, host, EmailImapPort is > 0 and < 65536 ? EmailImapPort : 993);
+        }
+        catch (Exception e) when (e is CryptographicException or FormatException)
+        {
+            return null;
+        }
+    }
+
     // -------------------------------------------------------------- local ai
 
     /// <summary>Which free local model the prompt ring uses (LocalModels id).</summary>
-    public string LocalModel { get; set; } = "qwen2.5-1.5b";
+    public string LocalModel { get; set; } = "qwen3-4b";
 
     // -------------------------------------------------------------------- ai
 

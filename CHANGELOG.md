@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### 2026-11-19 (night)
+- **Nova, the talking assistant** (`Ctrl+Alt+N`, the "Talk to Nova" command). A panel in the corner in your Beacon style, with an orb that shows when it's listening, thinking and speaking. Talk (Whisper, on this PC) or type; Nova answers out loud with a Windows voice and, when it ends on a question, listens for your answer. It keeps the conversation, so "summarize the second one" means the email it just listed.
+- **Runs on your PC, free:** the same local AI as the Prompt Ring. Qwen 3 4B is now the recommended model (Nova needs it to use tools reliably; the 1.5B one guesses). Replies are held by grammar to one JSON shape, so the model can only say something or call a real tool. The model's memory is kept between turns, so a turn costs the new words, not the whole conversation again.
+- **Tools:** do anything Beacon can (open apps and sites, search, volume, timers, windows...), check the inbox, read an email to summarize it, open it in the browser, and draft a reply you send yourself. Plain commands Beacon understands exactly run at once without the model. Anything that can't be undone (shut down, close apps) shows an approval card first.
+- **Email over IMAP with an app password:** free, read-only (nothing marked read, moved, deleted or sent), straight to your mail server. Gmail, Yahoo, iCloud and others are recognised from the address. Outlook and Hotmail no longer accept app passwords, so they can't be added yet. The password is encrypted for your Windows account.
+- Settings → **Nova Assistant**: what's ready, voice and listening, the email account with a Test button.
+
 ### 2026-11-19 (evening)
 - **Prompt Ring** (Beacon, `Ctrl+Alt+P`): select text you dictated in any app, press the shortcut, and a ring opens at the cursor in your Beacon style with Build, Fix, Workflow, Research, Write, Explain, Plan and Clean up. Pick one (click or 1-8) and the text is rewritten into a structured prompt (goal, context, requirements, constraints, how to check it's done...) and pasted over the selection; Ctrl+Z undoes it, and the clipboard is given back. The structures follow Anthropic's prompting advice; what you didn't say becomes a [question] to fill in, never an invented detail.
 - **Free local AI, no account or key:** the rewriting runs on your PC through llama.cpp (LLamaSharp, x64 and ARM64). Settings → Prompt Ring downloads a free Apache-licensed model: Qwen 2.5 1.5B (1 GB, recommended) or Qwen 3 4B (2.5 GB, better), checked against a pinned SHA-256. Without one, the ring lays your words out in the chosen structure with questions for the rest.
