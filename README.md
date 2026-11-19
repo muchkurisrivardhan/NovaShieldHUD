@@ -10,6 +10,7 @@ gunmetal-and-amber style.
 |---|---|
 | **[Beacon](beacon/)** | A Spotlight-style launcher. `Alt+Space`, type, Enter. Apps, files, windows, system commands, timers, plain-English sentences, local voice, and Claude for anything else. |
 | **[Dotline](dotline/)** | Desktop widgets that sit on your wallpaper: your life and your goals as dots, a focus timer, and time zones on a world-map wallpaper. Set up through Beacon, always in Beacon's style. |
+| **[Filee](filee/)** | Drag-and-drop file converter. Hold `Ctrl`, drag files, drop them on a format in the ring that opens at your cursor: 270 formats, offline. A fork of the open-source [Filee](https://github.com/KnifeLemon/Filee) (MIT) that wears Beacon's style, live. |
 
 ![Focus timer](docs/media/focus-timer.png)
 
@@ -38,6 +39,7 @@ Everything is in **Beacon Settings** (tray icon > Settings, or type `settings`):
 | **General** | Start Beacon when you sign in, the launcher shortcut, **Check for updates** |
 | **Appearance** | The style (Tactical, HUD, Classic, Cyberpunk, Retro CRT, Minimal mono) and accent colour. Dotline follows |
 | **Dotline** | Your birthday and lifespan, dot size, background, lock positions, time-zone dots |
+| **Filee** | Start with Beacon, follow Beacon's look (with a live preview of the ring), ring size and opacity, captions, pause |
 | **Voice** | Download a Whisper model to speak instead of typing (`Alt+M`) |
 | **Plain English** | Your Anthropic API key, only if you want `?` / Claude |
 
@@ -63,7 +65,8 @@ are left for a reinstall; delete them to remove every trace.
   system files or their permissions. Defender, SmartScreen, UAC and the lock itself stay on.
 - **Admin rights.** The apps need none.
 - **Other users.** Everything is per user: the install and the settings.
-- **The network,** except: Claude (only when you ask it, with your own key), website icons in
+- **The network,** except: Filee's optional engine downloads (FFmpeg, LibreOffice, ... only when a
+  conversion needs one and you agree), Claude (only when you ask it, with your own key), website icons in
   the launcher (can be turned off), the Whisper model you choose to download, and GitHub
   when you click Check for updates. No telemetry, no account, no ads.
 
@@ -75,6 +78,7 @@ All state is local, per Windows user:
 |---|---|
 | `%APPDATA%\Beacon\` | settings (API key encrypted with Windows DPAPI), timers, usage counts |
 | `%APPDATA%\Dotline\state.json` | birthday, goals, widget layout, focus log, map zones |
+| `%APPDATA%\Filee\` | Filee's settings, presets and history; `theme.json` is Beacon's look, written by Beacon |
 | `%APPDATA%\NovaShieldHUD\` | hand-off file between the apps: the running focus session |
 
 Details in [SECURITY.md](SECURITY.md).
@@ -86,6 +90,7 @@ Windows 10/11, .NET 10 SDK.
 ```bash
 dotnet build -c Release beacon/Beacon.csproj
 dotnet publish -c Release -o dotline/dist dotline/Dotline.csproj
+dotnet build -c Release filee/src/Filee.App/Filee.App.csproj
 ```
 
 Run `beacon/bin/Release/net10.0-windows/Beacon.exe`; it finds and starts the others.
@@ -107,7 +112,8 @@ Every feature, with how it works: [docs/FEATURES.md](docs/FEATURES.md). History:
 ## Licence
 
 Not open source. The app is free to install and use; the source is public to read and review;
-all other rights are reserved. See [LICENSE](LICENSE). The open-source components it includes,
+all other rights are reserved. See [LICENSE](LICENSE). The exception is [filee/](filee/), a fork of
+Filee that stays under its own MIT licence ([filee/LICENSE](filee/LICENSE)). The open-source components it includes,
 and their licences, are listed in [THIRD-PARTY-NOTICES.txt](THIRD-PARTY-NOTICES.txt).
 
 Windows is a trademark of Microsoft Corporation; Claude is a trademark of Anthropic, PBC.

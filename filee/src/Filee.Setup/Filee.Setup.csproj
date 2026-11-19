@@ -1,0 +1,107 @@
+<!--
+  Filee.Setup: Filee's own Windows installer and uninstaller (Filee-<version>-win-Setup.exe, uninstall.exe).
+  build/build-installer.ps1 publishes it as one self-contained, trimmed file (no .NET needed on the PC) and appends
+  the published app to it as a compressed payload (build/tools/make-setup.cs). The same program without a payload,
+  copied next to Filee.exe as uninstall.exe, is the uninstaller.
+  It shares the app's look (Styles/Soft.axaml, SoftPalette) and translations (Assets/i18n). It uses Windows' own UI
+  fonts instead of the app's embedded Noto fonts (37 MB): Setup is downloaded on every update.
+-->
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <AssemblyName>Filee.Setup</AssemblyName>
+    <RootNamespace>Filee.Setup</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>..\Filee.App\Assets\Icons\filee.ico</ApplicationIcon>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <!-- Kept trim- and AOT-safe (no reflection, compiled bindings, source-generated COM), so the publish can be
+         trimmed and could become Native AOT later. -->
+    <IsAotCompatible>true</IsAotCompatible>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <Product>Filee Setup</Product>
+  </PropertyGroup>
+
+  <!-- build/build-installer.ps1: dotnet publish -c Release -r win-x64 -p:FileeSetupPublish=true -->
+  <PropertyGroup Condition="'$(FileeSetupPublish)' == 'true'">
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <!-- No native library is left for .NET to unpack at start (into %TEMP%\.net, a folder the user can change, which
+         it reuses): Setup carries Skia and HarfBuzz itself (EmbedSetupNatives below, Platform/NativeLibraries.cs). -->
+    <IncludeNativeLibrariesForSelfExtract>false</IncludeNativeLibrariesForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <PublishTrimmed>true</PublishTrimmed>
+    <TrimMode>full</TrimMode>
+    <DebugType>none</DebugType>
+    <UseSystemResourceKeys>false</UseSystemResourceKeys>
+    <EventSourceSupport>false</EventSourceSupport>
+    <StackTraceSupport>true</StackTraceSupport>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Filee.Platform.Windows\Filee.Platform.Windows.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" />
+    <PackageReference Include="Avalonia.Desktop" />
+    <PackageReference Include="Avalonia.Themes.Fluent" />
+    <PackageReference Include="CommunityToolkit.Mvvm" />
+    <!-- LZMA for the payload (the engines use it already for downloads). -->
+    <PackageReference Include="SharpCompress" />
+  </ItemGroup>
+
+  <!-- Shared with the app: its look, icon and translations. -->
+  <ItemGroup>
+    <Compile Include="..\Filee.App\Services\SoftPalette.cs" Link="Shared\SoftPalette.cs" />
+    <Compile Include="..\Filee.App\Services\AppLanguages.cs" Link="Shared\AppLanguages.cs" />
+    <!-- The "What's new" slides on the progress card: the app's slideshow, its player and deck reader, and the media. -->
+    <Compile Include="..\Filee.App\Controls\AnimatedImage.cs" Link="Shared\AnimatedImage.cs" />
+    <Compile Include="..\Filee.App\Controls\AnimatedImageDecoder.cs" Link="Shared\AnimatedImageDecoder.cs" />
+    <Compile Include="..\Filee.App\Controls\SlideDeck.cs" Link="Shared\SlideDeck.cs" />
+    <Compile Include="..\Filee.App\Controls\SlideShow.cs" Link="Shared\SlideShow.cs" />
+    <AvaloniaResource Include="..\Filee.App\Assets\WhatsNew\**" Link="Assets\WhatsNew\%(RecursiveDir)%(Filename)%(Extension)" />
+    <AvaloniaResource Include="..\Filee.App\Styles\Soft.axaml" Link="Styles\Soft.axaml" />
+    <AvaloniaResource Include="..\Filee.App\Assets\Icons\filee.ico" Link="Assets\Icons\filee.ico" />
+    <AvaloniaResource Include="..\Filee.App\Assets\Icons\filee.png" Link="Assets\Icons\filee.png" />
+    <EmbeddedResource Include="..\Filee.App\Assets\i18n\*.json" Link="i18n\%(Filename)%(Extension)" LogicalName="i18n.%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Filee.Setup.Tests" />
+  </ItemGroup>
+
+  <!--
+    The publish keeps Setup one file without .NET's own unpacking of native libraries: Skia and HarfBuzz go into
+    Filee.Setup.dll as resources, which NativeLibraries writes into a folder of its own and loads by full path. They
+    leave the publish and its deps.json, so .NET neither unpacks nor looks for them. ANGLE (av_libglesv2.dll) is left
+    out: Setup draws in software (Program.BuildAvaloniaApp).
+  -->
+  <Target Name="EmbedSetupNatives" AfterTargets="ResolvePackageAssets" Condition="'$(FileeSetupPublish)' == 'true'">
+    <ItemGroup>
+      <_SetupNative Include="@(NativeCopyLocalItems)" Condition="'%(Filename)%(Extension)' == 'libSkiaSharp.dll' or '%(Filename)%(Extension)' == 'libHarfBuzzSharp.dll'" />
+      <EmbeddedResource Include="@(_SetupNative)" LogicalName="native.%(Filename)%(Extension)" WithCulture="false" Type="Non-Resx" />
+      <NativeCopyLocalItems Condition="'%(Filename)%(Extension)' == 'libSkiaSharp.dll' or '%(Filename)%(Extension)' == 'libHarfBuzzSharp.dll' or '%(Filename)%(Extension)' == 'av_libglesv2.dll'">
+        <CopyToPublishDirectory>false</CopyToPublishDirectory>
+      </NativeCopyLocalItems>
+    </ItemGroup>
+    <Error Condition="'@(_SetupNative->Count())' != '2'" Text="Expected libSkiaSharp.dll and libHarfBuzzSharp.dll among the native libraries, found: @(_SetupNative->'%(Filename)%(Extension)')" />
+  </Target>
+
+  <!-- A library that doesn't go into the single file lands next to Setup.exe, and build-installer.ps1 only takes the
+       exe: a new native library has to be carried like Skia above. -->
+  <Target Name="CheckSetupIsOneFile" AfterTargets="Publish" Condition="'$(FileeSetupPublish)' == 'true'">
+    <ItemGroup>
+      <_SetupLeftOut Include="$(PublishDir)*.dll" />
+    </ItemGroup>
+    <Error Condition="'@(_SetupLeftOut)' != ''" Text="Setup must publish as one file; next to it: @(_SetupLeftOut->'%(Filename)%(Extension)')" />
+  </Target>
+
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+      <_Parameter1>RepositoryUrl</_Parameter1>
+      <_Parameter2>$(FileeRepositoryUrl)</_Parameter2>
+    </AssemblyAttribute>
+  </ItemGroup>
+</Project>

@@ -1,0 +1,203 @@
+// Preset list + the shared PresetEditorView on the right.
+
+using System.Collections.ObjectModel;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using Filee.App.Controls;
+using Filee.App.Services;
+using Filee.Core.Formats;
+using Filee.Core.Localization;
+using Filee.Core.Presets;
+using Filee.Core.Settings;
+
+namespace Filee.App.ViewModels.Pages;
+
+public sealed partial class PresetListItem(Preset preset, ILocalizer loc) : ObservableObject
+{
+    public Preset Preset { get; private set; } = preset;
+
+    /// <summary>Updates the list only after the edited preset has been saved.</summary>
+    public void Saved(Preset preset, ILocalizer loc)
+    {
+        Preset = preset;
+        Refresh(loc);
+    }
+
+    [ObservableProperty] private string _name = loc.DisplayName(preset);
+    [ObservableProperty] private string _target = TargetLabel(preset, loc);
+
+    public void Refresh(ILocalizer l)
+    {
+        Name = l.DisplayName(Preset);
+        Target = TargetLabel(Preset, l);
+    }
+
+    private static string TargetLabel(Preset p, ILocalizer l) =>
+        p.IsUpscaleTool ? l["preset.upscale"]
+        : p.TargetFormat == BuiltInData.SameAsSource ? l["presets.same_as_source"]
+        : "→ " + (FormatLabels.NameOf(l, p.TargetFormat) ?? p.TargetFormat);
+}
+
+/// <summary>Pages that fill the window height and scroll their own parts instead of scrolling as a whole.</summary>
+public interface IFitsWindowHeight;
+
+public sealed partial class PresetsPageViewModel : ObservableObject, IFitsWindowHeight
+{
+    private readonly UserDataStore _store;
+    private readonly ILocalizer _loc;
+    private readonly WindowService _windows;
+    private Preset? _editingPreset;
+
+    public PresetsPageViewModel(UserDataStore store, ILocalizer loc, WindowService windows)
+    {
+        _store = store;
+        _loc = loc;
+        _windows = windows;
+        VisiblePresets = new FilteredList<PresetListItem>(Presets, p => [p.Name, p.Target, p.Preset.TargetFormat]);
+        var off = store.Settings.TurnedOffFieldSet();
+        // Groups and tools convert nothing: they live on the donut only (Settings → Toolbar).
+        foreach (var preset in store.Presets.Where(p => !p.IsGroup && (!p.IsTool || p.IsUpscaleTool) && FormatFields.IsShown(p.TargetFormat, off)))
+            Presets.Add(new PresetListItem(preset, loc));
+        SelectedPreset = Presets.FirstOrDefault();
+        PlacePresets = [.. BuiltInData.PlacePresets().Where(p => FormatFields.IsShown(p.TargetFormat, off))
+            .Select(p => new PresetListItem(p, loc))];
+    }
+
+    public ObservableCollection<PresetListItem> Presets { get; } = [];
+
+    /// <summary>The presets the search box above the list lets through (name or target format).</summary>
+    public FilteredList<PresetListItem> VisiblePresets { get; }
+
+    [ObservableProperty] private string _search = "";
+
+    partial void OnSearchChanged(string value) => VisiblePresets.Query = value;
+
+    [ObservableProperty] private PresetListItem? _selectedPreset;
+    [ObservableProperty] private PresetEditorViewModel? _editor;
+    [ObservableProperty] private SaveResult _saveResult;
+    [ObservableProperty] private string? _saveError;
+
+    /// <summary>Exposed as help text without replacing the button's accessible name.</summary>
+    public string? SaveStatus => SaveError ?? (SaveResult == SaveResult.Succeeded ? _loc["presets.saved"] : null);
+
+    partial void OnSaveResultChanged(SaveResult value) => OnPropertyChanged(nameof(SaveStatus));
+    partial void OnSaveErrorChanged(string? value) => OnPropertyChanged(nameof(SaveStatus));
+
+    /// <summary>Asks the editor view to reveal the first invalid field.</summary>
+    public event EventHandler? ValidationFailed;
+
+    partial void OnSelectedPresetChanged(PresetListItem? value)
+    {
+        _editingPreset = value?.Preset.Clone();
+        Editor = _editingPreset is null ? null : new PresetEditorViewModel(_editingPreset, _loc, _store.Settings.TurnedOffFieldSet());
+        SaveResult = SaveResult.None;
+        SaveError = null;
+    }
+
+    [RelayCommand]
+    private void Save()
+    {
+        SaveResult = SaveResult.None;
+        SaveError = null;
+        if (Editor is null || SelectedPreset is null || _editingPreset is null)
+            return;
+        if (!Editor.Apply())
+        {
+            SaveError = Editor.NameError ?? Editor.SizeRangeError ?? Editor.DestinationError ?? Editor.CustomSizeError;
+            SaveResult = SaveResult.Failed;
+            ValidationFailed?.Invoke(this, EventArgs.Empty);
+            return;
+        }
+
+        var original = SelectedPreset.Preset;
+        var index = _store.Presets.IndexOf(original);
+        if (index < 0)
+            return;
+        // The live library keeps the last saved preset until the write succeeds. Failed edits remain in the editor
+        // for retry; Revert and switching presets still restore the saved values.
+        _store.Presets[index] = _editingPreset;
+        try
+        {
+            _store.SaveLibrary();
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            _store.Presets[index] = original;
+            SaveError = _loc.Format("presets.save_failed", ex.Message);
+            SaveResult = SaveResult.Failed;
+            return;
+        }
+        SelectedPreset.Saved(_editingPreset, _loc);
+        OnSelectedPresetChanged(SelectedPreset);
+        SaveResult = SaveResult.Succeeded;
+    }
+
+    [RelayCommand]
+    private void Revert() => OnSelectedPresetChanged(SelectedPreset);
+
+    [RelayCommand]
+    private void Add() => AddPreset(new Preset { Name = _loc["toolbar.new_preset"], TargetFormat = "png" });
+
+    /// <summary>The ready-made presets Add offers besides an empty one (<see cref="BuiltInData.PlacePresets"/>).</summary>
+    public IReadOnlyList<PresetListItem> PlacePresets { get; }
+
+    /// <summary>Adds a copy of a ready-made preset under a new id, so it can be added again and changed freely.</summary>
+    [RelayCommand]
+    private void AddPlace(Preset template)
+    {
+        var copy = template.Clone();
+        copy.Id = Preset.NewId();
+        AddPreset(copy);
+    }
+
+    [RelayCommand]
+    private void Duplicate()
+    {
+        if (SelectedPreset is null)
+            return;
+        var copy = SelectedPreset.Preset.Clone();
+        copy.Id = Preset.NewId();
+        copy.Name = _loc.DisplayName(SelectedPreset.Preset) + " 2";
+        copy.NameKey = null;
+        AddPreset(copy);
+    }
+
+    [RelayCommand]
+    private async Task Delete()
+    {
+        if (SelectedPreset is null || _windows.Main is null)
+            return;
+        var message = _loc.Format("presets.delete_confirm", SelectedPreset.Name);
+        if (!await _windows.ConfirmAsync(_windows.Main, message, destructive: true))
+            return;
+
+        var index = Presets.IndexOf(SelectedPreset);
+        _store.Presets.Remove(SelectedPreset.Preset);
+        _store.SaveLibrary(); // also removes it from every profile
+        Presets.Remove(SelectedPreset);
+        SelectedPreset = Presets.Count == 0 ? null : Presets[Math.Clamp(index, 0, Presets.Count - 1)];
+    }
+
+    /// <summary>Opens the preset gallery; what it installs joins the list.</summary>
+    [RelayCommand]
+    private void OpenGallery() => _windows.ShowPresetGallery(result =>
+    {
+        foreach (var preset in result.Presets.Where(p => !p.IsGroup && (!p.IsTool || p.IsUpscaleTool)))
+            Presets.Add(new PresetListItem(preset, _loc));
+    });
+
+    /// <summary>Opens "Export for the gallery" with the chosen preset ticked.</summary>
+    [RelayCommand]
+    private void ExportForGallery() => _windows.ShowGalleryExport(SelectedPreset?.Preset);
+
+    private void AddPreset(Preset preset)
+    {
+        _store.Presets.Add(preset);
+        _store.SaveLibrary();
+        var item = new PresetListItem(preset, _loc);
+        // Clear the search filter first so the new preset is visible regardless of what was typed.
+        Search = "";
+        Presets.Add(item);
+        SelectedPreset = item;
+    }
+}

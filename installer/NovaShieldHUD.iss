@@ -63,7 +63,7 @@ Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: 
 Filename: "{app}\Beacon.exe"; Description: "Start NovaShield HUD"; Flags: nowait postinstall
 
 [UninstallRun]
-Filename: "{sys}\taskkill.exe"; Parameters: "/F /IM Beacon.exe /IM Dotline.exe"; Flags: runhidden; RunOnceId: "StopApps"
+Filename: "{sys}\taskkill.exe"; Parameters: "/F /IM Beacon.exe /IM Dotline.exe /IM Filee.exe"; Flags: runhidden; RunOnceId: "StopApps"
 
 [Code]
 // ponytail: v0.5.0 shipped a lock screen HUD that has since been removed. When updating over
@@ -74,6 +74,10 @@ var
   Old: String;
   Rc: Integer;
 begin
+  // Filee keeps its files open while it runs (Beacon closes it before an update; a manual
+  // reinstall may not have).
+  if (CurStep = ssInstall) and FileExists(ExpandConstant('{app}\filee\Filee.exe')) then
+    Exec(ExpandConstant('{sys}\taskkill.exe'), '/F /IM Filee.exe', '', SW_HIDE, ewWaitUntilTerminated, Rc);
   Old := ExpandConstant('{app}\Lockscreen');
   if (CurStep = ssInstall) and FileExists(Old + '.exe') then
   begin

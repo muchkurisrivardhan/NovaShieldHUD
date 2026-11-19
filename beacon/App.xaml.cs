@@ -126,6 +126,9 @@ public partial class App : System.Windows.Application
         BuildTrayIcon(settings);
         ApplyStartupRegistration(settings.RunAtStartup);
         if (settings.LaunchDotline) Suite.OpenDotline();
+        // Filee wears Beacon's look; refresh it in case Beacon was updated with new palettes.
+        Suite.SyncFileeLook(settings);
+        if (settings.LaunchFilee && !Suite.FileeRunning) Suite.OpenFilee();
 
         // Timers fire on a pool thread; the tray icon belongs to this one. Subscribe before
         // restoring, so reminders that fell due while Beacon was off are announced too.

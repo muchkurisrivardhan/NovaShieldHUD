@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### 2026-11-19
+- **New app: Filee**, the drag-and-drop file converter, forked from [KnifeLemon/Filee](https://github.com/KnifeLemon/Filee) (MIT, upstream commit `cf96cd5`) into `filee/`. Hold `Ctrl`, drag files, drop them on a format in the ring at the cursor.
+- **Filee wears Beacon's look, live.** Beacon writes its style into `%APPDATA%\Filee\theme.json` (surfaces, text, accent, light/dark, corner radius, font); the fork watches that file and restyles in place. Tactical is gunmetal and amber with square corners in Bahnschrift, HUD cyan on navy, Cyberpunk pink on violet, Retro CRT phosphor green in Cascadia Mono, Minimal mono greys, Classic keeps Filee's own rounded surfaces with Beacon's accent.
+- Beacon Settings has a **Filee** page: start with Beacon (on by default), follow Beacon's look, a live preview of the format ring in the style you are picking, ring size and opacity, captions, pause, upstream update notices, Open / Close.
+- Beacon commands: **Convert files (Filee)** (`convert`, `filee`, `png`, `pdf`...) and **Close Filee**.
+- Installer bundles Filee in `filee\` (self-contained, with the rhwp and 7-Zip engines; the large engines download on demand) and stops it on update and uninstall.
+
 ### 2026-11-16
 - **Removed the lock screen HUD** (the Lockscreen app, its Widgets-board widgets, and the Lock screen card in Beacon Settings → Appearance). Updating over 0.5.0 puts your own lock screen picture back and removes the scheduled refresh. If you installed the Widgets-board package, remove it in Settings → Apps. The older lock screen entries below are history.
 
