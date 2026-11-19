@@ -74,7 +74,7 @@ public sealed class AssistantWindow : Window
 
         var inbox = new EmailInbox(settings.EmailAccount);
         _tools = new AssistantTools(parser, runner, inbox, Dispatcher, () => _target[0], ApproveAsync, s => AddNote(s));
-        _brain = new AssistantBrain(LocalLlm.Shared, _tools);
+        _brain = new AssistantBrain(_tools);
         _brain.Said += line => Dispatcher.BeginInvoke(() => SayLine(line));
         _brain.Working += tool => Dispatcher.BeginInvoke(() => AddNote(ToolNote(tool)));
 
@@ -152,13 +152,8 @@ public sealed class AssistantWindow : Window
                 return;
             }
 
-            if (LocalModels.ForAssistant(_settings.LocalModel) is not { } model)
-            {
-                SayLine("I can run commands like \"open Notion\" now. To talk with me properly, download the AI model in Beacon Settings, on the Prompt Ring page. Qwen 3 4B works best.");
-                return;
-            }
-
-            await Task.Run(() => _brain.RespondAsync(LocalModels.PathFor(model), text, work.Token), work.Token);
+            if (Brain() is not { } brain) return;
+            await Task.Run(() => _brain.RespondAsync(brain, text, work.Token), work.Token);
         }
         catch (OperationCanceledException) { }
         catch (Exception e) when (e is not OutOfMemoryException)
@@ -171,6 +166,34 @@ public sealed class AssistantWindow : Window
             if (_mode == Mode.Thinking) SetMode(Mode.Idle);
             if (_mode == Mode.Idle && _voice.State != SynthesizerState.Speaking) OnSpeechDone();
         }
+    }
+
+    /// <summary>The brain chosen in Settings > Brain, or null (after saying what's missing).</summary>
+    Func<IReadOnlyList<(string Role, string Content)>, CancellationToken, Task<string>>? Brain()
+    {
+        var effort = _settings.BrainEffort;
+        switch (_settings.Brain)
+        {
+            case "claude" when _settings.ApiKey is { Length: > 0 } key:
+                var claudeModel = _settings.BrainClaudeModel;
+                return (messages, ct) => CloudBrains.ClaudeAsync(key, claudeModel, effort, messages, ct);
+            case "claude":
+                SayLine("Claude is picked as my brain, but there's no API key yet. Add it in Settings > Brain > Accounts.");
+                return null;
+            case "openrouter" when _settings.OpenRouterKey is { Length: > 0 } orKey && _settings.BrainOpenRouterModel.Length > 0:
+                var orModel = _settings.BrainOpenRouterModel;
+                return (messages, ct) => CloudBrains.OpenRouterAsync(orKey, orModel, effort, messages, ct);
+            case "openrouter":
+                SayLine("OpenRouter is picked as my brain, but it isn't connected or no model is chosen. Do that in Settings > Brain.");
+                return null;
+        }
+        if (LocalModels.ForAssistant(_settings.LocalModel) is not { } model)
+        {
+            SayLine("I can run commands like \"open Notion\" now. To talk with me properly, pick a brain in Settings > Brain: the free model on this PC, Claude, or OpenRouter.");
+            return null;
+        }
+        var path = LocalModels.PathFor(model);
+        return (messages, ct) => LocalLlm.Shared.ChatAsync(path, messages, 400, AssistantBrain.Gbnf, ct);
     }
 
     async Task ListenAsync()

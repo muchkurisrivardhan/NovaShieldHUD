@@ -24,7 +24,7 @@ public interface IAssistantTools
 /// loops while the model asks for tools (at most a few rounds), saying each line as it comes.
 /// The conversation is kept, so "summarize the second one" means the email it just listed.
 /// </summary>
-public sealed class AssistantBrain(LocalLlm llm, IAssistantTools tools)
+public sealed class AssistantBrain(IAssistantTools tools)
 {
     const int MaxRounds = 4;
     const int KeepMessages = 16;   // the last 8 exchanges; the model's window is small
@@ -58,7 +58,12 @@ public sealed class AssistantBrain(LocalLlm llm, IAssistantTools tools)
         _system = null;
     }
 
-    public async Task RespondAsync(string modelPath, string userText, CancellationToken ct)
+    /// <summary>
+    /// One turn. <paramref name="chat"/> is the brain: the model on this PC, Claude or OpenRouter.
+    /// It gets the whole conversation (system first) and returns the reply text.
+    /// </summary>
+    public async Task RespondAsync(Func<IReadOnlyList<(string Role, string Content)>, CancellationToken, Task<string>> chat,
+        string userText, CancellationToken ct)
     {
         // The time goes with the message, not the instructions, which must stay the same all conversation.
         _history.Add(("user", $"[{DateTime.Now:h:mm tt}] {userText.Trim()}"));
@@ -68,7 +73,7 @@ public sealed class AssistantBrain(LocalLlm llm, IAssistantTools tools)
             var messages = new List<(string, string)> { ("system", _system) };
             messages.AddRange(_history.TakeLast(KeepMessages).SkipWhile(m => m.Role != "user"));
 
-            var raw = await llm.ChatAsync(modelPath, messages, 400, Gbnf, ct).ConfigureAwait(false);
+            var raw = await chat(messages, ct).ConfigureAwait(false);
             _history.Add(("assistant", raw));
             var (say, tool, args) = Parse(raw);
 
@@ -108,6 +113,12 @@ public sealed class AssistantBrain(LocalLlm llm, IAssistantTools tools)
     internal static (string Say, string? Tool, Dictionary<string, string> Args) Parse(string raw)
     {
         var args = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        // A cloud model isn't held by grammar: take the JSON object out of whatever it wrote,
+        // and treat plain prose as something said, with no tool.
+        var start = raw.IndexOf('{');
+        var end = raw.LastIndexOf('}');
+        if (start < 0 || end <= start) return (raw.Trim(), null, args);
+        raw = raw[start..(end + 1)];
         try
         {
             if (JsonNode.Parse(raw) is not JsonObject o) return (raw, null, args);
@@ -124,7 +135,8 @@ public sealed class AssistantBrain(LocalLlm llm, IAssistantTools tools)
         }
     }
 
-    static string SystemPrompt() =>
+    /// <summary>The instructions, the same for every brain.</summary>
+    public static string SystemPrompt() =>
         $$$"""
         You are Nova, the voice assistant built into NovaShield HUD on the user's Windows PC. You talk like a helpful friend: warm, natural, and short, one to three sentences, because everything you say is spoken aloud. No lists, no markdown, no emoji.
 
@@ -150,7 +162,7 @@ public sealed class AssistantBrain(LocalLlm llm, IAssistantTools tools)
         """;
 
     /// <summary>The one reply shape the model may produce.</summary>
-    const string Gbnf = """
+    public const string Gbnf = """
         root   ::= "{" ws "\"say\":" ws string "," ws "\"tool\":" ws tool "," ws "\"args\":" ws args ws "}"
         tool   ::= "null" | "\"do\"" | "\"check_inbox\"" | "\"read_email\"" | "\"open_email\"" | "\"reply_email\""
         args   ::= "{" ws ( pair ( ws "," ws pair )* )? ws "}"

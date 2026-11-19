@@ -1140,6 +1140,72 @@
                     </Border>
                 </StackPanel>
 
+                <!-- ========================== Brain =========================== -->
+                <StackPanel x:Name="PageBrain" Visibility="Collapsed">
+                    <TextBlock Text="Brain" Style="{StaticResource PageTitle}" />
+                    <TextBlock Style="{StaticResource PageSubtitle}"
+                               Text="The AI that thinks for Nova. The one on this PC is free and private; Claude and OpenRouter are smarter and faster, and use your own account." />
+
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                        <ToggleButton x:Name="BrainTabDefault" Content="Default" Margin="0,0,8,0" Padding="16,6" IsChecked="True" />
+                        <ToggleButton x:Name="BrainTabAccounts" Content="Accounts" Padding="16,6" />
+                    </StackPanel>
+
+                    <StackPanel x:Name="BrainDefault">
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel>
+                                <TextBlock Text="Which AI answers you" Style="{StaticResource GroupHeader}" />
+                                <ComboBox x:Name="BrainPicker" Width="420" HorizontalAlignment="Left" />
+                                <TextBlock x:Name="BrainNote" Style="{StaticResource Caption}" />
+
+                                <TextBlock Text="EFFORT" Style="{StaticResource Label}" Margin="0,16,0,6" />
+                                <Slider x:Name="BrainEffort" Minimum="0" Maximum="3" TickFrequency="1" IsSnapToTickEnabled="True"
+                                        Width="420" HorizontalAlignment="Left" />
+                                <Grid Width="420" HorizontalAlignment="Left">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition /><ColumnDefinition /><ColumnDefinition /><ColumnDefinition />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Low" Foreground="{StaticResource TextSecondary}" FontSize="12" />
+                                    <TextBlock Grid.Column="1" Text="Medium" Foreground="{StaticResource TextSecondary}" FontSize="12" HorizontalAlignment="Center" />
+                                    <TextBlock Grid.Column="2" Text="High" Foreground="{StaticResource TextSecondary}" FontSize="12" HorizontalAlignment="Center" />
+                                    <TextBlock Grid.Column="3" Text="Max" Foreground="{StaticResource TextSecondary}" FontSize="12" HorizontalAlignment="Right" />
+                                </Grid>
+                                <TextBlock Style="{StaticResource Caption}" Text="Higher is smarter but slower. Applies to Claude and OpenRouter; the model on this PC has one speed." />
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+
+                    <StackPanel x:Name="BrainAccounts" Visibility="Collapsed">
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel>
+                                <TextBlock Text="OpenRouter" Style="{StaticResource GroupHeader}" />
+                                <TextBlock TextWrapping="Wrap" Foreground="{StaticResource TextSecondary}" FontSize="12.5"
+                                           Text="One click: your browser opens OpenRouter, you sign in and press Authorize, and Nova is connected. Free models cost nothing; Claude, GPT, Gemini and others are paid from your OpenRouter balance." />
+                                <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                                    <Button x:Name="OpenRouterConnect" Content="Connect" Style="{StaticResource PrimaryButton}" Margin="0,0,8,0" />
+                                    <Button x:Name="OpenRouterDisconnect" Content="Disconnect" />
+                                    <TextBlock x:Name="OpenRouterStatus" Margin="14,0,0,0" VerticalAlignment="Center"
+                                               Foreground="{StaticResource TextSecondary}" FontSize="12.5" />
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel>
+                                <TextBlock Text="Claude" Style="{StaticResource GroupHeader}" />
+                                <TextBlock TextWrapping="Wrap" Foreground="{StaticResource TextSecondary}" FontSize="12.5"
+                                           Text="Uses your own Anthropic API key, billed per use to your Anthropic account (Claude Haiku 5.5: $0.10 / $0.50 per million tokens, a fraction of a cent per chat). Get a key at platform.claude.com. The same key powers the ? mode on the Plain English page." />
+                                <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                                    <PasswordBox x:Name="BrainClaudeKey" Width="300" Margin="0,0,8,0" />
+                                    <Button x:Name="BrainClaudeSave" Content="Save" Margin="0,0,8,0" />
+                                    <Button x:Name="BrainClaudeTest" Content="Test" />
+                                </StackPanel>
+                                <TextBlock x:Name="BrainClaudeStatus" Style="{StaticResource Caption}" />
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </StackPanel>
+
                 <!-- ======================== Assistant ======================== -->
                 <StackPanel x:Name="PageAssistant" Visibility="Collapsed">
                     <TextBlock Text="Nova Assistant" Style="{StaticResource PageTitle}" />

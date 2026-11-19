@@ -222,6 +222,35 @@ public sealed class Settings
 
     // -------------------------------------------------------------- assistant
 
+    /// <summary>Which brain answers Nova: "local" (this PC), "claude" (API key) or "openrouter".</summary>
+    public string Brain { get; set; } = "local";
+
+    public string BrainClaudeModel { get; set; } = "claude-haiku-5-5";
+
+    /// <summary>"openrouter/free" picks among OpenRouter's free models by itself.</summary>
+    public string BrainOpenRouterModel { get; set; } = "openrouter/free";
+
+    /// <summary>"low", "medium", "high" or "max". Higher is smarter but slower (cloud brains).</summary>
+    public string BrainEffort { get; set; } = "low";
+
+    /// <summary>The key OpenRouter handed over when the user clicked Authorize, encrypted (DPAPI).</summary>
+    public string? OpenRouterKeyProtected { get; set; }
+
+    public void SetOpenRouterKey(string? key) => OpenRouterKeyProtected = string.IsNullOrWhiteSpace(key)
+        ? null
+        : Convert.ToBase64String(ProtectedData.Protect(Encoding.UTF8.GetBytes(key.Trim()), null, DataProtectionScope.CurrentUser));
+
+    [JsonIgnore]
+    public string? OpenRouterKey
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(OpenRouterKeyProtected)) return null;
+            try { return Encoding.UTF8.GetString(ProtectedData.Unprotect(Convert.FromBase64String(OpenRouterKeyProtected), null, DataProtectionScope.CurrentUser)); }
+            catch (Exception e) when (e is CryptographicException or FormatException) { return null; }
+        }
+    }
+
     /// <summary>Speak Nova's replies aloud.</summary>
     public bool AssistantSpeaks { get; set; } = true;
 
