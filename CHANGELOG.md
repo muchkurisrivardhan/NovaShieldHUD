@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+### 2026-11-19 (evening)
+- **Prompt Ring** (Beacon, `Ctrl+Alt+P`): select text you dictated in any app, press the shortcut, and a ring opens at the cursor in your Beacon style with Build, Fix, Workflow, Research, Write, Explain, Plan and Clean up. Pick one (click or 1-8) and the text is rewritten into a structured prompt (goal, context, requirements, constraints, how to check it's done...) and pasted over the selection; Ctrl+Z undoes it, and the clipboard is given back. The structures follow Anthropic's prompting advice; what you didn't say becomes a [question] to fill in, never an invented detail.
+- **Free local AI, no account or key:** the rewriting runs on your PC through llama.cpp (LLamaSharp, x64 and ARM64). Settings → Prompt Ring downloads a free Apache-licensed model: Qwen 2.5 1.5B (1 GB, recommended) or Qwen 3 4B (2.5 GB, better), checked against a pinned SHA-256. Without one, the ring lays your words out in the chosen structure with questions for the rest.
+- **Opening apps by name, without restarting Beacon:** Beacon now watches the Start Menu, so an app installed while it runs opens by name seconds later, and an "open X" that finds nothing rescans (Store apps). Spoken names match however dictation spaced or misheard them: "free l l m" opens Free LLM API, "tail scale" and "tailscail" open Tailscale, "note pad plus plus" opens Notepad++. Two equally close apps are never guessed between.
+
+### 2026-11-19 (later)
+- **Installer asks about Filee:** a Select Components page, with Filee ticked by default ("NovaShield HUD with Filee") or left out ("NovaShield HUD only"). Unticking it on an update removes the copy installed before. Filee gets its own Start menu entry.
+- **Credits:** Beacon Settings → Filee has a Credits card for Filee's author, Myeonggu Kim (KnifeLemon), with links; the README has a Credits section.
+- **Smart App Control:** with it on, Windows blocks Filee's unsigned files one by one ("Part of this app has been blocked"), so the ring can't open and Filee closes. Beacon now reads its state, doesn't start Filee by itself while it's on, and says so on the Filee page.
+- `filee/` now holds all of upstream Filee: tests, docs, installers and the contributor guides too.
+
 ### 2026-11-19
 - **New app: Filee**, the drag-and-drop file converter, forked from [KnifeLemon/Filee](https://github.com/KnifeLemon/Filee) (MIT, upstream commit `cf96cd5`) into `filee/`. Hold `Ctrl`, drag files, drop them on a format in the ring at the cursor.
 - **Filee wears Beacon's look, live.** Beacon writes its style into `%APPDATA%\Filee\theme.json` (surfaces, text, accent, light/dark, corner radius, font); the fork watches that file and restyles in place. Tactical is gunmetal and amber with square corners in Bahnschrift, HUD cyan on navy, Cyberpunk pink on violet, Retro CRT phosphor green in Cascadia Mono, Minimal mono greys, Classic keeps Filee's own rounded surfaces with Beacon's accent.

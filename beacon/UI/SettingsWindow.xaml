@@ -822,6 +822,21 @@
                                        Text="Formats, presets, the trigger keys and watch folders are in Filee's own settings (Open Filee). Saving here restarts a running Filee to apply the ring options; nothing is lost. Upstream releases don't carry the NovaShield look; NovaShield updates bring Filee along." />
                         </StackPanel>
                     </Border>
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <TextBlock Text="Credits" Style="{StaticResource GroupHeader}" />
+                            <TextBlock TextWrapping="Wrap" Foreground="{StaticResource TextSecondary}" FontSize="12.5">
+                                Filee is made by Myeonggu Kim (KnifeLemon) and the Filee contributors, and is free
+                                and open source under the MIT licence. NovaShield HUD ships a fork of it, styled to
+                                match Beacon. All credit for the converter goes to them.
+                            </TextBlock>
+                            <TextBlock Margin="0,8,0,0" FontSize="12.5">
+                                <Hyperlink x:Name="FileeCreditLink" NavigateUri="https://github.com/KnifeLemon/Filee">github.com/KnifeLemon/Filee</Hyperlink>
+                                <Run Text="  ·  " Foreground="{StaticResource TextTertiary}" />
+                                <Hyperlink x:Name="FileeSiteLink" NavigateUri="https://filee.sh">filee.sh</Hyperlink>
+                            </TextBlock>
+                        </StackPanel>
+                    </Border>
                 </StackPanel>
 
                 <!-- ===================== Search and index ==================== -->
@@ -1121,6 +1136,45 @@
                                       Content="Carry out what I said, without pressing Enter" />
                             <TextBlock Style="{StaticResource Caption}"
                                        Text="Only when the instruction is understood exactly and is not destructive — “set the volume to 20” runs itself, “close all apps and shut down” still waits for you. Needs sentence understanding, on the Plain English page." />
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <!-- ======================== Local AI ========================= -->
+                <StackPanel x:Name="PageLocalAi" Visibility="Collapsed">
+                    <TextBlock Text="Prompt Ring" Style="{StaticResource PageTitle}" />
+                    <TextBlock Style="{StaticResource PageSubtitle}"
+                               Text="Dictate what you want, select it, press Ctrl+Alt+P, and pick what it's for. A free AI model on this PC rewrites it into a well-structured prompt, right where it was. No account, no key, nothing uploaded." />
+
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <TextBlock Text="How it works" Style="{StaticResource GroupHeader}" />
+                            <TextBlock TextWrapping="Wrap" Foreground="{StaticResource TextSecondary}" FontSize="12.5" LineHeight="19">
+                                1. Select the text in any app: a chat box, a document, an email.<LineBreak />
+                                2. Press <Run FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" Text="Ctrl+Alt+P" /> (change it on the Shortcuts page: “Shape Prompt”).<LineBreak />
+                                3. Pick a slice, or press its number: Build, Fix, Workflow, Research, Write, Explain, Plan, or Clean up.<LineBreak />
+                                4. The rewritten prompt replaces your selection. Ctrl+Z puts your words back.
+                            </TextBlock>
+                            <TextBlock Style="{StaticResource Caption}"
+                                       Text="Each style uses the structure Anthropic recommends for prompting Claude: what you want and why, the context, specific requirements, constraints, and how you'll know it's done. Anything you didn't say becomes a short [question] to fill in, never an invented detail." />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <TextBlock Text="AI model" Style="{StaticResource GroupHeader}" />
+                            <ComboBox x:Name="LocalModelPicker" Width="360" HorizontalAlignment="Left" />
+                            <TextBlock x:Name="LocalModelNote" Style="{StaticResource Caption}" />
+
+                            <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
+                                <Button x:Name="LocalModelDownload" Content="Download" Margin="0,0,8,0" />
+                                <Button x:Name="LocalModelDelete" Content="Delete" />
+                                <TextBlock x:Name="LocalModelStatus" Margin="14,0,0,0" VerticalAlignment="Center"
+                                           Foreground="{StaticResource TextSecondary}" FontSize="12.5" />
+                            </StackPanel>
+
+                            <TextBlock Style="{StaticResource Caption}" Margin="0,12,0,0"
+                                       Text="Free, openly licensed models (Apache 2.0), downloaded once from Hugging Face and checked against a fixed SHA-256 hash. They run on your CPU through llama.cpp. Without a model the ring still works: it lays your words out in the chosen structure, with questions for the parts to add." />
                         </StackPanel>
                     </Border>
                 </StackPanel>

@@ -20,7 +20,8 @@ public sealed partial class CommandRegistry
     public IReadOnlyList<BeaconCommand> Commands { get; }
 
     public CommandRegistry(
-        AppIndex apps, IFileSearch files, Action rebuildIndex, Action openSettings, Action startVoice)
+        AppIndex apps, IFileSearch files, Action rebuildIndex, Action openSettings, Action startVoice,
+        Func<IntPtr, Task> promptRing)
     {
         var commands = new List<BeaconCommand>();
 
@@ -58,6 +59,24 @@ public sealed partial class CommandRegistry
             {
                 startVoice();
                 return Task.FromResult("Listening.");
+            },
+        });
+
+        // Bindable in Settings > Shortcuts (Ctrl+Alt+P by default): rewrite the selected text as a prompt.
+        commands.Add(new BeaconCommand
+        {
+            Id = Settings.PromptRingCommandId,
+            Title = "Shape Prompt",
+            Subtitle = "Select dictated text, pick Build, Fix, Research... rewritten in place, on this PC",
+            Description = "Rewrite the selected text as a well-structured AI prompt, using a free model on this PC.",
+            Glyph = "\uE8BD",
+            Keywords = ["prompt", "rewrite", "shape", "improve prompt", "prompt ring", "dictation", "clean up"],
+            ExposeToAi = false,
+            Category = "Beacon",
+            RunAsync = async ctx =>
+            {
+                await promptRing(ctx.TargetWindow);
+                return "Prompt ring.";
             },
         });
 

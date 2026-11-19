@@ -41,6 +41,71 @@ public sealed class AppIndex
 
     public event Action? Updated;
 
+    private int _building;   // 1 while a build runs: a burst of installs rebuilds once, not once per file
+    private bool _again;     // something changed during that build: run one more
+    private readonly List<FileSystemWatcher> _watchers = [];
+    private Timer? _debounce;
+
+    /// <summary>
+    /// Watches both Start Menus, so an app installed while Beacon runs can be opened by name
+    /// a few seconds later, without restarting Beacon. Installers write several shortcuts in
+    /// a burst, so changes are gathered for a few seconds before one rebuild.
+    /// </summary>
+    public void WatchForInstalls()
+    {
+        foreach (var root in new[]
+                 {
+                     Environment.GetFolderPath(Environment.SpecialFolder.CommonStartMenu),
+                     Environment.GetFolderPath(Environment.SpecialFolder.StartMenu),
+                 })
+        {
+            if (string.IsNullOrEmpty(root) || !Directory.Exists(root)) continue;
+            try
+            {
+                var watcher = new FileSystemWatcher(root, "*.lnk")
+                {
+                    IncludeSubdirectories = true,
+                    NotifyFilter = NotifyFilters.FileName | NotifyFilters.DirectoryName,
+                };
+                watcher.Created += (_, _) => RequestRefresh();
+                watcher.Deleted += (_, _) => RequestRefresh();
+                watcher.Renamed += (_, _) => RequestRefresh();
+                watcher.EnableRaisingEvents = true;
+                _watchers.Add(watcher);
+            }
+            catch (Exception e) when (e is IOException or ArgumentException or UnauthorizedAccessException)
+            {
+                // No watching on this root; the on-miss rescan below still finds new apps.
+            }
+        }
+    }
+
+    /// <summary>
+    /// Rebuilds the list soon. Also called when a spoken or typed "open X" finds nothing, which
+    /// is how Store apps (no Start Menu shortcut to watch) are picked up after installing.
+    /// </summary>
+    public void RequestRefresh(TimeSpan? delay = null)
+    {
+        _debounce ??= new Timer(_ => _ = RebuildAsync());
+        _debounce.Change(delay ?? TimeSpan.FromSeconds(3), Timeout.InfiniteTimeSpan);
+    }
+
+    private async Task RebuildAsync()
+    {
+        if (Interlocked.Exchange(ref _building, 1) == 1) { _again = true; return; }
+        try
+        {
+            do
+            {
+                _again = false;
+                try { await BuildAsync().ConfigureAwait(false); }
+                catch (Exception e) when (e is not OutOfMemoryException) { }   // keep the old list
+            }
+            while (_again);
+        }
+        finally { Interlocked.Exchange(ref _building, 0); }
+    }
+
     public async Task BuildAsync(CancellationToken ct = default)
     {
         // Shortcuts land first so the launcher is usable within milliseconds of startup.

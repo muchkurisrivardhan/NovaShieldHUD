@@ -29,6 +29,13 @@ public partial class SettingsWindow
 
         FileeOpen.Click += (_, _) => FileeStatus.Text = Suite.OpenFilee(show: true);
         FileeClose.Click += (_, _) => FileeStatus.Text = Suite.CloseFilee();
+
+        foreach (var link in new[] { FileeCreditLink, FileeSiteLink })
+            link.RequestNavigate += (_, e) =>
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(e.Uri.AbsoluteUri) { UseShellExecute = true });
+                e.Handled = true;
+            };
     }
 
     private void LoadFileePage()
@@ -41,7 +48,8 @@ public partial class SettingsWindow
         FileeCaptions.IsChecked = f.Captions;
         FileePaused.IsChecked = f.Paused;
         FileeUpdates.IsChecked = f.CheckUpdates;
-        FileeStatus.Text = Suite.FindFilee() is null ? "Filee isn't installed next to Beacon."
+        FileeStatus.Text = Suite.FindFilee() is null ? "Filee isn't installed. Run the NovaShield HUD installer again and tick Filee."
+            : Suite.SmartAppControlOn ? Suite.SmartAppControlNote
             : Suite.FileeRunning ? "Filee is running." : "Filee isn't running.";
         DrawFileePreview();
     }

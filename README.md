@@ -10,6 +10,7 @@ gunmetal-and-amber style.
 |---|---|
 | **[Beacon](beacon/)** | A Spotlight-style launcher. `Alt+Space`, type, Enter. Apps, files, windows, system commands, timers, plain-English sentences, local voice, and Claude for anything else. |
 | **[Dotline](dotline/)** | Desktop widgets that sit on your wallpaper: your life and your goals as dots, a focus timer, and time zones on a world-map wallpaper. Set up through Beacon, always in Beacon's style. |
+| **Prompt Ring** | Dictate a request, select it, press `Ctrl+Alt+P` and pick what it's for (Build, Fix, Workflow, Research, Write, Explain, Plan, Clean up). A free AI model on your PC rewrites it into a well-structured prompt, in place. Part of Beacon. |
 | **[Filee](filee/)** | Drag-and-drop file converter. Hold `Ctrl`, drag files, drop them on a format in the ring that opens at your cursor: 270 formats, offline. A fork of the open-source [Filee](https://github.com/KnifeLemon/Filee) (MIT) that wears Beacon's style, live. |
 
 ![Focus timer](docs/media/focus-timer.png)
@@ -23,11 +24,15 @@ gunmetal-and-amber style.
    - `NovaShieldHUD-Setup-x64.exe`: Intel and AMD PCs
    - `NovaShieldHUD-Setup-arm64.exe`: Snapdragon and other ARM PCs
    (Not sure? Settings > System > About > *System type*.)
-2. Run it. It installs for you only, in `%LOCALAPPDATA%\Programs\NovaShield HUD`: no admin
+2. Run it. On the **Select Components** page, keep **Filee** ticked to get the drag-and-drop
+   converter too (untick it for NovaShield HUD only; run the installer again to change your mind). It installs for you only, in `%LOCALAPPDATA%\Programs\NovaShield HUD`: no admin
    prompt, and nothing else to download (.NET is included).
 3. Windows may warn about an unrecognised app, because the installer isn't code-signed yet:
    **More info > Run anyway**. If **Smart App Control** is on, Windows blocks unsigned apps
    outright and there's no Run anyway; it can't be installed on that PC until releases are signed.
+   The same goes for parts of an installed app: with Smart App Control on, Windows shows
+   "Part of this app has been blocked" for Filee's unsigned files, its Ctrl+drag ring can't open and
+   it may close. Beacon then doesn't start Filee by itself, and its Filee page says why.
 4. Finish starts Beacon. Its icon is in the tray; press `Alt+Space`.
 
 ### 2. Make it yours
@@ -41,6 +46,7 @@ Everything is in **Beacon Settings** (tray icon > Settings, or type `settings`):
 | **Dotline** | Your birthday and lifespan, dot size, background, lock positions, time-zone dots |
 | **Filee** | Start with Beacon, follow Beacon's look (with a live preview of the ring), ring size and opacity, captions, pause |
 | **Voice** | Download a Whisper model to speak instead of typing (`Alt+M`) |
+| **Prompt Ring** | Download a free AI model (1–2.5 GB) so `Ctrl+Alt+P` rewrites selected text into a structured prompt, on your PC |
 | **Plain English** | Your Anthropic API key, only if you want `?` / Claude |
 
 ### 3. Updates
@@ -65,7 +71,7 @@ are left for a reinstall; delete them to remove every trace.
   system files or their permissions. Defender, SmartScreen, UAC and the lock itself stay on.
 - **Admin rights.** The apps need none.
 - **Other users.** Everything is per user: the install and the settings.
-- **The network,** except: Filee's optional engine downloads (FFmpeg, LibreOffice, ... only when a
+- **The network,** except: the Prompt Ring's AI model, downloaded once from Hugging Face when you choose it; Filee's optional engine downloads (FFmpeg, LibreOffice, ... only when a
   conversion needs one and you agree), Claude (only when you ask it, with your own key), website icons in
   the launcher (can be turned off), the Whisper model you choose to download, and GitHub
   when you click Check for updates. No telemetry, no account, no ads.
@@ -108,6 +114,13 @@ powershell -ExecutionPolicy Bypass -File installer/build.ps1 -Arch x64 -Version 
 ```
 
 Every feature, with how it works: [docs/FEATURES.md](docs/FEATURES.md). History: [CHANGELOG.md](CHANGELOG.md).
+
+## Credits
+
+**Filee**, the converter in `filee/`, is made by **Myeonggu Kim ([KnifeLemon](https://github.com/KnifeLemon))**
+and the Filee contributors: <https://github.com/KnifeLemon/Filee> · <https://filee.sh>. It is free and open
+source under the MIT licence; NovaShield HUD ships a fork of it, styled to match Beacon. All credit for the
+converter is theirs. What the fork changes is listed in [filee/NOVASHIELD.md](filee/NOVASHIELD.md).
 
 ## Licence
 

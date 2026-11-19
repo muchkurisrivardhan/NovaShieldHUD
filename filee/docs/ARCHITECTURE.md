@@ -1,0 +1,865 @@
+# Architecture
+
+```
+            ┌──────────────────────────── Filee.App (Avalonia) ─────────────────────────────┐
+ global     │ TriggerService ──► GestureDetector ──► RadialController ──► RadialWindow/DonutMenu │
+ mouse/keys │   (SharpHook)        (pure state         (drag / click       (transparent,          │
+ ─────────► │                       machine)            mode)               topmost window)       │
+            │                                              │ drop / click                         │
+ Explorer   │ SingleInstance (pipe) ── --convert files ──►│                                      │
+ context    │ Home drop zone ─────────────────────────────┘                                      │
+ menu       │                                              ▼                                      │
+            │                                    ConversionService ──► ToastWindow (progress)     │
+            │ MainWindow (settings pages) ◄──► UserDataStore (JSON in %APPDATA%\Filee)            │
+            └──────────────────────────────────────────────┬──────────────────────────────────────┘
+                                                           ▼
+            ┌──────────────────────────── Filee.Core ───────────────────────────────────────────┐
+            │ JobQueue ──► RoutePlanner (Dijkstra over converter edges) ──► IConverter steps    │
+            │ FormatRegistry · Preset · OutputPathResolver · ToolbarProfile · ProfileSelector   │
+            └──────────────────────────────────────────────┬──────────────────────────────────────┘
+                                                           ▼
+            ┌──────────────────────────── Filee.Engines ────────────────────────────────────────┐
+            │ Built in: Magick (images, RAW) · PdfSharp · Pdfium · PdfPig · Svg.Skia · ICNS      │
+            │ HwpxWriter + DocxWriter over DocumentReaders (DOCX, XLSX, XLS, ODS, PPTX,          │
+            │   PDF, HTML, EPUB, MOBI, FB2, HWPX, Markdown) · Spreadsheets · OOXML variants      │
+            │   · E-mail · Signed files · Data · E-books · CAD · Fonts · Subtitles · 3D models   │
+            │ Bundled: rhwp (HWP→PDF, HWP↔HWPX) · 7-Zip (archives) · Unhwp · Markdig             │
+            │ Optional: FFmpeg · LibreOffice + H2Orestart · calibre · Ghostscript · Pandoc       │
+            │   · WeasyPrint                                                                     │
+            └────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+## Flow of a conversion
+
+1. **Trigger** – `TriggerService` receives global input from SharpHook and feeds `GestureDetector`.
+   A drag gesture (modifier + drag past the threshold) opens the donut *before* files are known.
+2. **Donut** – `RadialWindow` is transparent, topmost and not activated, so Explorer's drag continues.
+   The first `DragEnter` delivers the file list; `RadialViewModel` picks a `ToolbarProfile` by extension
+   (`ProfileSelector`: the first normal profile that has every file's extension; for a mix of types the first
+   mixed-selection profile whose checked extensions cover the files, else the one with nothing checked) and asks
+   `PresetAvailability` which presets can run (disabled slices get a reason).
+3. **Drop** – the slice under the cursor is a preset. `ConversionService.Start` enqueues a `ConversionJob`.
+   The drop is always reported as *Copy* so Explorer never deletes the source files.
+4. **Plan** – for every file, `RoutePlanner` finds the cheapest chain of converter edges from the source format to
+   the target (at most 3 hops). Engine priority (Settings → Engines) breaks ties. Some edges are limited: tracing
+   only starts from raster images (`ImageSourcesOnly`), and PDF → PPTX picture slides are only ever a route of their
+   own (`DirectOnly`), never a step of a longer one. An envelope (a signed `.p7m`) is planned from the file inside
+   it: its engine (`IEnvelopeOpener`) names that file's format, and the route opens it first, then goes on from there
+   (`RoutePlanner.PlanThrough`: P7M → PDF → PNG).
+5. **Run** – `JobQueue` runs steps with per-engine concurrency limits. Intermediate files live in a work folder only
+   the user can open (`WorkFolders.Root`: `%TEMP%\Filee` on Windows; `~/.cache/filee` on Linux and
+   `~/Library/Caches/Filee` on macOS, mode 700, because `/tmp` is shared by every user); final outputs are named by `OutputPathResolver` (pattern, folder, conflict policy; the source is never overwritten).
+   Each name stays reserved while a conversion holds it. A conversion that fails or is cancelled deletes what it began
+   writing, but only at a path that was its alone: nothing was there before and no other conversion was handed the
+   same name ("Overwrite"). It frees its names and removes an output folder it made if that is left empty.
+   A PDF target's finishing (watermark, page numbers, password; `IPdfFinisher`) runs after the last step, on every
+   PDF a file became, and once on a merged PDF; PDF/A (`IPdfArchiver`, Ghostscript) follows it there.
+   *Replace the original* (`OutputRule.ReplaceOriginal`, off by default) comes after that, for a finished result of
+   the source's own format and extension, or another spelling of it (`.jpeg` / `.jpg`; TXT also covers scripts and
+   logs, PPT also `.pps` and `.pot`, so those need the same extension). The result is first
+   moved next to the source under a temporary name, then the source goes to the Recycle Bin / Trash
+   (`IPlatformServices.MoveToTrash`, in the app and the command line), then the result takes its name. Windows only
+   ever recycles (IFileOperation with a sink that refuses a delete it can't recycle). When the source can't go there
+   (no Recycle Bin on the drive, a file open elsewhere, a read-only file), both stay and the file's notice says why,
+   with a translated reason (`trash.*`). A result "Only if smaller" copied from the source leaves the source alone.
+   Watch folders and files from a browser never replace.
+   "Merge into one PDF" converts each file to PDF and merges with PDFsharp, preserving bookmarks, internal links,
+   named destinations and page-backed AcroForm fields. Fields with colliding names get a file-position prefix.
+   "Compress into one archive" packs the dropped files, unconverted, with the archive engine (`IFileCombiner`).
+   "Merge videos", "Merge audio" and "Video from images" join the files, in the order picked in the merge order
+   window, into one file with FFmpeg (`IMediaJoiner`); pictures become PNG through the image engines first, and audio
+   files dropped with videos are music under them (added in the same window, which also offers "Loop music"). Like the
+   other one-file jobs, the output follows "subfolder only for several files", and a join that fails or is cancelled
+   is undone by the job's allocator, which deletes only paths that were the job's own.
+   "Merge images" puts the pictures, in the order picked in the same window (with their layout: one under another or
+   side by side, the same width or their own sizes, a gap and a background), into one image with ImageMagick
+   (`IImageJoiner`), in the first picture's format. Pictures ImageMagick doesn't read become PNG first; a merged image
+   over 200 megapixels is refused with its size.
+6. **Report** – progress and results appear in the toast window and in Home → Recent conversions.
+   Renderers check only the original source for referenced fonts. `ConversionStep.MissingFonts` reports any missing
+   families to `FileResult.MissingFonts`; the toast card can offer one trusted source, while the CLI and watch jobs
+   report the names without pausing conversion or installing anything.
+
+## Files dragged from a web browser
+
+A picture, a link to a file or a download dragged out of a browser opens the donut like a file from the file manager.
+A drag gesture over a browser (`WebBrowsers`, by process name) counts as over the file manager, so the default scope
+covers it; click and key gestures don't, as they read the file manager's selection.
+`DraggedFiles.Read` asks `BrowserDrags` (App, reads Avalonia's drag data) first; `BrowserDrag` (Core, pure rules)
+decides what in the drag is a file:
+
+| Source | What the drag carries | What Filee takes |
+| --- | --- | --- |
+| Chrome / Edge, Windows | the picture as a virtual file (`FileGroupDescriptorW` + `FileContents`, which Avalonia 12 gives as a storage item without a local path), a `.url` virtual file for links, `UniformResourceLocatorW`, `text/x-moz-url`, `HTML Format` | the picture's own bytes; for a link, its address |
+| Firefox, Windows | the picture written to `%TEMP%` (`CF_HDROP`), `text/x-moz-url`, file promise formats | the temporary copy (a local file in the temp folder *and* a web address on the drag) |
+| Chrome / Firefox, Linux | `text/x-moz-url`, `_NETSCAPE_URL`, `text/html` (Avalonia turns `text/uri-list` into local files only and drops http addresses) | the address |
+| Safari / Chrome, macOS | file promises (not receivable through Avalonia), `public.url`, `public.html`, sometimes picture data | the address, else the picture data |
+
+Rules, in order: files handed over with their bytes (never `.url` shortcuts or programs); a picture (an HTML fragment
+that is one `<img>` and no text, or a Firefox file promise); a `DownloadURL` a page sets; links only when the address
+ends in an extension Filee converts and isn't a web page (`.html`, `.php`, none); last, picture pixels for a `blob:`
+picture. Plain text is never read. `data:` addresses are decoded.
+
+Until the conversion runs, the files stand as **placeholders** (`WebDrop`): paths in `%TEMP%\Filee\web\<drop>\drop\<n>\`
+(`web/` in the work root on Linux and macOS) named like the file will be, so the donut picks the profile by extension without touching the network. No HEAD request
+is made: a picture without an extension stands as `.jpg` and a link without one isn't offered. `ConversionService.Start`
+gives the job a `WebDropFetcher` (`ISourceFetcher`): `JobQueue` saves every source first (half of its progress), then
+converts. Failures are per file (`error.web_*`), cancelling stops a download, and the job toast/ring shows both phases.
+While files are saved, a badge pops up above the donut's progress ring and above the toast's progress bar with the
+speed and the amounts ("2.4 MB/s · 12.3 / 48.0 MB", "· 2 of 3 files" for several): `FileResult.Transfer` holds each
+file's byte count, `ConversionJob.Transfer()` sums them, and `DownloadBadge` (App) averages the speed over the last
+second with the Engines page's `TransferRate` and units, rewritten four times a second and shown after 300 ms.
+
+- **Where**: Settings → General → "Files dragged from a browser" (`AppSettings.BrowserDrops`): the user's Downloads
+  folder (`IPlatformServices.DownloadsFolder`: the shell's known folder on Windows, `XDG_DOWNLOAD_DIR` on Linux,
+  `~/Downloads` on macOS) or a chosen one. "Next to the source" means this folder for these files
+  (`OutputRule.SourceFolder`, set per job, never saved), so subfolder rules apply there and fixed folders stay fixed.
+- **Save only the converted file**: the original goes to the drop's work folder, which `Release` deletes when the job
+  ends; leftovers from a crash are deleted at start-up after a day.
+- **Downloads** (`WebDownloader`): http and https only, at most 5 redirects (never from https to http or off the web),
+  2 GB cap whether or not the server says the size, 30 s to answer and 30 s without data at most. No cookies or
+  credentials are sent: a file behind a sign-in comes back as the sign-in page, which is refused as a web page
+  ("save it from the browser first"). A browser's own bytes (virtual files, Firefox's copy) don't have that limit.
+  Only the public internet is reached (`LocalNetwork`): an address on this computer or the local network (loopback,
+  private, carrier-grade NAT, link-local, unique local, multicast, `localhost` and `.local` names, IPv4 inside IPv6)
+  is refused (`error.web_local_address`), on every redirect and after the name is looked up: the handler's
+  `ConnectCallback` connects only to the checked addresses, so a name that changes its answer (DNS rebinding) gets
+  nowhere. A connection to the user's proxy isn't checked, including the CONNECT tunnel the handler opens to an
+  https site through a proxy on this computer (`127.0.0.1:7890`); the names and numbers in the address still are.
+  The proxy is Settings → General → Network (`ProxySetting`, which never sends local addresses through it) or the
+  system's.
+  "Allow links to this computer and the local network" (Settings → General, `BrowserDropSettings.AllowLocalNetwork`,
+  off by default, read for each drop) lifts this for an intranet or a NAS. Those downloads go through an `HttpClient`
+  of their own, so a pooled connection to a local address never serves a drop that may not go there.
+- **Names and safety**: Content-Disposition, else the page's name, else the address; then the first bytes decide the
+  extension of pictures and PDFs (`.jpg` that is WebP becomes `.webp`). Names are cut to a plain file name (no folders,
+  no device names, at most 120 characters) and never replace an existing file (`name (2).ext`). Programs, installers and
+  scripts are refused by extension, media type and first bytes; nothing downloaded is ever run, and every file goes
+  through the same converters as any other.
+- **Mark of the Web** (`Platform/MarkOfTheWeb`, Windows): every saved file gets a `Zone.Identifier` stream as a
+  browser's download would (`ZoneId=3`, and `HostUrl` with the address a download came from, without sign-in or
+  fragment), so SmartScreen, Office's block on macros from the internet and Protected View still apply. `JobQueue`
+  copies a source's mark onto the files converted from it (also for "Save only the converted file"), and onto an
+  archive packed from many files when any of them has one (files inside folders too, links not followed); a folder
+  result is left to its engine (the archive engine marks what it unpacked). A drive without NTFS streams gets no mark, and
+  that never fails a conversion.
+
+## Donut control
+
+`Controls/DonutMenu.cs` draws the ring itself (no child controls) for speed. `DonutGeometry.cs` holds the pure math
+(slice angles, hit testing) and is unit tested. The same control is the live toolbar and, with `IsEditMode`, the
+editor on the *Donut toolbar* settings page (drag to reorder, ✎ / right-click to edit).
+Animations are small springs advanced per frame; `Motion.Enabled == false` (*Reduce animations*) snaps them.
+
+Every `ToolbarProfile` has two faces: `PresetIds` (the front) and `BackPresetIds` (the back; the built-in donuts get
+the less common formats and tools of their file type, see `BuiltInData.CreateProfiles`). The flip key
+(`DonutSettings.FlipKey`, Tab unless recorded otherwise in Settings → Shortcuts; `EffectiveFlipKey` refuses keys the
+donut or a keyboard shortcut uses) and the mouse wheel (`FlipWithWheel`, one flip per turn of the wheel: notches less
+than `DonutMenu.WheelQuietMs` apart are one turn) flip the open donut (`DonutMenu.Flip.cs`): the ring turns about its
+vertical axis in 200 ms, an open group's ring folding first, and halfway, edge-on, `FaceSwapping` has
+`RadialViewModel` show the other face, so slices, hit tests and drops always belong to the face that is drawn.
+*Reduce animations* swaps the faces at once. `RadialViewModel` builds both faces with the same `PresetAvailability`
+check (the back right after the front is on screen); a face with no slice for the files (or none at all) isn't
+flipped to, and only then does the hub leave out its "⟳ Tab back" hint (a mouse in place of the key when only the
+wheel flips). In click mode the focused window gets the key (`DonutMenu.HandleKey`) and the donut the wheel. During a
+drag the donut's window has no keyboard focus, so `RadialController` turns on `TriggerService.WatchFlipKey` while
+the drag donut shows files and flips on `FlipKeyPressed` / `FlipWheelTurned`: the global hook only listens (it
+can't hold an event back; Explorer and Finder ignore Tab during a drag) and reports one flip per key press. On
+macOS the drag donut takes key window status once files are on it (`RadialController.TakeKeyboard` / `IPlatformServices.TakeKeyWindow`),
+and the key reaches its window without whole-application activation, keeping macOS Show Desktop (Desktop Reveal) and Exposé uninterrupted:
+while another app holds Secure Input (Terminal with Secure Keyboard Entry can keep it from the background) macOS gives no keys to a hook,
+only to the key window and app in front. The hook's copy of a press is ignored while the window has the keyboard (`HookFlipsKey`, one flip
+per press, following `IsActive`); key window status is explicitly released once a conversion starts or the donut closes
+(`IPlatformServices.ReleaseKeyWindow` / `ReturnFocus`), returning typing to the previous app (unless the user clicked elsewhere meanwhile) while the progress ring finishes, and stays
+with Filee when the drop opens a window of its own (a tool, the merge order, the save dialog). Not on Windows, where taking the keyboard
+during a drag breaks Explorer's.
+The editor's Front / Back switch (`ToolbarPageViewModel.EditingBack`) edits either list with the same drag and drop.
+Each gesture says which face the donut opens on (`TriggerGesture.Face`, the front unless set to the back in Settings →
+Shortcuts), so gestures with different modifiers open different sets of slices (#195). `RadialController.ShowForDrag`
+keeps it until files enter, `ShowForFiles` takes it for the selection and clipboard shortcuts, and
+`RadialViewModel.Load` opens the front instead when the back has no slice for the files. The flip key and the wheel
+turn it over from there. Thunar's shortcut on Linux goes through the context-menu action, which always opens the front.
+
+The editor's donut is laid out at its real size and drawn smaller (a `Viewbox` that only shrinks) when its column is
+narrower, so names wrap and icons show as on the donut itself. Clicking a group slice opens it in the editor
+(`ToolbarPageViewModel.OpenGroup`): the donut then shows and edits the group's members with the same drag and drop, the
+palette offers what the group doesn't hold and no groups (`Placed`, shared with the search and the judging), and the ✎
+still opens each preset's own editor. *Edit Donut Size* (`IsAdjustingLook`) swaps the editor for the size, look and
+label settings. While either is open, `DonutPreviewWindow` shows the donut on screen beside the main window at its real
+size, filled by a `RadialViewModel` of its own as the donut opens for the profile's files (`LoadPreview`, with the
+turned-off fields left out); it follows every change and converts nothing. It holds a group open
+(`DonutMenu.HeldGroupId`, by preset id, so a flip or a reload keeps it): the one open in the editor, or, once a ring
+setting changes, the one picked under the ring sliders (*Group shown*, offered with two or more) or clicked on it, the
+first until then; a donut with none fans an example ring off its top slice (`RadialViewModel.ShowExampleGroup`). Where
+it goes is `DonutPreviewPlacement` (pure, in screen pixels at each screen's own scaling): where it was last dragged
+(`AppSettings.DonutPreviewPlace`, against the main window) if all of it is on a screen there and clear of the window;
+beside the main window, on a screen as tall as the donut; on another screen; beside it past its screen's edges; else the
+main window moves over, narrower down to its minimum width if it must, and back when the donut goes
+(`MainWindow.RestPlace` keeps where it was, so closing meanwhile remembers that). Beside the window its facing edge
+stays put as a slider grows it, and it is placed again when it no longer fits, when the window is resized, moved or
+maximized. With no room at all (a screen too small for both, or a window that can't move: maximized) it goes over the
+start side of the main window (its navigation and profile list), never over Done, owned by the main window so it stays
+above it; otherwise it isn't Topmost or owned, unlike the live donut: a click on the main window brings that in front of
+it. Dragged by its middle, it is the user's until the button is up (released, or seen up since: a window manager's move
+may keep the release); dropped onto the main window, it moves back off it. The look sliders change the settings at once
+and write them once the slider rests (`DonutLookSave`, as `UiZoom` does), with `UserDataStore.SaveDonutLook`, which
+doesn't raise `SettingsChanged`: re-applying the theme for every pixel a slider moved made them stick.
+
+A group is one slice that opens up to six non-group actions. Its members may be conversions or interactive tools
+(for example the PDF Edit group contains Crop and the page editor); groups cannot contain another group. The group
+editor offers both kinds, and `UserDataStore.EnsureConsistency` removes missing, duplicate, nested or excess members
+without excluding tools. A group slice is marked with a small chevron by its outer edge, drawn in the slice's transform
+(`DonutMenu.DrawGroupMark`), which also marks a dragged group in the toolbar editor.
+
+## Annotate tool
+
+"Annotate" (`tool-annotate`, palette only, settings schema 60) draws pen lines, arrows, boxes, highlights, text and
+numbers on pictures (`ImageOptions.Annotations`): points are parts of the picture, sizes parts of its shorter side.
+
+- `Engines/Annotations/AnnotationPainter` (SkiaSharp) draws the marks, always at the picture's own size in pixels. The
+  window's `AnnotationCanvas` calls it on Avalonia's own Skia canvas (a custom draw operation through
+  `ISkiaSharpApiLeaseFeature`), scaled to where the picture is shown, and `Annotator` on layers over the part the marks
+  cover, a band at a time, laid over the picture in `ImageEncoder.ApplyOptions` after hidden areas (converted to a CMYK
+  picture's colours; a greyscale picture becomes a colour one): the preview is the file. Text is shaped with HarfBuzz
+  (`Vector/GlyphOutlines`) in the system's bold sans-serif, each run of letters it lacks in a font the system finds.
+- `AnnotationSet` keeps the marks, the selection and undo / redo (a drag is one step). A mark just drawn isn't selected:
+  a colour picked next goes to the next mark; with Select, colour and width restyle the selected one.
+- `AnnotateTool.ConversionOf` (Core) turns the tool into a conversion in the picture's own format (as Pixelate / blur),
+  run by the job queue; `ReworksPixels` includes the marks.
+
+## Add background tool
+
+"Add background" (`tool-background`, palette only, settings schema 64) sets pictures on a gradient, a colour or a
+picture of one's own, with padding, rounded corners, a shadow and a canvas shape (`BackdropOptions`). Sizes are parts of
+the picture (padding of its longer side, corners of its shorter side), so a look suits any picture.
+
+- `BackgroundTool.ConversionOf` (Core) turns the tool into a PNG conversion with `ImageOptions.Backdrop`, run by the job
+  queue like Pixelate / blur's areas: `ReworksPixels` includes it, so it is applied once, in the first transform step.
+  The tool keeps the last look apart, in `ImageOptions.BackdropLook`; an export or import leaves out the path of a
+  picture of one's own.
+- `Engines/Magick/BackdropComposer` composes it in `ImageEncoder.ApplyOptions`, after resizing, background removal and
+  grayscale and before the density, metadata and alpha steps. The picture is brought to sRGB as it is seen (through its
+  profile, or by formula for CMYK and grey); the canvas grows round it to the shape (never crops) and stays within a
+  pixel limit (`PictureSizeOn`). It is drawn by Skia as the window draws it: a linear gradient shader, a colour, or
+  one's own picture covering (`ReadPictureBehind`: a raster picture of a few kinds, by extension or by its first bytes,
+  its size checked before it is decoded, read as large as covering the canvas takes and cropped to it, in sRGB, white
+  where see-through; one that can't be read refuses the file); the picture with its corners cut round in its own pixels;
+  Skia's drop shadow of what shows of it, blurred at most at a sigma of 100 (a wider one drawn smaller and scaled up,
+  where Skia's blur stays Gaussian). The canvas is drawn in tiles at most 2048 px wide, a band at a time, as RGB: a blur
+  is never larger than a tile and the shadow's reach round it (a wider shadow is blurred once, scaled down until its
+  sigma is 100 or less). The EXIF thumbnail is dropped.
+- `BackgroundViewModel` draws the same composition live with Avalonia: the layout and shadow from the composer's
+  formulas (an Avalonia drop shadow is Skia's), the picture and the one behind read through the composer's functions,
+  the preview never mirrored in a right-to-left UI. A picture behind is read when it is chosen, and again when it is
+  picked again; Save waits for one that can be read, and one whose file changed since it was read (time written or
+  length) is read again and shown before it is saved. The conversion carries that stamp, and the composer refuses the
+  file (`error.background_picture_changed`, which the toast offers no Retry for) when the picture behind changed since,
+  before it is read or after: a change after Save gives no file rather than one with a picture behind the window didn't
+  show. A change that keeps both the time and the length (a copy that keeps the time, of a picture of the same size)
+  isn't told apart, and the picture itself edited meanwhile isn't looked for (as in Pixelate / blur and Annotate). One
+  look for all pictures or one each; failures end on a summary, as in Pixelate / blur.
+
+## Metadata tool
+
+"Metadata" (`tool-metadata`, palette only, settings schema 72) shows every metadata field of pictures, PDFs, video and
+sound, grouped by where it lives (ExifTool's family-1 groups: GPS, IFD0, ExifIFD, XMP-dc, IPTC, PDF …), and edits them
+without touching the file's content.
+
+- Saving is an ordinary conversion, as for Pixelate / blur, Annotate and Add background: `MetadataTool.ConversionOf`
+  makes the tool into a conversion to the file's own format carrying the changes (`Preset.Metadata`,
+  `MetadataEdits`), so the toast, History, cancelling and the output rules (where the copy goes, its name
+  `{name}_metadata`, a name already taken, "Replace the original" sending the original to the Recycle Bin / Trash)
+  work as for any other file. "Replace the original" is the tool's own output rule, kept on disk. History offers no
+  Retry for it: a Filee from before it would re-encode the file without the changes.
+- Only an engine that writes metadata and nothing else takes such a conversion: `ConversionEdge.Metadata`, never part
+  of an ordinary route, and with `RoutePlanner.Plan(metadata: true)` the whole route or none. Without one the file
+  fails (`error.no_route`, with the route asked for, so `filee` can name the package), never re-encoded instead.
+- Remove location takes what ExifTool can write. What it can't reach is said, not hidden: a place kept whole with a
+  block (a camera's maker notes, a C2PA manifest; `ExifTool.LocationOutOfReach`) is named in the window, and a video
+  always says its tracks can hold location (an action camera's or a drone's route), which ExifTool can't remove.
+- `Engines/Metadata/ExifToolConverter` is that engine (`exiftool` package: Windows build renamed from
+  `exiftool(-k).exe`, the Perl version elsewhere, or one on the PATH). Its edges are the formats `exiftool -listwf`
+  names; a file of an extension it doesn't write shows read-only, saying so. `ExifTool` reads with `-j -G0:1` (lists as
+  JSON arrays, so an entry keeps its commas; "Group:Tag" where family and group share a name, as IPTC and PDF do).
+- It writes by editing a copy in a work folder beside the output, on its disk, under a plain name, so nothing in the
+  file's name reaches ExifTool (`%` is expanded in paths it takes, Perl on Windows reads its command line in the ANSI
+  code page, and `-o` refuses WebP). A `-config` of its own makes the `GPS…Ref` fields macOS puts in XMP writable, so
+  they can be removed. Edits go through an argument file, one argument per line taken literally, a value of several
+  lines through `-Tag<=file`, a list one assignment per entry. IPTC text outside Latin-1 switches the file's IPTC to
+  UTF-8 with its other IPTC text written again, so none is garbled.
+- What can be edited is a choice, not what's left over: IFDs, PDFs and PNGs offer only the fields that describe the file
+  (`IfdFields`, `PdfFields`, `PngFields`). The rest says how to read it (a TIFF's layout, a DNG's colour calibration, a
+  PDF's page mode, a PNG's colours), and a video's or HEIC's header and tracks can't be changed. Those show a lock.
+- `-m` lets a file with a small fault of its own be written. The copy is then read back: a warning naming a changed
+  field, a field unknown or not writable, text that doesn't fit its character set, a field set that isn't there, one
+  removed that still is, or an editable field Remove location or Remove everything should have taken refuses the copy
+  (`error.metadata_refused`) and leaves none. Remove location takes GPS and the XMP, IPTC and QuickTime place fields, and
+  every editable field `ExifTool.IsLocation` finds, the one rule the window strikes through by; a locked one (a camera's
+  focus location, in its maker notes) stays, in plain sight. Remove everything is `-all=` keeping the orientation and the
+  colour profile, a TIFF's descriptive IFD fields by name on every page. It may also take locked rows (maker notes, cover
+  art, a JPEG's DPI, a PNG's custom text); others stay, a video's header dates and a TIFF's other tags among them, and the
+  hint says so. A file that holds more than its picture (`ExifTool.HoldsMore`: a Motion Photo's video, an MPF second
+  picture, a gain map, a Samsung trailer) doesn't offer it, and the window says why: it would orphan what's there and
+  leave that metadata, which no field shows. Camera RAW and DNG don't offer it either.
+- Without ExifTool the window reads nothing and offers Settings → Engines: a metadata library inside Filee can be made
+  to hang or fill the memory by a small file, and can't be stopped, while ExifTool runs apart under limits of time,
+  memory and output: a small file can make it hold and print gigabytes of text, and a file over them goes to the summary
+  as holding too much past the output or memory limit, as unreadable past the time limit, or with more than 3,000
+  fields, 256 KB of text to show or a field name over 256 characters, as the window lays out every row, and search waits
+  for a pause in the typing above 500 rows. A row shows and searches the first 32 KB of a value, and one longer can be
+  removed but not typed in. Closing the window stops the read. ExifTool's write has only its time limit, but the reads
+  around a save have these limits, so a conversion of a file over them is refused. It reads the file with ExifTool once
+  it is installed.
+- `MetadataViewModel` keeps one row per field (edited, removed, added; a list one entry per line) and turns them into
+  `MetadataEdits`. Add field offers XMP's descriptive fields, IPTC's where the kind of file has IPTC (JPEG, TIFF, PSD),
+  a PDF's document info for a PDF. The keys, the summary of files that could not be opened or saved, and texts that
+  follow a language change are as in Add background.
+- PDFs: ExifTool appends its changes as an update, so earlier values stay recoverable inside the file; the window says
+  so.
+
+A group's ring scales with the donut: its gap, depth and narrowest slice (`DonutMenu.SubGap`, `SubBand`,
+`DonutGeometry.MinSubWidth`) and the window's room for it (`SubRingSpaceFor`) are multiplied by the ring scale,
+radius ÷ 150 × *Group ring size* (`DonutSettings.GroupRingSize`, 75–150 %), never below the default ring of the
+smallest donut (`MinRingScale`). *Group ring spread* (`GroupRingSpread`, 100–300 %) widens each ring slice after the
+narrowest-slice rule, up to one turn round the donut. Pointer tolerances (`BackdropMargin`, `LeaveEdge`) stay in
+pixels. At the defaults and radius 150 the ring is the same as before these settings.
+
+### Slice labels
+
+`Controls/SliceLabelLayout.cs` decides what each slice shows and where, without drawing; `DonutMenu.DrawSliceLabel`
+draws the result. Every label stays inside the slice's *safe zone*: the slice inset by a margin of `max(2·s,
+0.025·depth)` from all four edges (plus half the 3 px gap on the sides), and as far from a group's chevron: the mark
+itself, not a band across the slice, so a group slice's label is centred as any other's. The margin is kept from the
+letters, measured from their outlines (`LabelText.InkBox`) with each line at its own width (`StackInside`), not from the
+lines' boxes, which hold room above and below the letters: it leaves about the room today's donut leaves round its
+names. A box's edges are checked against the inner edge too, since it curves inward. `s = OuterRadius / 150` is the
+donut scale; names start at `max(10, 13 × LabelScale × s)` px, captions 80 % of that, icons 20·k beside a name or
+16–28·k alone (k = LabelScale · s).
+
+What a slice shows is its preset's `Show` (`LabelShow`: Auto, IconAndText, TextOnly, IconOnly), else its donut's
+`ToolbarProfile.LabelShow`, else Auto. `PlanRing` lays out a whole ring at once: one name size, one way for its names
+and one icon size, and for each slice the best its Show allows there. The ring's size runs from the starting one down,
+0.5 px at a time, to `max(10, 10 × s)` (`SizesFor`; the icon beside a name shrinks with it, to 16·k), and the ring takes
+the size and way with the fewest slices it can't label, then the fewest needed captions lost, then the fewest names cut
+so far they no longer read (under four letters or 40 % of them) or by only a letter or two, then the earlier way, then
+the largest size: on the face a name that doesn't fit is shortened rather than the ring made smaller (a group's ring, of
+short words, steps down before it shortens), and optional captions never make the names smaller. Icon & text keeps its
+icons: where an icon and its name, whole or shortened to `MinKept`, don't fit (the eight-slice back faces), the ring
+steps down rather than cut the name to a word ("Merge…"), which says less. A block goes on the slice's middle first, its
+letters centred there and moved sideways until it has as much room left of it as right of it (`Balanced`: a slice that
+runs aslant has more on one side); there it drops a caption it doesn't need before it moves. Upright lines wrap at the
+slice's width at its middle less 10 px (`ComfortableWidth`, as today's donut wraps its names), and run longer only where
+no wrapping fits. Only a block that fits nowhere on the middle is tried along the middle line and round from it
+(`Positions`): a three-slice face's slices run aslant. Auto: icon and whole name where every Auto slice of the ring has
+room for both and loses nothing for it (the caption it shows without its icon, and its place on the middle), else the
+whole name alone, else shortened to no less than 60 % of its letters and never dropping a word (`MinKept`), else
+shorter, else its icon alone. Icon & text: icon and whole name, else (a slice that needs its caption) the name and
+caption alone, else icon and name shortened to `MinKept` (wrapped as a name alone is: "Remove / metad…"), else the icon
+alone. Text only: the whole name, else shortened to `MinKept`, else as far as it takes. Slices of one name look alike:
+where one shows its name alone, the others do too. Captions show per slice, under a name where they fit, with Show
+output format on. A caption the slice needs (`NeedsCaption`: "Copy to folder" or "Move to folder" under a folder's name,
+or the format under a name another slice of the ring has too) shows with it off as well, and under the name beside an
+icon; an icon otherwise stands in for the caption. A slice without an icon (a format conversion) shows its name and
+doesn't decide the others' style. Icon and name: on a deep slice the icon above the name, both upright, else (where that
+can't show the name whole, or for Out from the centre) the icon before a name running out from the centre; on a wide
+slice the upright icon above a name bent along the ring, above it as read (the outer of the two on the top half, the
+inner on the bottom), else (a group ring's chip, too shallow for one above the other at most sizes) before it, side by
+side. The icon never turns. A ring takes one placement for all its icons (above their names where every one fits so, the
+face stepping down for it; else before them) and names, the one of its way (`ways` in `PlanRing`): straight under an
+upright icon, out from the centre after the icon, or bent beside it; a format's name beside them runs that way too, and
+a ring bends only if every name of it can (else all run level with it). Names wrap at word boundaries (CJK by character,
+Korean by word) and run one way for the whole ring, each way through the sizes, except a slice whose preset says its own
+(`Preset.Direction`: Straight, OutFromCentre, AlongRing; `SliceLabelLayout.Tries`). The donut's face keeps its names
+upright, and so does a group's ring of Chinese, Japanese or Korean names (turned, their characters read sideways). A
+group's ring, deeper than it is wide, tries straight or out from the centre, then bent; one wider than deep (`IsWide`,
+so the ring's size, its spread and the name size decide) bent along the ring, then straight, then out from the centre. A
+bent name (`LabelText.Curved`) puts each line on its own circle and each letter on it, upright, clockwise on the top
+half and anticlockwise on the bottom (`CurvedGlyphs`); it fits when its lines stay between the zone's circles and their
+ends clear the side edges at their inner edge (`CurvedFits`). Scripts whose letters join or reorder (Arabic, Hebrew, the
+Indic scripts, Thai, Lao, Myanmar) aren't bent but drawn level with the ring. A shortened name runs in the direction
+that keeps the most of it. `DonutMenu.LabelPlan` caches each ring's plan by its inputs (items, geometry, scale,
+settings), so labels are laid out once per change, not per frame; the open, pop and flip animations move them with
+transforms. Every group's ring slices are equally wide, whatever the group's size (`DonutGeometry.SubSpan`: a share of
+the group's slice and a quarter of each neighbour, as if three slices shared it, times Group ring spread), so a group of
+six fans out twice as far as a group of three and the spread looks the same on every group; it never goes round more
+than once. A group's ring labels follow the ring's scale instead of the donut's, and the Label scale as far as the
+ring's slices have room: `PlanRingToFit` steps the Label scale down 5 % at a time, not below 100 %, until every slice
+shows its whole name or its icon.
+
+The icons are a curated set of Material Design Icons (`SliceIcons.Data.cs`, generated; Apache-2.0, see
+THIRD-PARTY-NOTICES.md), keyed by their MDI names and grouped for the picker. `Preset.Icon` is a key, `"none"`, or
+unset for the default: a built-in preset's own (by id), else its tool's; plain format conversions have none.
+`Preset.ShortName` replaces the name on the donut and its rings (`DonutName` / `RingName`); the centre hint always
+names the slice in full (`DonutItem.FullName`). The preset and group editors share `SliceLabelFields` (Icon with
+`IconPickerFlyout`, Short name, Show); the Toolbar page's Edit Donut Size panel sets each donut's Slice labels and
+Label scale.
+
+## Crop overlay and PDF page editor
+
+The image Crop tool (`tool-crop`) and PDF Crop (`tool-pdf-crop`) open `Views/CropOverlayWindow` instead of running a job:
+the files one after another,
+each cropped by hand and saved by `CropService` (the preset's output rule, the source's quality kept, animated or
+multi-frame pictures refused, the EXIF thumbnail dropped), one history entry for the run. A PDF preview is rendered
+with PDFium and the chosen rectangle changes every page's crop box in a copied document opened in modify mode, so
+text, vectors, outlines, forms, page labels and document information remain PDF objects and stay attached.
+
+- `CropOverlayViewModel` walks the queue (Enter saves and opens the next file, Skip, Esc closes), keeps a
+  `CropQueueItem` per file for the strip of thumbnails (waiting, current, done, skipped, failed; a thumbnail is a
+  small copy of the preview, made once) and, after the last file, shows the summary when something failed or was
+  skipped. Every file starts free and whole, its portrait/landscape choice following the picture.
+- `Controls/CropCanvas` is the stage: the picture inside `ImagePadding`, the part outside the frame frosted (a copy at
+  most 40 px across, drawn large) under a veil of the page colour, the frame in the accent colour with round handles,
+  a rule-of-thirds grid while dragging and a size chip that follows the frame. A frame being moved snaps onto the
+  picture's vertical or horizontal centre line within `CropMath.SnapDistance` (8 px) and shows that line as a dashed
+  guide until the drag ends. The preview is downscaled once by
+  `CropService.LoadPreviewAsync`; nothing is decoded again while dragging. Programmatic changes (reset, a ratio, a
+  new picture) ease in with tweens read against the clock, so a lost frame never leaves one half done; dragging and
+  arrow-key nudges follow at once, and `PlayAnimations` (from `Motion.Enabled`) turns all of it off.
+- `Controls/AspectDial` is a small donut of the ratios (free, original, 1:1, 5:4, 4:3, 3:2, 16:9): each slice a
+  `RingSegment` button that answers only inside its wedge (`DonutGeometry.Wedge`, rounded by the softness), the hub
+  swaps portrait and landscape. A with the pointer over the stage opens it around the pointer, as the donut opens,
+  growing from its middle and kept inside the window; A without a pointer there (the keyboard) and its toolbar button
+  open it over the button with a slice focused for the arrow keys. `AspectGlyph` is the dial in miniature on that
+  button, and `CropSummaryRing` the end summary's donut (a slice per file).
+- `Controls/CropMath` holds the arithmetic (ratios and their portrait forms, nudging by whole pixels, the frame in
+  pixels, where the size chip goes, where the dial opens) and is unit tested.
+
+`tool-pdf-pages` opens `Views/PdfPageEditorWindow`: it previews, reorders, rotates, deletes, adds and extracts pages.
+Ctrl / Shift + click selects several pages, and every action works on the whole selection: the pages move up or down
+as a block, dragging them moves them to the line drawn between two pages, Insert puts another PDF's pages before or
+after the selection and Replace puts them where the selection was, removing it (#860).
+PDFs dragged in from the file manager show the same line and go in at it, through the same path as Insert
+(`PdfPageEditorViewModel.InsertFilesAtAsync`); other files are left out, and a drag without a PDF isn't taken (#1596).
+Each source PDF's bytes and page sizes are cached once after the window has appeared; thumbnails and the large preview
+render off the UI thread. A whole-document edit keeps the original catalogue and changes `/Rotate` in modify mode.
+An actual reorder, deletion, addition or extraction builds a new PDF from selected page objects. A PDF that opens
+without a password but requires an owner password for modify mode uses the same page-copy fallback as compression;
+its outlines and form fields are not preserved by that fallback. Generated copies are writable even when the source
+has the read-only attribute; the source's bytes and attributes are left alone.
+
+## Clip window
+
+The Cut a clip tool (`tool-clip`, first on the back of the video donut) opens `Views/ClipWindow` instead of running a
+job. The window only chooses the clip; writing it is an ordinary conversion.
+
+It also opens on sounds (#1291): the timeline is then the waveform (`ClipTimeline.Waveform`) in place of the picture strip,
+and the picture, thumbnails and sequence pictures are skipped (`ClipWindowViewModel.HasPicture`). In *ringtone mode*
+(`ShowRingtoneWindow`, from the donut for a preset with `AskRingtonePart`) only the part is chosen: the editing tools are
+hidden and Save starts the M4R conversion of that part (`AskedRingtone.Apply`).
+
+- `Core/Presets/ClipCutter` does every edit without the window: the parts of the clip (start, end, speed, volume,
+  mute), gaps left by Delete, the blade, edge trims that take back or cut away, music on A2, fades, Remove silence and
+  undo / redo (one step per drag). The result is a `ClipEdit`, unit tested on its own.
+- `ClipWindowViewModel` holds the window's state: the overview of the whole video (`Controls/ClipTimeline`: 16
+  frames, the loudness, the handles) and the sequence under it (`Controls/ClipSequence`: V1 pictures, A1 the video's
+  sound, A2 music). Both are custom-drawn controls; their pictures and loudness are taken again only when the clip's
+  ends rest.
+- Space plays the clip as it will be written: `Engines/Media/ClipPreview` runs the same filter graph as the output,
+  the pictures as raw BGRA frames over a pipe and the sound through `ffplay` (when it sits next to Filee's FFmpeg;
+  without it the preview is silent). FFmpeg for the window runs below normal priority.
+- Save calls `ClipTool.ConversionOf`, which carries the `ClipEdit` in `MediaOptions.Clip`, so the toast, cancel, the
+  output rules (`{name}_clip` next to the video) and the history work as for any conversion. `FfmpegConverter`
+  copies one plain stretch with `-ss/-to` and `-c copy` (*Fast, no re-encoding*), or encodes the exact cut.
+- Anything else is one filter graph (`MediaEncoding.ClipGraphOf`): the video is read once, `split`/`trim` per piece,
+  `setpts` and chained `atempo` for speed, `volume`, `color`/`anullsrc` for gaps, `concat`, the music as a second
+  input (`atrim`, `volume`, `afade`, `adelay`, `amix`), then `fade`/`afade`. It is encoded with the preset's quality,
+  size and codec.
+- Pictures, clips, the preview and Live Photos start at the frame shown at the time chosen (#1205):
+  `Engines/Media/KeyFrames` reads the packets before the time with ffprobe, without decoding, for the key frame to read
+  from, since FFmpeg's own `-ss` lands between key frames in MPEG-TS and MPEG-PS and skips the leading pictures of an
+  open group. A picture is trimmed at the file's own times (`-copyts`). What is encoded reads with `-copyts` and
+  `-itsoffset`, moved back to a microsecond before the start so nothing kept is below time 0, and its picture is cut by
+  `trim` in the stream's own ticks; its progress comes from `-stats_enc_pre`, with `-progress` to show it is working
+  between parts. A copy's `-ss` is checked where FFmpeg's own copy lands, since each demuxer seeks its own way (an MP4
+  by decode time, a WMV by a key frame a second), and its end is put where no frame shown before its last is missing.
+  The file header of `KeyFrames.cs` lists the FFmpeg behaviours, and the versions, that this allows for.
+
+## Crop video
+
+"Crop video" (`crop-video`, after Cut a clip on the back of the video donut, #830) is a group of ordinary
+conversions, not a window: each preset keeps the video's own format (MP4 for VOB and DV, whose fixed frame sizes would
+stretch the crop back: `VideoCrop.TargetFor`) and sets `MediaOptions.CropFrame` to `auto` or a `width:height` ratio
+(`Core/Presets/VideoCrop`).
+
+- A ratio crops the largest centred box of the upright picture with square pixels (`MediaEncoding.RatioBox`); a video
+  already that shape is refused (`error.crop_same_frame`).
+- Auto runs `cropdetect` (limit as a part of the range, so 10-bit and HDR read alike) over a second at five points of
+  the video (the first five seconds of a short one), takes each stretch's final box and the largest of those
+  (`MediaEncoding.FinalCrop`, `LargestCrop`); no black bars, or a box under a quarter of the picture, refuses the file
+  (`error.no_black_bars`), and cropdetect failing everywhere is an error with FFmpeg's message.
+- The crop goes before the scale filter, so the video is always encoded: an HEVC or AV1 source stays in its codec where
+  the target and FFmpeg allow it (keeping 10 bits and HDR tags), the sound is copied where the container takes it, and the
+  subtitle tracks stay as in any video conversion (see *FFmpeg* in `docs/ENGINES.md`).
+
+## Spreadsheet print studio
+
+The `tool-sheet-studio` tool opens an independent `Views/SpreadsheetPrintStudioWindow` for each dropped XLSX workbook
+instead of starting a normal conversion job. `SpreadsheetPrintStudioViewModel` owns an ordered, non-destructive print plan: each visible
+sheet starts as one region and the user can add more regions, change paper, orientation, scale, margins, page order,
+hidden rows and manual breaks, then see the PDF that those settings will produce.
+
+- `SpreadsheetPrintInspector` reads workbook metadata and streams the large worksheet data with `XmlReader`; opening
+  a large workbook neither builds nor retains an `XDocument` for every sheet.
+- `SpreadsheetPrintPackage` makes a disposable XLSX under `JobQueue.DefaultWorkRoot`. It keeps every worksheet and
+  named range so cross-sheet formulas remain valid, hides the sheets not being rendered, and changes only the chosen
+  sheet's print settings. A new print area is written only after the user explicitly changes or accepts the range.
+- `SpreadsheetPrintService` runs LibreOffice once for each region. Preview and export use the same disposable-workbook
+  path; export then joins the region PDFs in the chosen order with PDFsharp, or, with **One PDF per sheet**, writes
+  each region as `<chosen name>_<sheet>.pdf` (`PerSheetPaths` cleans the names, adds `_2` for repeats, and applies the tool preset's conflict policy to files
+  already there). The ordinary XLSX → PDF donut conversion
+  can still differ because route planning may select Filee's built-in spreadsheet reader instead of LibreOffice.
+- `PdfPreviewDocument` caches a PDF's bytes and page geometry. The studio asks PDFium/PDFtoImage for small thumbnails
+  and only one large selected page, all decoded away from the UI thread; exporting never performs preview rendering.
+  Cancellation closes LibreOffice and the temporary job folder is removed on success, error or window close.
+
+## Settings and data
+
+`PortableMode.Initialize` runs in both entry points before logging, settings or engine discovery. A
+`filee.portable` marker selects the adjacent `data` directory through `FILEE_DATA_DIR`; an explicit override
+keeps precedence. macOS stores the marker/data outside `.app` to preserve the signed bundle. Startup validates
+write/delete access and reports failure without loading the normal user profile. Portable settings turn off
+login and file-manager integration; the existing separate-data guard prevents registration and unregistration.
+The General page explains this and disables those controls.
+
+Conversion work folders, temporary files and engine caches keep their existing behavior and locations.
+Portable mode does not change the environment passed to external engines.
+Portable release archives include the marker by default. Installer payloads keep normal profile storage;
+the desktop app offers a one-time copy of an existing profile into unused portable data before loading settings.
+Import stages copies first and preserves the source. Integration cleanup checks the executable target on all three
+platforms, asks independently of import and remembers declined cleanup. Shared macOS Finder service preferences stay
+unchanged. See [portable mode](PORTABLE.md) for migration and quarantine details.
+
+`UserDataStore` owns `settings.json`, `presets.json`, `profiles.json` and `history.json`
+(System.Text.Json source generation, atomic writes, broken files are kept as `*.broken`).
+Bump `AppSettings.CurrentSchemaVersion` and add a step to `SettingsMigrations` when the format changes.
+
+## Localization and theming
+
+- `LocalizationService` loads `Assets/i18n/<lang>.json` into `Application.Resources`; XAML uses
+  `{DynamicResource key}`, so switching language updates the UI live.
+- `ThemeService` writes the accent colour, corner radii, fonts, the reading direction and Fluent's
+  `SystemAccentColor*` into application resources. Arabic reads right to left: `Styles/Soft.axaml`'s Window style
+  takes `FlowDirection` from that resource, so every window mirrors; the donut, the crop canvas and animated images
+  stay left to right. Light/dark surface colours are theme dictionaries in `Styles/Soft.axaml`; a user's
+  `theme.json` (`CustomTheme`, see [CUSTOM-THEMES.md](CUSTOM-THEMES.md)) overrides them with theme dictionaries in
+  application resources, which are searched first.
+- The UI font is one chain (`SoftPalette.FontFamilies`): the embedded Noto fonts (`FileeFontCollection`,
+  `fonts:Filee#…`), with the UI language's CJK font first so Han takes that region's shapes. Theme → *Use the system
+  font* puts the system's UI fonts ahead of them (Segoe UI and Windows' script fonts, San Francisco on macOS,
+  fontconfig's default on Linux), named `fonts:System#…` (`SystemUiFontCollection`): Avalonia's own system collection
+  answers any letter with the platform's fallback font, whatever family is asked, so a plain name would draw every
+  language's Han in Yu Gothic UI on Windows. Annotate's labels follow the same chain (`AnnotationFonts`).
+- What sits on an accent fill is `OnAccentBrush`: white or dark, whichever has the higher WCAG contrast
+  (`SoftPalette.OnAccent`). `SoftPalette.ApplyAccentStates` also gives Fluent's accent controls this label instead of
+  their fixed white, and their hover and pressed fills, which move away from the label when they would cost it contrast.
+  New text on `AccentBrush` takes `OnAccentBrush`, never a fixed colour.
+- Window zoom (`Services/UiZoom`): Theme → *Window size* (− / + and *Reset*), and in any tracked window the
+  platform's command key (`HotkeyConfiguration.CommandModifiers`: Ctrl, Cmd on macOS) with the mouse wheel, plus /
+  minus (Shift allowed, Alt not: AltGr is Ctrl + Alt) or 0 for 100 %. 70–180 % in 10 % steps, every window at once.
+  `UiZoom.Track(window)` wraps the window's content in a `LayoutTransformControl`, so layouts see the room they really
+  have. Small wheel deltas (touchpads, smooth wheels, pinching on a Windows touchpad) add up to one step per whole notch.
+  Windows that can't be resized grow with the zoom (their designed width × the zoom) up to their screen, cap their
+  height to it and scroll; the engine setup keeps itself on screen and scrolls its own list (`fitsItself`).
+  Tracked: the main window, the preset, group, rename and merge-order editors, the engine setup, LibreOffice options,
+  close, sponsor, what's new and update-progress windows and `WindowService`'s message dialog. Not tracked, so at
+  100 %: the donut (it has its own size), the toast and the corner notices (update, engine update, feedback, format
+  request, elevation), which are placed in a screen corner like system notifications, and the crop overlay, whose
+  wheel zooms the crop. Drop-down lists, context menus and tooltips open in their own popup windows outside the
+  transform and stay at 100 % too. The size is `UiScale` in settings.json (1 when missing, so no schema step); it is
+  written by `UserDataStore.SaveUiScale` 0.6 s after the last change (and on exit), without raising `SettingsChanged`.
+
+## "What's new" slides
+
+After an update, Filee shows the new version's features once as slides (an animation or picture, a title, a line or
+two). The pieces:
+
+- `Assets/WhatsNew/<version>/slides.json` lists the slides: `id`, `media` (a file next to it), and the i18n keys of
+  `title` and `text` (`whats_new.<version>.<id>.title`, in every language file). `SlideDeck` (Controls) reads every
+  manifest from the assembly's resources; a broken one is skipped.
+- `AnimatedImage` shows GIF, animated WebP or a still picture. Avalonia's `Image` shows only the first frame, so
+  `AnimatedImageDecoder` decodes frames with Skia's `SKCodec`, which also says which earlier frame each one is drawn
+  over (`RequiredFrame`, disposal included). The file is copied into an `SKData` and each frame is decoded straight
+  into a `WriteableBitmap`'s framebuffer: no managed buffer is ever handed to native code. `FrameTimeline` keeps the
+  frame durations (0–10 ms counts as 100 ms, as in browsers) and the loop count. The animation pauses while the
+  control is hidden or its window is minimized, shows the first frame with reduced motion (`AutoPlay`), and gives
+  the decoder and bitmap back when it leaves the visual tree or its source changes.
+- `SlideShow` is the deck itself (picture, texts, position dots), built in code so `Filee.Setup` can link the same
+  files for a slideshow on its progress page (`AutoAdvance`). All slides' texts sit in one grid cell, only the
+  current one visible, so the height is the tallest slide's and the window doesn't jump.
+- `WhatsNewWindow` adds the card, ✕, Previous / Next ("Get started" on the last slide), ←/→ and Esc.
+- `WhatsNewService` decides at start-up, before the first run is marked complete:
+  - a fresh install (first run not completed) needs no slides, as the first-run setup introduces Filee; its
+    version is stored as seen;
+  - otherwise `AppSettings.WhatsNewSeenVersion` (null in settings older than the slides, which means "updated")
+    is compared with the running version, and the newest deck after it, up to this version, is shown;
+  - the same version or a downgrade shows nothing and never lowers what was seen; an update without a deck is
+    stored as seen quietly.
+  The version is stored when the window opens. A start in the background (`--background` at sign-in, or the
+  Explorer menu) keeps the deck until `WindowService.ShowMain` raises `MainShown`; the installer starts an updated
+  Filee with `--background --whats-new`, which shows it at once. About → "What's new in Filee X" opens the newest
+  deck again.
+
+The `<!-- update -->` lines of CHANGELOG.md are the other half: the update card shows them for a version that isn't
+installed yet; the slides introduce the installed one. The demo animations are rendered by
+`tests/Filee.App.Tests/WhatsNewMedia.cs` from the real windows (see CONTRIBUTING.md, "Releasing").
+
+## Command line and watch folders
+
+- `Filee.Cli` (`filee-cli.exe`, run as `filee` through `cli\filee.cmd`, which Setup can put on PATH) composes the same
+  pipeline as the app without any UI (`CliHost`: `UserDataStore`, `EngineRegistry`, `ConverterCatalog`, `JobQueue`)
+  and reads the app's presets and engine order. It is published into the app folder, so both share one runtime and
+  the bundled engines; its name can't be `filee.exe` next to `Filee.exe` on a case-insensitive file system.
+- `Filee.Core/Watching/FolderWatcher` watches one `WatchRule` with a `FileSystemWatcher` and converts a file once it
+  has kept its size and time for a moment, opens without sharing and has data at its start (downloads and copies in
+  progress are skipped). A file that didn't convert gets one more turn after 10 seconds. Temporary files, unknown
+  formats and dedicated output and originals folders are ignored. Links (junctions, mount points, symbolic links to
+  folders or files) are never followed or converted, neither as they arrive, nor in the scan of what is already there
+  (`FolderWatcher.FilesInside`), nor when a file gets its second turn; other reparse points, such as OneDrive's
+  online-only files, are converted like any file. A rule may also write
+  into the watched folder itself. In that case, generated file versions (path, size and modification time) and
+  generated result directories are recorded in `.filee-watch-<rule hash>.json` inside the watched root. The hidden
+  state file prevents those results from becoming new inputs, including after an inbox watcher restarts; a changed
+  file with an old output name is accepted again. A failure to save this state is logged because results may be
+  retried after restart. Removing a rule's state file also forgets its results.
+  The tray app runs one per rule (`WatchFolderService`, Settings → Watch folders, conversions in the toast and
+  history); `filee watch` runs one on its own, with a stable `cli` rule identity across command restarts.
+
+## Preset gallery
+
+Presets shared by users live in the `KnifeLemon/Filee-Presets` repository and on filee.sh (#1530); the app reads
+them, it never uploads.
+
+- `Filee.Core/Gallery/SharedPresetRules` is the allow-list: every field a shared preset.json (a `PresetBundle`) may
+  have, with its range, and the fields left out (folders of one's own, passwords, picture and sound paths, metadata
+  naming people, places or owners), which may only be empty. A field added to `Preset` fails the check until it is
+  listed there (`PresetGalleryCheckTests` compares the list with the model). Settings that touch the installer's files
+  pass with a warning (`SharedPresetWarnings`, codes shared with the gallery's repository and filee.sh); the window
+  shows them and asks for a tick before installing a preset with a high one.
+- `SharedBundleCheck` checks a preset.json against it, as JSON first (unknown fields, types, ranges, links, personal
+  paths) and then as presets (kinds, tools, targets, references), and derives what meta.json needs.
+  `SharedPresetFolderCheck` checks a whole submission folder, pictures included (`GalleryImageHeader` reads their
+  header before anything decodes them). `filee presets check <folder> [--json]` runs it, with SkiaSharp decoding each
+  picture; the gallery's CI calls it.
+- `GalleryInstaller` checks the downloaded file's SHA-256 and the rules again, then adds its presets and donut under
+  new ids (" (2)" on a name the library has); nothing is ever replaced, unlike Settings → General → Import.
+  `GalleryExport` builds the preset.json "Export for the gallery…" saves (Presets page).
+- The app's `PresetGalleryWindow` (from the Presets page) reads `index.json` through `PresetGalleryClient`, only while
+  it is open, with the proxy setting, time and size limits, and falls back to the repository on GitHub when filee.sh
+  can't be reached. Paths in the index are relative to the URL it came from; Install uses the entry's counted
+  `download` link. Pictures are cached in the work folder's `gallery/` (64 MB, 30 days). A preset is written in one
+  main `language` and optionally more (`titleByLang`, `descriptionByLang`): the window shows the app language's texts
+  when the preset has them, else the main ones with a badge naming their language, lists the presets in the app's
+  language first and can hide the rest ("Only in my language"). Pictures follow the app language on their own
+  (`imagesByLang`).
+
+## Platform code
+
+Everything OS-specific goes through `IPlatformServices` (`Filee.Core/Platform`). Windows lives in
+`Filee.Platform.Windows`; macOS will get its own project. Global input uses SharpHook on both.
+
+Home → Recent conversions opens a result with `OpenFile` (the shell on Windows, `open` on macOS, `xdg-open` on Linux,
+so a file is handed to its app and never started itself; only formats Filee knows are offered) and, where
+`SupportsOpenWith` (Windows), the shell's "Open with" dialog (`SHOpenWithDialog`, on a thread of its own because it
+blocks until closed). The cards' pictures come from `HistoryThumbnails`: Skia decodes them off the UI thread, scaled
+down while decoding where the format allows, from a copy read in one go so the file isn't held open, and a small cache
+keeps them while the files are unchanged. For video files, FFmpeg extracts and scales a representative frame off the UI thread without locking the file.
+
+On macOS, files reach Filee from file managers other than Finder too (issue #160). The "Convert with Filee" service
+(`MacOSServicesProvider`) and the donut's drags (`DraggedFiles`) read file URLs first, then the older
+`NSFilenamesPboardType` array of paths (`PasteboardPaths`); the service also takes plain-text lines that are absolute
+paths. The donut registers those types with AppKit next to Avalonia's own, so such a drag reaches it, and a drag or
+service request without readable files is logged with the types it offered. File promises (`NSFilePromiseProvider`)
+can't be received through Avalonia; for a browser drag Filee reads the address and HTML it also offers, which the donut
+registers too (see "Files dragged from a web browser"). A click-mode donut opened for a later launch or the service forgives one loss of
+focus within a second of opening (`ActivationGrace`): Filee becoming the active app can take focus away from it.
+
+A keyboard shortcut with `TriggerGesture.Clipboard` reads the clipboard instead of the selection
+(`IPlatformServices.ReadClipboard`, `MacOSClipboard`): copied files (file URLs, then `NSFilenamesPboardType`; copied
+files that are gone give nothing, not Finder's icon), else a picture (`PasteboardPaths.PictureTypes`, PNG first, TIFF
+last). With neither on the clipboard the shortcut does nothing — it never falls back to the file manager's selection,
+which for an Everywhere shortcut could sit in a Finder window in the background. A picture becomes a one-item `WebDrop`
+with `SaveOnlyConverted`, so it is saved into the browser-drop folder when it converts and only the result stays. The
+donut's jobs are started with `toClipboard`, and `ConversionService` puts their outputs back on the clipboard when they
+finish (`CopyToClipboard`: a file URL per item, a single picture also as itself; the log also carries how many files
+failed). No shortcut has `Clipboard` on by default and no settings migration adds one: the global hook can't hold the
+keys back, so a preset combination would also reach the app in front (Shift + Cmd + V is Paste and Match Style in most
+text fields). Whoever wants it turns the switch on in Settings → Shortcuts for a shortcut with keys of their own choosing.
+
+The donut, the toast and the notices are transparent windows. On Windows Filee keeps Avalonia's rendering defaults
+(ANGLE on Direct3D 11 composed through WinUI composition, then DirectComposition, then the window's redirection
+surface; software rendering when Direct3D 11 fails): each of them keeps per-pixel transparency. The log says what was
+picked (`Rendering: AngleEgl with WinUIComposition`), lists the graphics adapters, carries Avalonia's own errors from
+starting the GPU paths (`AvaloniaLogForwarder`), and describes each kind of transparent window the first time it
+shows (`TransparentWindows`). A system backdrop (Acrylic, Mica) or an accent blur on such a window turns its
+transparent area into a blurred rectangle (issue #269). Filee sets neither, so one found there came from another
+program: each time the window shows, a backdrop is set back to none and the accent (which can't be read back) is
+turned off. For a report that still shows the wrong thing, the `FILEE_RENDERING` environment variable picks another
+way to draw (`WindowsRendering`): `dcomp` (skip WinUI composition), `redirection` (Direct3D into the redirection
+surface) or `software` (no GPU); `auto` keeps the defaults, and so does unset except on ARM64. Filee reads it at
+start. On ARM64, Avalonia's Adreno blocklist draws on the CPU through the Microsoft Basic Render Driver (issue #236),
+and three values try the GPU there again: `gpu` (Direct3D on the first adapter that isn't the Basic Render Driver),
+`vulkan` and `wgl` (OpenGL), the last two falling back to software when they can't start. On a Snapdragon X Elite `gpu`
+was smooth and kept transparency, `vulkan` drew the donut on black and `wgl` didn't start, so unset means `gpu` on
+ARM64; `auto` goes back to Avalonia's blocklist. On Linux (X11) only `software` applies: the GPU's driver stays
+in memory for as long as Filee runs, also with no window open, so this is the way to a smaller tray app (issue #957).
+
+## Explorer integration
+
+Settings → General → "Show “Convert with Filee” in the Explorer context menu" (`AppSettings.ContextMenuEnabled`) is
+applied by `WindowsPlatformServices.SetContextMenu` at start-up and whenever settings change (installed builds only):
+
+- **Classic verb** `HKCU\Software\Classes\*\shell\Filee` (`Filee.exe --convert "%1"`, `MultiSelectModel` `Player`) and
+  a **Send To** shortcut. Per user, no admin rights. On Windows 10 this is the entry; on Windows 11 it sits under "Show
+  more options". Explorer starts one process per selected file, out of order and over many seconds, and hides the
+  entry above 100 files (Send To has no such limit). The processes reach the running instance through `SingleInstance`;
+  the first asks Explorer for the selection, so the donut has all of it at once (`SelectionLaunches`). When that can't
+  be read (another file manager), they are collected for 350 ms and later ones join the open donut
+  (`RadialController.TryAddFiles`); once a conversion took its files, later ones get a donut of their own.
+- **Windows 11 top-level entry** (optional): an `IExplorerCommand` in `FileeExplorerMenu.dll`
+  (`src/Filee.ExplorerMenu`, plain C, no C runtime) declared by the sparse package `FileeExplorerMenu.msix`
+  (`ExplorerMenuPackage.CreateManifest`: `desktop4:FileExplorerContextMenus`, `desktop5:ItemType Type="*"`,
+  `com:SurrogateServer`, `uap10:AllowExternalContent`, `AppListEntry="none"`). Both files ship next to Filee.exe and the
+  package's external location is the install folder (`C:\Program Files\Filee` by default).
+  - The package is **unsigned** (publisher contains `OID.2.25.311729368913984317654407730594956997722=1`; Filee has no
+    code-signing certificate). Windows only registers an unsigned package with executable content **with
+    administrator rights** (it installs it for all users); a per-user attempt fails with 0x80073D2B "an unsigned
+    package cannot include Executable activations". Setup (`src/Filee.Setup`) has those rights anyway and
+    registers it on Windows 11 x64 while its option is ticked. Later the General page offers "Add to the main menu",
+    which runs `Add-AppxPackage -Path … -ExternalLocation … -AllowUnsigned` in Windows PowerShell through one UAC
+    prompt (`ExplorerMenuRegistration`). A signed package would register per user without a prompt.
+  - The manifest version (`ExplorerMenuPackage.ManifestVersion`) is independent of the app version, so app updates
+    don't need a new prompt: the DLL is loaded from the install folder and updated with the app. Bump it only when the
+    manifest changes; the page then offers to add the entry again ("Outdated").
+  - The DLL shows the entry only for files (not folders or items inside ZIP folders) and only while
+    `%APPDATA%\Filee\explorer-menu.txt` exists. The app writes the title in the UI language there while the setting is
+    on and deletes it when the setting is off, so switching the setting takes effect without re-registering. While the
+    package is registered the classic verb is removed (Windows lists packaged commands under "Show more options" too).
+  - Invoke starts `Filee.exe --convert "<path>"…` next to the DLL and returns at once. Selections longer than a
+    command line go through `%TEMP%\Filee-convert-*.txt` (`--convert-list`, one path per line), which the app deletes.
+  - Updates: Setup asks the running Filee to exit (`Filee.exe --quit`), then renames a `FileeExplorerMenu.dll` that
+    Explorer still has loaded into its backup folder (Windows allows renaming a loaded DLL, not replacing or deleting
+    it) and has Windows delete the old copy at the next restart, so updating needs no restart. An update keeps the
+    registration as it was and refreshes it. Uninstall runs `Filee.exe --uninstall-cleanup` (`UninstallCleanup`): it
+    removes the package, the title file, the classic verb, the startup entry and downloaded engines; the uninstaller
+    then asks whether to delete the settings too (they stay by default).
+  - Build: `pwsh build/build-explorer-menu.ps1` downloads a pinned Zig (SHA-256 checked) into `build/.cache`, compiles
+    the DLL and packs the MSIX with `build/tools/make-explorer-package.cs` (Windows' own packaging API, no SDK).
+    Output: `build/.cache/explorer-menu`; CI builds it for the tests, `build/build-installer.ps1` builds it into the
+    publish folder.
+
+Debugging: `Get-AppxPackage Filee.ExplorerMenu` shows the registration (`InstallLocation` is the external location);
+`Get-AppPackageLog -ActivityID <id>` explains a failed deployment. To try a local build, copy
+`FileeExplorerMenu.dll` + `.msix` next to an installed Filee.exe and use the button, or run elevated:
+`Add-AppxPackage -Path FileeExplorerMenu.msix -ExternalLocation <folder with Filee.exe> -AllowUnsigned`. Explorer picks
+the entry up for new menus; if not, restart Explorer. To remove it by hand:
+`Get-AppxPackage Filee.ExplorerMenu | Remove-AppxPackage`.
+
+## Windows installer
+
+`Filee-<version>-win-Setup.exe` is Filee's own installer, `src/Filee.Setup` (it replaced the Inno Setup script of
+1.x). It is an Avalonia program with the app's look and translations: it links `Styles/Soft.axaml` (which therefore
+styles only Avalonia's own controls; Filee's controls are in `Controls.axaml`), `SoftPalette` (accent, radii, font
+order), `AppLanguages` and `Assets/i18n/*.json` (Setup's texts are the `installer.*` keys). To stay small it uses
+Windows' own UI fonts (Segoe UI, Nirmala UI and the UI language's CJK font first; titles bold, as those CJK fonts
+have no semibold) instead of the app's embedded Noto fonts.
+
+- **Look**: one borderless 640×420 card (`SetupWindow`, its own window buttons, drag to move) whose states crossfade
+  (`Views/StateViews.axaml`): Welcome (the logo assembling itself, `DonutLogo`; one Install button; an Options sheet
+  sliding up with the language, folder, options and engines), Progress (the new version's "What's new" slides, a thin
+  `ShimmerBar`), Done (`CheckBurst`, "Launch Filee"), Failed ("Copy details") and the uninstaller's states.
+  `SoftBackdrop` draws slowly drifting accent blobs behind it. The slides are the app's (`SlideShow`, `AnimatedImage`,
+  `SlideDeck` and `Assets/WhatsNew`, linked): the newest deck up to the version being installed, advancing every 6 s.
+  Every animation runs only while the window is visible and not minimized (`FrameLoop`) and is a still picture when
+  Windows' "Show animations" is off (`SetupMotion`). `/SILENT` shows only the progress card, without slides. After an
+  update Setup starts Filee with `--background --whats-new`, so the slides show once in the app as well.
+
+- **Build** (`build/build-installer.ps1`): Setup is published as one self-contained, trimmed file
+  (`-p:FileeSetupPublish=true`), so it runs on Windows 10 1809+ x64 without .NET. Skia and HarfBuzz are resources of
+  `Filee.Setup.dll` rather than files .NET unpacks at start: `NativeLibraries` writes them into a new folder of its
+  own before the window opens (elevated, one in `%SystemRoot%\Temp` only administrators can change) and loads them by
+  full path; other libraries come from System32 only. Setup draws in software, so ANGLE isn't carried.
+  `build/tools/make-setup.cs` appends
+  the app's publish folder as the payload: `[program][LZMA streams of all files][manifest JSON][72-byte trailer]`
+  (`SetupPayload`): ~48 MB segments compressed in parallel with SharpCompress's LZMA (48 MB dictionary), programs
+  first through the x86 branch filter (`X86Filter`, from the LZMA SDK) as 7-Zip and Inno Setup do. The manifest lists
+  every file with its size, SHA-256 and filter, the SHA-256 of the compressed data, the version and the engines to
+  offer (from `EngineDownloads`). Setup.exe's signature goes after the trailer (Setup looks
+  for the trailer in front of the certificate table; the manifest is padded so the file ends on the 8-byte boundary
+  signtool needs), so Setup.exe is signed after packing. The Setup program is signed before: its signature stays at
+  the end of the program, Setup.exe's header stops pointing to it, and the manifest's `programSignature` lets the
+  uninstaller copied out of Setup.exe (`CopyProgramTo`) point to it again, so `uninstall.exe` is signed too. The code is trim- and AOT-safe
+  (compiled bindings, source-generated P/Invoke and COM); Native AOT would need the MSVC linker on the build machine
+  and still couldn't link SkiaSharp's native libraries in.
+- **Rights**: Setup starts unelevated (asInvoker) and, for an install for all users, starts itself again with
+  administrator rights (one UAC prompt) and waits. The elevated copy writes what to start at the end into a file
+  (`/LAUNCHFILE`), and the unelevated one starts Filee from it as the signed-in user. Elevated without such a parent
+  (run as administrator, a package manager), it starts Filee with Explorer's token.
+- **Install** (`Installer`): checks the free space and the payload's hash first, closes Filee (`--quit`, then ends
+  what still runs from the folder), unpacks into `<folder>\~setup-*\new` checking every file, checks that every
+  program finds the Microsoft C++ runtime it imports (next to it or in System32; `RuntimeCheck`), then swaps the files
+  in (`FileSwap`: replaced and obsolete files are renamed into a backup, which works for files in use) and writes the
+  uninstall entry, the shortcuts and PATH. Any failure until then puts everything back. Filee's own settings (Explorer
+  menu, start at sign-in, engines, a picked language) are handed to Filee on its command line, as before.
+- **Updates from 1.x**: the uninstall key stays `{C8686E06-8327-40A2-B0F7-3DEDD61D9248}_is1` (Inno Setup's AppId), so
+  Apps & Features keeps one Filee. `PreviousInstall` reads the folder and choices of an Inno Setup installation; an
+  update keeps the folder and what is registered now (desktop shortcut, PATH, the top-level menu package), removes
+  `unins000.*` and every file 2.0 doesn't have, and rewrites the key without the `Inno Setup: …` values. The app
+  counts as installed when `uninstall.exe` (or 1.x's `unins000.exe`) is next to it (`UpdateService.IsInstalled`).
+- **Uninstall**: `uninstall.exe` is Setup without its payload. Run from the install folder it copies itself to
+  `%TEMP%` and waits for the copy, which removes what `uninstall.json` lists (other files in the folder stay), the
+  shortcuts, the PATH entry and the key. `Filee.exe --uninstall-cleanup` runs as the signed-in user (`RunAsSignedInUser`):
+  the startup entry, the classic verb and the engines are theirs, and the pipe of a Filee without administrator rights
+  refuses an elevated client (`CurrentUserOnly` compares the pipe's owner with the token's owner, which is
+  Administrators when elevated), so that Filee would never hear `--quit`. Files in use are moved out and deleted at the
+  next restart. Only programs `uninstall.json` lists are ended. A Filee that can't be ended, or a file that can't be
+  moved or renamed, fails the uninstall and keeps the key, `uninstall.json` and `uninstall.exe`, so it can be run again;
+  `uninstall.json` itself is never scheduled or renamed. A program without a payload is the uninstaller only as `uninstall.exe`, as `Filee.Setup.exe` (a development build) or with `/UNINSTALL`
+  (`SetupStart`); any other name is a Setup.exe whose download didn't finish, and it says so instead (exit code 1).
+- **Command line**: Inno Setup's switches (`SetupOptions`, documented at the top of the file), because Filee 1.x
+  updates itself with `/SILENT /NORESTART` and winget passes `/VERYSILENT /SUPPRESSMSGBOXES /NORESTART`. Exit codes as
+  Inno Setup's: 0 done, 1 could not start, 2 cancelled before installing (also a declined UAC prompt), 4 failed.
+- **In-app updates** (`UpdateService`): an installed copy downloads `Filee-<v>-SHA256SUMS.txt`, its `.sig` and
+  `Filee-<v>-win[-arm64]-Setup.exe` from the GitHub release, checks the signature with the update key, the Setup's
+  SHA-256 and its Authenticode publisher, and runs it with `/SILENT /NORESTART`. A file GitHub doesn't hand out (an
+  HTTP error, a timeout, a cut connection) is taken from the download mirror, `https://dl.filee.sh/<v>/<file name>`
+  (`UpdateService.MirrorRoot`, filled by `build/sign-release.ps1`); after one GitHub failure, the update's other files
+  try the mirror first. The checks don't depend on the source. A file that arrived and was refused is not fetched
+  again from the other source. Linux and macOS files aren't on the mirror.
+- **Testing**: `Filee.Setup.Tests` runs installs, updates (also over a simulated 1.x installation) and uninstalls
+  against `MemoryRegistry`, a fake `ISetupSystem` and scratch folders, and renders every page. `/SANDBOX=<folder>`
+  runs the real Setup with a registry file and all folders inside `<folder>`; `build-installer.ps1 -CheckOnly` (CI)
+  installs, updates and uninstalls that way.
+
+## Linux installer and updates
+
+On Linux, Filee is distributed as a self-contained archive (`Filee-<version>-<rid>.tar.gz` for `linux-x64` and
+`linux-arm64`) containing the application, `filee-cli`, bundled conversion engines, application icon, `.desktop` launcher,
+and standalone shell scripts (`install.sh`, `uninstall.sh`).
+
+- **Installation**: `install.sh` installs for the current user into `~/.local/share/filee/application` without root,
+  creating a launcher symlink at `~/.local/bin/filee` and desktop registration at
+  `~/.local/share/applications/com.filee.app.desktop`. A `.filee-package` marker containing `com.filee.app` identifies
+  the directory as an authentic managed installation. Running without `--upgrade` refuses to overwrite an existing
+  installation.
+- **In-app updates** (`UpdateService`): Checks GitHub releases for matching `<rid>.tar.gz` and `<rid>-SHA256SUMS.txt`
+  assets. The tarball is verified against SHA-256 before extraction; a build that carries the update key
+  (`FileeUpdatePublicKey`) first checks the checksum file's signature (`<rid>-SHA256SUMS.txt.sig`, `UpdateSignature`). Archive extraction validates that all entries stay
+  within the target directory, rejecting absolute paths, directory symlinks, and escaping links, and masks permissions to
+  standard rwx bits (excluding setuid/setgid/sticky bits).
+- **Transactional upgrade**: `UpdateAsync` stages the payload in a private directory (`~/.local/share/filee/.update-*`),
+  spawns a detached `/bin/sh` helper, and requests application shutdown (`App.Quit`). Once the old process exits, the
+  helper executes `install.sh --upgrade` (which safely moves the existing installation to a backup directory, validates the
+  new files, and rolls back on failure or signal interruption), and restarts Filee with `--background --whats-new`.
+  Output and rollback diagnostics are appended to Filee's daily log (`~/.config/Filee/logs/`). Downloaded conversion engines
+  (`~/.local/share/Filee/engines`) and user settings (`~/.config/Filee`) remain untouched.
+- **Uninstallation**: `uninstall.sh` removes the application directory, desktop launcher, and `~/.local/bin/filee` symlink
+  after verifying the `.filee-package` marker. User settings and converted files are kept.
+
+## Filee Connect
+
+Filee Connect (`Filee.App.Services.Connect`) is an embedded local Wi-Fi server providing instant device-to-device file transfers and quick note exchanges between desktop and mobile devices. See [FILEE-CONNECT.md](FILEE-CONNECT.md) for full details.
+
+- **Embedded Server**: Powered by Microsoft ASP.NET Core Kestrel with HTTP REST endpoints and WebSockets for real-time bi-directional messaging and presence detection.
+- **Security & Scope**: Runs locally without cloud dependencies. Secured with cryptographically random pairing tokens, LAN-only binding, and strict relative-path normalization preventing directory traversal.
+- **Shared Folder Manager**: Enforces a 2 GB total quota in `UserDataStore.Directory / ConnectShared` (fully supporting Portable mode) with instant ZIP streaming on folder download. Files outside the safe allowlist are stored as `{id}.bin` to prevent Explorer NTLM leak attacks.
+- **Workflow**: A global trigger gesture (`Ctrl + Alt + Left Click` on Windows/Linux, `⌥ Option + ⇧ Shift + Left Click` on macOS, or custom configuration for new installs) opens the Donut with the Filee Connect slice. Selecting it presents a QR code modal (`FileeConnectQrWindow`), and scanning it from any phone browser automatically transitions to the desktop Filee Connect application window (`FileeConnectWindow`) and mobile light-mode web client.
