@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### 2026-11-20
+- **Settings, reorganised** into groups in the sidebar: **Beacon** (General, Commands, Shortcuts, Custom Commands, Search & Index, Appearance, Advanced), **Apps** (Dotline, Filee, Prompt Ring) and **AI** (Brain, Nova Assistant, Avatar, Voice, Connectors, Plain English). Nothing is set in two places any more: the on-PC AI model moved to Brain, Nova's speaking options to Voice, and email to Connectors.
+- **Brain page:** "Answering now" with Nova's avatar, then **Top 10 AI** as tiles (the first two, our top picks, in green), **Claude** (your subscription through Claude Code, or an API key), **ChatGPT** (your plan through Codex), **On this PC** (download and pick a free model) and **More models** filtered by what you want to see (Free, Fast, Smartest, All). The Top 10 is checked against OpenRouter's live list; one that's gone is greyed out. Every AI option uses the same tile.
+- **Avatar page** and a new avatar for Nova, drawn live in your Beacon style: an **LED globe** of dots (new default), a glowing **orb**, or a **character** with 24 poses (idle, listening, thinking, searching, alert, happy, confirmed, error...). Drop the character art in `%APPDATA%\Beacon\avatar` or `beacon/Assets/Avatar` (see the README there); its blue glow is recoloured to your style's accent automatically. With **moods** on, Nova's colour and pose follow the tone of the conversation. Size: small, default or large. The page previews every state and pose.
+- **Connectors page:** email (moved here), with Calendar, Notes and tasks, and more add-ons marked as coming soon.
+
 ### 2026-11-19 (late)
 - **Brain page** (Settings → Brain) for Nova: "Which AI answers you" with an Effort slider (Low, Medium, High, Max), and an Accounts tab.
   - **On this PC** (free, private), the default.

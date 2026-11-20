@@ -34,7 +34,7 @@ public partial class SettingsWindow
             catch (Exception e) when (e is ArgumentException or InvalidOperationException or System.Runtime.InteropServices.COMException) { }
         };
 
-        AssistantGoModel.Click += (_, _) => ShowPage(PageLocalAi);
+        AssistantGoModel.Click += (_, _) => ShowPage(PageBrain);
         AssistantGoVoice.Click += (_, _) => ShowPage(PageVoice);
         AssistantOpen.Click += async (_, _) =>
         {
@@ -81,7 +81,7 @@ public partial class SettingsWindow
         var voice = Voice.WhisperModels.IsDownloaded(Voice.WhisperModels.Find(_settings.VoiceModel));
         AssistantReadiness.Text =
             (model is null
-                ? "✗ AI model: not downloaded. Get Qwen 3 4B on the Prompt Ring page; until then Nova only runs plain commands."
+                ? "✗ AI model: not downloaded. Pick a brain on the Brain page; until then Nova only runs plain commands."
                 : model.Id == "qwen3-4b"
                     ? "✓ AI model: Qwen 3 4B."
                     : "! AI model: " + model.Label + " is small for conversation. Qwen 3 4B is much better at it.") + "\n" +
@@ -89,7 +89,7 @@ public partial class SettingsWindow
                 ? "✓ Speech model: ready, so Nova listens when it opens."
                 : "✗ Speech model: not downloaded (Voice page). You can still type to Nova.") + "\n" +
             (_settings.EmailAccount() is null
-                ? "– Email: not set up (below). Optional."
+                ? "– Email: not set up (Connectors page). Optional."
                 : "✓ Email: " + _settings.EmailAddress + ".");
     }
 

@@ -22,6 +22,8 @@
         <SolidColorBrush x:Key="Accent"        Color="#FF5B8DEF" />
         <SolidColorBrush x:Key="SidebarBg"     Color="#FF121214" />
         <SolidColorBrush x:Key="Danger"        Color="#FFFF8A7A" />
+        <SolidColorBrush x:Key="Success"       Color="#FF3FB97A" />
+        <SolidColorBrush x:Key="SuccessSoft"   Color="#FF2A7F57" />
 
         <FontFamily x:Key="UiFont">Segoe UI Variable Text, Segoe UI</FontFamily>
         <FontFamily x:Key="GlyphFont">Segoe Fluent Icons, Segoe MDL2 Assets</FontFamily>
@@ -264,6 +266,47 @@
             </Setter>
         </Style>
 
+        <!-- One look for every AI option (Brain choices, avatar looks, moods): a two-line tile.
+             Tag="on" marks the chosen one. AiChipTop is the success-coloured top pick. -->
+        <Style x:Key="AiChip" TargetType="Button">
+            <Setter Property="FontFamily" Value="{StaticResource UiFont}" />
+            <Setter Property="Foreground" Value="{StaticResource TextPrimary}" />
+            <Setter Property="Background" Value="{StaticResource FieldBg}" />
+            <Setter Property="BorderBrush" Value="{StaticResource FieldBorder}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Padding" Value="12,8" />
+            <Setter Property="Margin" Value="0,0,8,8" />
+            <Setter Property="MinWidth" Value="128" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="8" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.85" />
+                            </Trigger>
+                            <Trigger Property="Tag" Value="on">
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource Accent}" />
+                                <Setter TargetName="Bd" Property="BorderThickness" Value="2" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.4" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="AiChipTop" TargetType="Button" BasedOn="{StaticResource AiChip}">
+            <Setter Property="Background" Value="{StaticResource SuccessSoft}" />
+            <Setter Property="BorderBrush" Value="{StaticResource Success}" />
+        </Style>
+
         <Style x:Key="PrimaryButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
             <Setter Property="Background" Value="{StaticResource Accent}" />
             <Setter Property="BorderBrush" Value="{StaticResource Accent}" />
@@ -303,6 +346,11 @@
                             <ContentPresenter />
                         </Border>
                         <ControlTemplate.Triggers>
+                            <DataTrigger Binding="{Binding IsHeader}" Value="True">
+                                <Setter Property="IsHitTestVisible" Value="False" />
+                                <Setter Property="Focusable" Value="False" />
+                                <Setter TargetName="Bd" Property="Padding" Value="11,6,11,2" />
+                            </DataTrigger>
                             <Trigger Property="IsSelected" Value="True">
                                 <Setter TargetName="Bd" Property="Background" Value="#24FFFFFF" />
                                 <Setter Property="Foreground" Value="{StaticResource TextPrimary}" />
@@ -354,14 +402,26 @@
                          ScrollViewer.VerticalScrollBarVisibility="Hidden">
                     <ListBox.ItemTemplate>
                         <DataTemplate>
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="{Binding Glyph}"
-                                           FontFamily="{StaticResource GlyphFont}"
-                                           FontSize="14"
-                                           Width="24"
-                                           VerticalAlignment="Center" />
-                                <TextBlock Text="{Binding Title}" FontSize="13" VerticalAlignment="Center" />
-                            </StackPanel>
+                            <Grid>
+                                <StackPanel x:Name="Row" Orientation="Horizontal">
+                                    <TextBlock Text="{Binding Glyph}"
+                                               FontFamily="{StaticResource GlyphFont}"
+                                               FontSize="14"
+                                               Width="24"
+                                               VerticalAlignment="Center" />
+                                    <TextBlock Text="{Binding Title}" FontSize="13" VerticalAlignment="Center" />
+                                </StackPanel>
+                                <!-- A group heading: BEACON, APPS, AI. Not selectable. -->
+                                <TextBlock x:Name="Heading" Text="{Binding Title}" Visibility="Collapsed"
+                                           FontSize="10.5" FontWeight="SemiBold"
+                                           Foreground="{StaticResource TextTertiary}" Margin="0,10,0,0" />
+                            </Grid>
+                            <DataTemplate.Triggers>
+                                <DataTrigger Binding="{Binding IsHeader}" Value="True">
+                                    <Setter TargetName="Row" Property="Visibility" Value="Collapsed" />
+                                    <Setter TargetName="Heading" Property="Visibility" Value="Visible" />
+                                </DataTrigger>
+                            </DataTemplate.Triggers>
                         </DataTemplate>
                     </ListBox.ItemTemplate>
                 </ListBox>
@@ -1138,6 +1198,22 @@
                                        Text="Only when the instruction is understood exactly and is not destructive — “set the volume to 20” runs itself, “close all apps and shut down” still waits for you. Needs sentence understanding, on the Plain English page." />
                         </StackPanel>
                     </Border>
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <TextBlock Text="Nova speaking" Style="{StaticResource GroupHeader}" />
+                            <CheckBox x:Name="AssistantSpeaks" Content="Speak Nova's replies" />
+                            <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                                <ComboBox x:Name="AssistantVoicePicker" Width="300" />
+                                <Button x:Name="AssistantVoiceTest" Content="Test" Margin="8,0,0,0" />
+                            </StackPanel>
+                            <TextBlock Style="{StaticResource Caption}"
+                                       Text="Windows' own voices. More (and more natural ones) can be added in Windows Settings > Time &amp; language > Speech." />
+                            <CheckBox x:Name="AssistantListens" Margin="0,12,0,0"
+                                      Content="When Nova asks a question, listen for my answer" />
+                            <TextBlock Style="{StaticResource Caption}"
+                                       Text="So a conversation flows: “You've got two emails, summarize or open?” and you just answer. Press Esc to stop listening." />
+                        </StackPanel>
+                    </Border>
                 </StackPanel>
 
                 <!-- ========================== Brain =========================== -->
@@ -1152,13 +1228,78 @@
                     </StackPanel>
 
                     <StackPanel x:Name="BrainDefault">
+                        <!-- What answers now, with Nova's avatar in the same style as its window. -->
+                        <Border Style="{StaticResource Card}">
+                            <DockPanel>
+                                <ui:NovaAvatar x:Name="BrainAvatar" Width="64" Height="64" DockPanel.Dock="Left" Margin="0,0,16,0" />
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock Text="ANSWERING NOW" FontSize="10.5" FontWeight="SemiBold" Foreground="{StaticResource TextTertiary}" />
+                                    <TextBlock x:Name="BrainCurrent" FontSize="17" FontWeight="SemiBold" Margin="0,2,0,2" />
+                                    <TextBlock x:Name="BrainNote" Foreground="{StaticResource TextSecondary}" FontSize="12.5" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </DockPanel>
+                        </Border>
+
                         <Border Style="{StaticResource Card}">
                             <StackPanel>
-                                <TextBlock Text="Which AI answers you" Style="{StaticResource GroupHeader}" />
-                                <ComboBox x:Name="BrainPicker" Width="420" HorizontalAlignment="Left" />
-                                <TextBlock x:Name="BrainNote" Style="{StaticResource Caption}" />
+                                <TextBlock Text="Top 10 AI" Style="{StaticResource GroupHeader}" />
+                                <TextBlock x:Name="BrainTopNote" TextWrapping="Wrap" Foreground="{StaticResource TextSecondary}" FontSize="12.5" Margin="0,0,0,10"
+                                           Text="The best-known models, through OpenRouter (connect once on the Accounts tab). The first two are our top picks." />
+                                <WrapPanel x:Name="BrainTop10" />
+                            </StackPanel>
+                        </Border>
 
-                                <TextBlock Text="EFFORT" Style="{StaticResource Label}" Margin="0,16,0,6" />
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel>
+                                <TextBlock Text="Claude" Style="{StaticResource GroupHeader}" />
+                                <TextBlock Text="With your Claude subscription (through Claude Code)" Style="{StaticResource Label}" />
+                                <WrapPanel x:Name="BrainClaudeSub" Margin="0,0,0,10" />
+                                <TextBlock Text="With an API key" Style="{StaticResource Label}" />
+                                <WrapPanel x:Name="BrainClaudeApi" />
+                            </StackPanel>
+                        </Border>
+
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel>
+                                <TextBlock Text="ChatGPT" Style="{StaticResource GroupHeader}" />
+                                <TextBlock Text="With your ChatGPT plan (through Codex)" Style="{StaticResource Label}" />
+                                <WrapPanel x:Name="BrainChatGpt" />
+                            </StackPanel>
+                        </Border>
+
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <TextBlock Text="On this PC" Style="{StaticResource GroupHeader}" />
+                            <TextBlock Text="Free and private: nothing leaves this PC. Download a model once, then pick it." Foreground="{StaticResource TextSecondary}" FontSize="12.5" Margin="0,0,0,10" />
+                            <WrapPanel x:Name="BrainLocalChips" Margin="0,0,0,10" />
+                            <ComboBox x:Name="LocalModelPicker" Width="360" HorizontalAlignment="Left" />
+                            <TextBlock x:Name="LocalModelNote" Style="{StaticResource Caption}" />
+
+                            <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
+                                <Button x:Name="LocalModelDownload" Content="Download" Margin="0,0,8,0" />
+                                <Button x:Name="LocalModelDelete" Content="Delete" />
+                                <TextBlock x:Name="LocalModelStatus" Margin="14,0,0,0" VerticalAlignment="Center"
+                                           Foreground="{StaticResource TextSecondary}" FontSize="12.5" />
+                            </StackPanel>
+
+                            <TextBlock Style="{StaticResource Caption}" Margin="0,12,0,0"
+                                       Text="Free, openly licensed models (Apache 2.0), downloaded once from Hugging Face and checked against a fixed SHA-256 hash. They run on your CPU through llama.cpp. Without a model the ring still works: it lays your words out in the chosen structure, with questions for the parts to add." />
+                        </StackPanel>
+                    </Border>
+
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel>
+                                <TextBlock Text="More models" Style="{StaticResource GroupHeader}" />
+                                <TextBlock Text="Show me" Style="{StaticResource Label}" />
+                                <WrapPanel x:Name="BrainPrefs" Margin="0,0,0,10" />
+                                <ComboBox x:Name="BrainMore" Width="420" HorizontalAlignment="Left" />
+                                <TextBlock x:Name="BrainMoreNote" Style="{StaticResource Caption}" />
+                            </StackPanel>
+                        </Border>
+
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel>
+                                <TextBlock Text="Effort" Style="{StaticResource GroupHeader}" />
                                 <Slider x:Name="BrainEffort" Minimum="0" Maximum="3" TickFrequency="1" IsSnapToTickEnabled="True"
                                         Width="420" HorizontalAlignment="Left" />
                                 <Grid Width="420" HorizontalAlignment="Left">
@@ -1170,7 +1311,7 @@
                                     <TextBlock Grid.Column="2" Text="High" Foreground="{StaticResource TextSecondary}" FontSize="12" HorizontalAlignment="Center" />
                                     <TextBlock Grid.Column="3" Text="Max" Foreground="{StaticResource TextSecondary}" FontSize="12" HorizontalAlignment="Right" />
                                 </Grid>
-                                <TextBlock Style="{StaticResource Caption}" Text="Higher is smarter but slower. Applies to Claude and OpenRouter; the model on this PC has one speed." />
+                                <TextBlock Style="{StaticResource Caption}" Text="Higher is smarter but slower. Applies to the cloud brains; the model on this PC has one speed." />
                             </StackPanel>
                         </Border>
                     </StackPanel>
@@ -1253,22 +1394,52 @@
                         </StackPanel>
                     </Border>
 
+
+                </StackPanel>
+
+                <!-- ========================== Avatar ========================== -->
+                <StackPanel x:Name="PageAvatar" Visibility="Collapsed">
+                    <TextBlock Text="Avatar" Style="{StaticResource PageTitle}" />
+                    <TextBlock Style="{StaticResource PageSubtitle}"
+                               Text="How Nova looks. It wears your Beacon style's colour (Appearance page), shows when it's listening, thinking and speaking, and can follow the mood of the conversation." />
+
+                    <Border Style="{StaticResource Card}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Border Width="170" Height="170" CornerRadius="10" Background="#FF101012" Margin="0,0,20,0">
+                                <ui:NovaAvatar x:Name="AvatarPreview" Width="150" Height="150" />
+                            </Border>
+                            <StackPanel Grid.Column="1">
+                                <TextBlock Text="Look" Style="{StaticResource Label}" />
+                                <WrapPanel x:Name="AvatarLooks" Margin="0,0,0,12" />
+                                <TextBlock Text="Size in Nova's window" Style="{StaticResource Label}" />
+                                <WrapPanel x:Name="AvatarSizes" Margin="0,0,0,12" />
+                                <TextBlock Text="Try it" Style="{StaticResource Label}" />
+                                <WrapPanel x:Name="AvatarStates" />
+                                <TextBlock x:Name="AvatarArtNote" Style="{StaticResource Caption}" />
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
                     <Border Style="{StaticResource Card}">
                         <StackPanel>
-                            <TextBlock Text="Voice" Style="{StaticResource GroupHeader}" />
-                            <CheckBox x:Name="AssistantSpeaks" Content="Speak Nova's replies" />
-                            <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
-                                <ComboBox x:Name="AssistantVoicePicker" Width="300" />
-                                <Button x:Name="AssistantVoiceTest" Content="Test" Margin="8,0,0,0" />
-                            </StackPanel>
+                            <TextBlock Text="Mood" Style="{StaticResource GroupHeader}" />
+                            <CheckBox x:Name="AvatarMoods" Content="Follow the mood of the conversation" />
                             <TextBlock Style="{StaticResource Caption}"
-                                       Text="Windows' own voices. More (and more natural ones) can be added in Windows Settings > Time &amp; language > Speech." />
-                            <CheckBox x:Name="AssistantListens" Margin="0,12,0,0"
-                                      Content="When Nova asks a question, listen for my answer" />
-                            <TextBlock Style="{StaticResource Caption}"
-                                       Text="So a conversation flows: “You've got two emails, summarize or open?” and you just answer. Press Esc to stop listening." />
+                                       Text="Nova's colour leans warm and bright when things go well, cool and steady while it works something out, and amber when something went wrong. Off: always your accent colour." />
+                            <WrapPanel x:Name="AvatarMoodSamples" Margin="0,10,0,0" />
                         </StackPanel>
                     </Border>
+                </StackPanel>
+
+                <!-- ======================== Connectors ======================== -->
+                <StackPanel x:Name="PageConnectors" Visibility="Collapsed">
+                    <TextBlock Text="Connectors" Style="{StaticResource PageTitle}" />
+                    <TextBlock Style="{StaticResource PageSubtitle}"
+                               Text="What Nova can reach for you. Each one is optional, and only reads what you ask about." />
 
                     <Border Style="{StaticResource Card}">
                         <StackPanel>
@@ -1291,6 +1462,34 @@
                             <TextBlock Style="{StaticResource Caption}" Margin="0,8,0,0"
                                        Text="Gmail: turn on 2-Step Verification, then create an app password at myaccount.google.com/apppasswords and paste it here. Yahoo and iCloud have app passwords too. Outlook and Hotmail no longer allow app passwords, so they can't be added yet." />
                         </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource Card}" Opacity="0.55">
+                        <DockPanel>
+                            <TextBlock Text="COMING SOON" DockPanel.Dock="Right" FontSize="10.5" FontWeight="SemiBold" Foreground="{StaticResource TextTertiary}" VerticalAlignment="Top" />
+                            <StackPanel>
+                                <TextBlock Text="Calendar" Style="{StaticResource GroupHeader}" />
+                                <TextBlock Foreground="{StaticResource TextSecondary}" FontSize="12.5" TextWrapping="Wrap" Text="“What's on tomorrow?” Your events, read-only." />
+                            </StackPanel>
+                        </DockPanel>
+                    </Border>
+                    <Border Style="{StaticResource Card}" Opacity="0.55">
+                        <DockPanel>
+                            <TextBlock Text="COMING SOON" DockPanel.Dock="Right" FontSize="10.5" FontWeight="SemiBold" Foreground="{StaticResource TextTertiary}" VerticalAlignment="Top" />
+                            <StackPanel>
+                                <TextBlock Text="Notes and tasks" Style="{StaticResource GroupHeader}" />
+                                <TextBlock Foreground="{StaticResource TextSecondary}" FontSize="12.5" TextWrapping="Wrap" Text="“Add milk to my list.” Your notes and to-dos." />
+                            </StackPanel>
+                        </DockPanel>
+                    </Border>
+                    <Border Style="{StaticResource Card}" Opacity="0.55">
+                        <DockPanel>
+                            <TextBlock Text="COMING SOON" DockPanel.Dock="Right" FontSize="10.5" FontWeight="SemiBold" Foreground="{StaticResource TextTertiary}" VerticalAlignment="Top" />
+                            <StackPanel>
+                                <TextBlock Text="More add-ons" Style="{StaticResource GroupHeader}" />
+                                <TextBlock Foreground="{StaticResource TextSecondary}" FontSize="12.5" TextWrapping="Wrap" Text="Room for future integrations, each with its own on/off switch here." />
+                            </StackPanel>
+                        </DockPanel>
                     </Border>
                 </StackPanel>
 
@@ -1317,18 +1516,9 @@
                     <Border Style="{StaticResource Card}">
                         <StackPanel>
                             <TextBlock Text="AI model" Style="{StaticResource GroupHeader}" />
-                            <ComboBox x:Name="LocalModelPicker" Width="360" HorizontalAlignment="Left" />
-                            <TextBlock x:Name="LocalModelNote" Style="{StaticResource Caption}" />
-
-                            <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
-                                <Button x:Name="LocalModelDownload" Content="Download" Margin="0,0,8,0" />
-                                <Button x:Name="LocalModelDelete" Content="Delete" />
-                                <TextBlock x:Name="LocalModelStatus" Margin="14,0,0,0" VerticalAlignment="Center"
-                                           Foreground="{StaticResource TextSecondary}" FontSize="12.5" />
-                            </StackPanel>
-
-                            <TextBlock Style="{StaticResource Caption}" Margin="0,12,0,0"
-                                       Text="Free, openly licensed models (Apache 2.0), downloaded once from Hugging Face and checked against a fixed SHA-256 hash. They run on your CPU through llama.cpp. Without a model the ring still works: it lays your words out in the chosen structure, with questions for the parts to add." />
+                            <TextBlock TextWrapping="Wrap" Foreground="{StaticResource TextSecondary}" FontSize="12.5"
+                                       Text="The ring uses the free model on this PC, the same one Nova can use. Download and pick it on the Brain page, under On this PC. Without one, the ring lays your words out in the chosen structure, with questions for the rest." />
+                            <Button x:Name="PromptRingGoBrain" Content="Open Brain" HorizontalAlignment="Left" Margin="0,12,0,0" />
                         </StackPanel>
                     </Border>
                 </StackPanel>

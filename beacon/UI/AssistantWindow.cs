@@ -41,9 +41,7 @@ public sealed class AssistantWindow : Window
     readonly ScrollViewer _scroll;
     readonly TextBox _input = new();
     readonly TextBlock _state = new();
-    readonly Ellipse _orb = new(), _halo = new();
-    readonly Path _thinkArc = new();
-    readonly ScaleTransform _orbScale = new(1, 1);
+    readonly NovaAvatar _avatar = new();
 
     readonly Color _accent, _page, _surface, _border, _text, _secondary;
     readonly FontFamily _font;
@@ -76,16 +74,23 @@ public sealed class AssistantWindow : Window
         _tools = new AssistantTools(parser, runner, inbox, Dispatcher, () => _target[0], ApproveAsync, s => AddNote(s));
         _brain = new AssistantBrain(_tools);
         _brain.Said += line => Dispatcher.BeginInvoke(() => SayLine(line));
-        _brain.Working += tool => Dispatcher.BeginInvoke(() => AddNote(ToolNote(tool)));
+        _brain.Working += tool => Dispatcher.BeginInvoke(() =>
+        {
+            AddNote(ToolNote(tool));
+            _avatar.Flash(tool switch
+            {
+                "check_inbox" => "Searching",
+                "read_email" => "Calculating",
+                _ => "Working",
+            }, 30);
+        });
 
         _voice.SetOutputToDefaultAudioDevice();
         if (settings.AssistantVoice is { Length: > 0 } name)
             try { _voice.SelectVoice(name); } catch (ArgumentException) { }
         _voice.SpeakCompleted += (_, _) => Dispatcher.BeginInvoke(OnSpeechDone);
-        _mic.Level += level => Dispatcher.BeginInvoke(() =>
-        {
-            if (_mode == Mode.Listening) _orbScale.ScaleX = _orbScale.ScaleY = 1 + Math.Min(level * 3, 0.35);
-        });
+        _mic.Level += level => Dispatcher.BeginInvoke(() => _avatar.Level = level);
+        _avatar.FollowSettings(settings);
 
         Title = "Nova";
         WindowStyle = WindowStyle.None;
@@ -116,6 +121,7 @@ public sealed class AssistantWindow : Window
         Show();
         Activate();
         if (_transcript.Children.Count == 0) Greet();
+        _avatar.Flash("Greeting", 2.5);
         if (WhisperModels.IsDownloaded(WhisperModels.Find(_settings.VoiceModel))) _ = ListenAsync();
         else _input.Focus();
     }
@@ -127,6 +133,7 @@ public sealed class AssistantWindow : Window
         text = text.Trim();
         if (text.Length == 0) return;
         AddBubble(text, mine: true);
+        _avatar.Mood = NovaAvatar.Detect(text);
         StopSpeaking();
         _work?.Cancel();
         var work = _work = new CancellationTokenSource();
@@ -234,6 +241,8 @@ public sealed class AssistantWindow : Window
     void SayLine(string line)
     {
         AddBubble(line, mine: false);
+        _avatar.Mood = NovaAvatar.Detect(line);
+        if (_avatar.Pose is "Searching" or "Calculating" or "Working") _avatar.Flash(_avatar.Mood == NovaAvatar.Feeling.Concerned ? "Error" : "Confirmed", 2);
         _lastWasQuestion = line.TrimEnd().EndsWith('?');
         if (_settings.AssistantSpeaks && IsVisible)
         {
@@ -295,6 +304,9 @@ public sealed class AssistantWindow : Window
         card.Child = stack;
         _transcript.Children.Add(card);
         _scroll.ScrollToEnd();
+        _avatar.Flash("Alert", 60);
+        answer.Task.ContinueWith(t => Dispatcher.BeginInvoke(() => _avatar.Flash(t.Result ? "Confirmed" : "Idle", 2)),
+            TaskScheduler.Default);
         SayLine($"Should I {action}?");
         _lastWasQuestion = false;   // answered with the card, not by voice
         return answer.Task;
@@ -324,23 +336,10 @@ public sealed class AssistantWindow : Window
 
         // Header: the orb, the name, what Nova is doing, and a close button.
         var header = new DockPanel { Margin = new Thickness(0, 0, 0, 8) };
-        var orb = new Grid { Width = 46, Height = 46, Margin = new Thickness(0, 0, 12, 0) };
-        _halo.Stroke = new SolidColorBrush(WithAlpha(_accent, 0x55));
-        _halo.StrokeThickness = 1.5;
-        _orb.Width = _orb.Height = 30;
-        _orb.Fill = new RadialGradientBrush(Mix(_accent, Colors.White, 0.45), _accent) { GradientOrigin = new Point(0.35, 0.3) };
-        _orb.RenderTransformOrigin = new Point(0.5, 0.5);
-        _orb.RenderTransform = _orbScale;
-        _orb.Effect = new DropShadowEffect { Color = _accent, BlurRadius = 18, ShadowDepth = 0, Opacity = 0.8 };
-        _thinkArc.Data = Geometry.Parse("M 23,2 A 21,21 0 0 1 44,23");
-        _thinkArc.Stroke = new SolidColorBrush(_accent);
-        _thinkArc.StrokeThickness = 2.5;
-        _thinkArc.StrokeEndLineCap = _thinkArc.StrokeStartLineCap = PenLineCap.Round;
-        _thinkArc.RenderTransform = new RotateTransform(0, 23, 23);
-        _thinkArc.Visibility = Visibility.Collapsed;
-        orb.Children.Add(_halo);
-        orb.Children.Add(_orb);
-        orb.Children.Add(_thinkArc);
+        var side = _settings.AvatarSize switch { "small" => 36d, "large" => 64d, _ => 48d };
+        var orb = new Grid { Width = side, Height = side, Margin = new Thickness(0, 0, 12, 0) };
+        _avatar.Width = _avatar.Height = side;
+        orb.Children.Add(_avatar);
         DockPanel.SetDock(orb, Dock.Left);
         header.Children.Add(orb);
 
@@ -407,20 +406,13 @@ public sealed class AssistantWindow : Window
             Mode.Speaking => "Speaking…",
             _ => "Ready. Type, or press the mic.",
         };
-        _thinkArc.Visibility = mode == Mode.Thinking ? Visibility.Visible : Visibility.Collapsed;
-        _thinkArc.RenderTransform.BeginAnimation(RotateTransform.AngleProperty, mode == Mode.Thinking
-            ? new DoubleAnimation(0, 360, TimeSpan.FromSeconds(1)) { RepeatBehavior = RepeatBehavior.Forever }
-            : null);
-
-        var breathe = new DoubleAnimation(1, mode == Mode.Speaking ? 1.18 : 1.06, TimeSpan.FromSeconds(mode == Mode.Speaking ? 0.35 : 1.6))
+        _avatar.State = mode switch
         {
-            AutoReverse = true, RepeatBehavior = RepeatBehavior.Forever,
-            EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut },
+            Mode.Listening => NovaAvatar.Activity.Listening,
+            Mode.Thinking => NovaAvatar.Activity.Thinking,
+            Mode.Speaking => NovaAvatar.Activity.Speaking,
+            _ => NovaAvatar.Activity.Idle,
         };
-        _orbScale.BeginAnimation(ScaleTransform.ScaleXProperty, mode == Mode.Listening ? null : breathe);
-        _orbScale.BeginAnimation(ScaleTransform.ScaleYProperty, mode == Mode.Listening ? null : breathe);
-        _halo.Opacity = mode == Mode.Listening ? 1 : 0.4;
-        _halo.Stroke = new SolidColorBrush(WithAlpha(_accent, mode == Mode.Listening ? (byte)0xE0 : (byte)0x55));
     }
 
     void AddBubble(string text, bool mine)

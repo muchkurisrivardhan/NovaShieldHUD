@@ -29,6 +29,7 @@ public partial class SettingsWindow
                 return;
             }
             RefreshLocalModel();
+            BuildBrainChips();
         };
     }
 
@@ -65,6 +66,7 @@ public partial class SettingsWindow
             LocalModelStatus.Text = "Downloaded and ready.";
             _settings.LocalModel = model.Id;   // the one just fetched is the one to use
             _settings.Save();
+            BuildBrainChips();
         }
         catch (OperationCanceledException)
         {

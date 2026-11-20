@@ -257,6 +257,15 @@ public sealed class Settings
         }
     }
 
+    /// <summary>Nova's avatar: "orb" (a glowing sphere) or "globe" (LED dots).</summary>
+    public string AvatarLook { get; set; } = "globe";
+
+    /// <summary>"small", "default" or "large" in Nova's window.</summary>
+    public string AvatarSize { get; set; } = "default";
+
+    /// <summary>The avatar's colour follows the tone of the conversation.</summary>
+    public bool AvatarMoods { get; set; } = true;
+
     /// <summary>Speak Nova's replies aloud.</summary>
     public bool AssistantSpeaks { get; set; } = true;
 

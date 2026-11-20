@@ -12,7 +12,11 @@ namespace Beacon.UI;
 
 public partial class SettingsWindow : Window
 {
-    private sealed record NavPage(string Title, string Glyph, UIElement Panel);
+    /// <summary>A page in the sidebar, or (with no panel) a group heading above some.</summary>
+    private sealed record NavPage(string Title, string Glyph, UIElement? Panel)
+    {
+        public bool IsHeader => Panel is null;
+    }
 
     private sealed record VoiceModelChoice(Voice.WhisperModel Model)
     {
@@ -127,31 +131,48 @@ public partial class SettingsWindow : Window
 
     private void BuildNavigation()
     {
+        // Grouped so the AI pieces (the brain, Nova, how it looks and sounds, what it connects to)
+        // sit together instead of spread through the list.
         var pages = _pages = new List<NavPage>
         {
-            new("General", "", PageGeneral),
-            new("All Commands", "", PageLibrary),
-            new("Appearance", "", PageAppearance),
-            new("Dotline", "", PageDotline),   // Segoe Fluent Icons: TVMonitor
-            new("Filee", "\uE8AB", PageFilee),   // Segoe Fluent Icons: Switch (convert)
-            new("Search & Index", "", PageSearch),
-            new("Shortcuts", "", PageShortcuts),
-            new("Custom Commands", "", PageCustom),
-            new("Plain English", "", PageAi),
-            new("Voice", "", PageVoice),
-            new("Nova Assistant", "\uE720", PageAssistant),
-            new("Brain", "\uE9D9", PageBrain),
+            new("BEACON", "", null),
+            new("General", "\uE713", PageGeneral),
+            new("Commands", "\uE8FD", PageLibrary),
+            new("Shortcuts", "\uE765", PageShortcuts),
+            new("Custom Commands", "\uE710", PageCustom),
+            new("Search & Index", "\uE721", PageSearch),
+            new("Appearance", "\uE790", PageAppearance),
+            new("Advanced", "\uE9F5", PageAdvanced),
+
+            new("APPS", "", null),
+            new("Dotline", "\uE7F4", PageDotline),
+            new("Filee", "\uE8AB", PageFilee),
             new("Prompt Ring", "\uE8BD", PageLocalAi),
-            new("Advanced", "", PageAdvanced),
+
+            new("AI", "", null),
+            new("Brain", "\uE9D9", PageBrain),
+            new("Nova Assistant", "\uE720", PageAssistant),
+            new("Avatar", "\uE77B", PageAvatar),
+            new("Voice", "\uE767", PageVoice),
+            new("Connectors", "\uE71B", PageConnectors),
+            new("Plain English", "\uE8F2", PageAi),
         };
 
         Nav.ItemsSource = pages;
         Nav.SelectionChanged += (_, _) =>
         {
-            foreach (var page in pages)
-                page.Panel.Visibility = Visibility.Collapsed;
+            // Headings can't be picked (keyboard arrows can still land on one): step past it.
+            if (Nav.SelectedItem is NavPage { IsHeader: true })
+            {
+                var i = Nav.SelectedIndex;
+                Nav.SelectedIndex = i + 1 < pages.Count ? i + 1 : i - 1;
+                return;
+            }
 
-            if (Nav.SelectedItem is NavPage selected)
+            foreach (var page in pages)
+                if (page.Panel is not null) page.Panel.Visibility = Visibility.Collapsed;
+
+            if (Nav.SelectedItem is NavPage { Panel: not null } selected)
             {
                 selected.Panel.Visibility = Visibility.Visible;
                 if (ReferenceEquals(selected.Panel, PageSearch)) RefreshIndexStatus();
@@ -162,7 +183,7 @@ public partial class SettingsWindow : Window
             }
         };
 
-        Nav.SelectedIndex = 0;
+        Nav.SelectedIndex = 1;   // General, under the BEACON heading
     }
 
     private void BuildAccentPresets()
@@ -252,6 +273,7 @@ public partial class SettingsWindow : Window
         InitLocalAiPage();
         InitAssistantPage();
         InitBrainPage();
+        InitAvatarPage();
 
         ModelPicker.SelectionChanged += (_, _) =>
         {
@@ -513,6 +535,7 @@ public partial class SettingsWindow : Window
         LoadLocalAiPage();
         LoadAssistantPage();
         LoadBrainPage();
+        LoadAvatarPage();
         LaunchDotline.IsChecked = _settings.LaunchDotline;
         var dot = Suite.ReadDotline();
         DotBirthday.Text = dot.Birthday?.ToString("yyyy-MM-dd") ?? "";
@@ -974,7 +997,7 @@ public partial class SettingsWindow : Window
 
             if (answer != MessageBoxResult.OK)
             {
-                Nav.SelectedIndex = 0;
+                ShowPage(PageGeneral);
                 return;
             }
         }
@@ -1037,6 +1060,7 @@ public partial class SettingsWindow : Window
         if (LocalModelPicker.SelectedItem is LocalModelChoice localModel) _settings.LocalModel = localModel.Model.Id;
         SaveAssistantPage();
         SaveBrainPage();
+        SaveAvatarPage();
         if (VoiceDevice.SelectedItem is DeviceChoice device) _settings.VoiceDevice = device.Index;
 
         _settings.FaviconMode = TagOf(FaviconMode) ?? "direct";
