@@ -47,7 +47,7 @@ public static class AvatarArt
                          Path.Combine(AppContext.BaseDirectory, "Avatar"),
                      })
             {
-                if (File.Exists(Path.Combine(dir, "sheet.png")) || File.Exists(Path.Combine(dir, "idle.png")))
+                if (File.Exists(Path.Combine(dir, "idle.png")) || SheetIn(dir) is not null)
                     return _folder = dir;
             }
             return null;
@@ -84,9 +84,9 @@ public static class AvatarArt
         {
             var single = Path.Combine(dir, pose.ToLowerInvariant().Replace(' ', '-') + ".png");
             if (File.Exists(single)) result = Open(single);
-            else if (File.Exists(Path.Combine(dir, "sheet.png")))
+            else if (SheetIn(dir) is { } sheetPath)
             {
-                _sheet ??= Open(Path.Combine(dir, "sheet.png"));
+                _sheet ??= Open(sheetPath);
                 var index = Array.IndexOf(Poses, pose);
                 if (_sheet is not null && index >= 0)
                 {
@@ -101,6 +101,29 @@ public static class AvatarArt
             }
         }
         return Raw[pose] = result;
+    }
+
+    static readonly string[] PictureTypes = [".png", ".jpg", ".jpeg", ".webp", ".bmp"];
+
+    /// <summary>
+    /// The sheet: sheet.png when it's there, otherwise the largest picture in the folder,
+    /// whatever its name (the art is often saved as "image.png" or "avatar.webp").
+    /// </summary>
+    static string? SheetIn(string dir)
+    {
+        var named = Path.Combine(dir, "sheet.png");
+        if (File.Exists(named)) return named;
+        if (!Directory.Exists(dir)) return null;
+        try
+        {
+            var poseNames = Poses.Select(p => p.ToLowerInvariant().Replace(' ', '-')).ToHashSet();
+            return new DirectoryInfo(dir).EnumerateFiles()
+                .Where(f => PictureTypes.Contains(f.Extension.ToLowerInvariant())
+                            && !poseNames.Contains(Path.GetFileNameWithoutExtension(f.Name).ToLowerInvariant()))
+                .OrderByDescending(f => f.Length)
+                .FirstOrDefault()?.FullName;
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException) { return null; }
     }
 
     static BitmapSource? Open(string path)

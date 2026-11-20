@@ -2,7 +2,7 @@
 
 Put the art here and it ships next to `Beacon.exe` (in `Avatar\`). Either:
 
-- **`sheet.png`**: the 6 x 4 design sheet, poses in this order (left to right, top to bottom):
+- **`sheet.png`** (or any one picture: PNG, JPG, WebP or BMP, whatever its name; the largest is used): the 6 x 4 design sheet, poses in this order (left to right, top to bottom):
   Idle, Listening, Thinking, Working, Alert, Happy · Searching, Loading, Confirmed, Error, Tired, Shy ·
   Idea, No Signal, Calculating, Sad, Muted, Charging · Celebrating, Heart, Doubtful, Sleepy, Greeting, Encrypting.
   Each cell's bottom 14% (the name label) is cut off.
