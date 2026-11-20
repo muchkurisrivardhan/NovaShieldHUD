@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### 2026-11-20 (Kai)
+- **Nova now appears as Kai**, a 3D chibi companion in a glowing cyber suit on a holo base, replacing the robot. Kai's glow, suit, hair and eyes all take your Beacon style's colour (amber Tactical, cyan HUD, pink Cyberpunk, green CRT, grey Mono), and follow the mood of the conversation.
+- **Kai acts and has expressions:** waves hello when called; breathes, bobs and blinks; turns to look at your pointer; lifts a hand to the headphone with wide eyes while listening, with sound waves pulsing to your voice; puts a hand to the face under a "?" with half-closed eyes while thinking; gestures and moves the mouth while talking; makes a worried face when something went wrong; walks after the pointer when it wanders off; and cheers with ^ ^ eyes and hearts when you stroke the head. The hair strand springs as Kai moves, and the base's rings turn (faster while thinking).
+- Kai is drawn by Beacon's own 3D from a model inside the app (no game engine, nothing to download). If the model can't be read, Nova shows a simple glowing orb instead.
+
 ### 2026-11-20 (later)
 - **Nova is now a 3D pet beside your cursor.** `Ctrl+M` brings it up next to the pointer, listening; `Ctrl+Alt+N` (or right-click it, or say "bye") sends it away. A small robot drawn live in 3D: gunmetal head with a dark visor and glowing eyes, antenna, hovering body with a glowing core, floating hands and two rings of light, all in your Beacon style's colour. It turns its head to follow the pointer, blinks and bobs, perks up and pulses with your voice while listening, spins its rings while thinking, and bounces and lights its mouth while talking. Stroke its head with the mouse to pet it: it squints happily, wiggles and sends up hearts. It follows the pointer when it wanders off and stays put when it comes close. Replies are spoken, with a small speech bubble; approvals are answered with Yes/No in the bubble or by saying yes or no.
 - **Removed:** Nova's chat window and the 2D avatar (orb, LED globe, character art). The Avatar page now has the live 3D preview, its size, following the cursor, and moods. Existing Ctrl+Alt+N bindings for Nova move to Ctrl+M.

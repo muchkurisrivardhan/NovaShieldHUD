@@ -163,10 +163,16 @@ public sealed class PetWindow : Window
         if (_settings.PetFollowsCursor && (cursor - petCenter).Length > _petSize * 1.4)
         {
             var target = Beside(cursor);
-            _pos = new Point(_pos.X + (target.X - _pos.X) * 0.12, _pos.Y + (target.Y - _pos.Y) * 0.12);
+            var step = (target.X - _pos.X) * 0.12;
+            _pos = new Point(_pos.X + step, _pos.Y + (target.Y - _pos.Y) * 0.12);
             Left = _pos.X; Top = _pos.Y;
+            _pet.Walk = Math.Clamp(step / 10, -1, 1);   // Kai turns and walks the way it's going
         }
-        else _pos = new Point(Left, Top);
+        else
+        {
+            _pos = new Point(Left, Top);
+            _pet.Walk = 0;
+        }
 
         if (DateTime.Now > _hideBubbleAt) HideBubble();
     }

@@ -1402,7 +1402,7 @@
                 <StackPanel x:Name="PageAvatar" Visibility="Collapsed">
                     <TextBlock Text="Avatar" Style="{StaticResource PageTitle}" />
                     <TextBlock Style="{StaticResource PageSubtitle}"
-                               Text="Nova is a 3D pet. Ctrl+M brings it up beside your cursor, listening; Ctrl+Alt+N sends it away. It glows in your Beacon style's colour. Stroke its head with the mouse to pet it." />
+                               Text="Nova appears as Kai, a 3D companion. Ctrl+M brings Kai up beside your cursor, listening; Ctrl+Alt+N sends Kai away. Kai's glow, suit, hair and eyes all take your Beacon style's colour. Stroke Kai's head with the mouse to pet." />
 
                     <Border Style="{StaticResource Card}">
                         <Grid>
@@ -1418,7 +1418,7 @@
                                 <WrapPanel x:Name="AvatarSizes" Margin="0,0,0,12" />
                                 <TextBlock Text="Try it" Style="{StaticResource Label}" />
                                 <WrapPanel x:Name="AvatarStates" Margin="0,0,0,8" />
-                                <TextBlock Style="{StaticResource Caption}" Text="Move the mouse over the preview: it looks at the pointer. Stroke its head to pet it." />
+                                <TextBlock Style="{StaticResource Caption}" Text="Move the mouse over the preview: Kai looks at the pointer. Stroke the head to pet (^ ^). Appear plays the hello wave." />
                             </StackPanel>
                         </Grid>
                     </Border>
@@ -1426,11 +1426,11 @@
                     <Border Style="{StaticResource Card}">
                         <StackPanel>
                             <TextBlock Text="Behaviour" Style="{StaticResource GroupHeader}" />
-                            <CheckBox x:Name="PetFollows" Content="Follow my cursor when it moves away" />
+                            <CheckBox x:Name="PetFollows" Content="Walk after my cursor when it moves away" />
                             <TextBlock Style="{StaticResource Caption}" Text="It stays put while the pointer is near, so you can pet it or click it. Off: it stays where it appeared." />
                             <CheckBox x:Name="AvatarMoods" Margin="0,12,0,0" Content="Follow the mood of the conversation" />
                             <TextBlock Style="{StaticResource Caption}"
-                                       Text="Its glow leans warm and bright when things go well, cool while it works something out, and amber when something went wrong. Off: always your accent colour." />
+                                       Text="The glow leans warm and bright when things go well, cool while Kai works something out, and amber with a worried face when something went wrong. Off: always your accent colour." />
                             <WrapPanel x:Name="AvatarMoodSamples" Margin="0,10,0,0" />
                         </StackPanel>
                     </Border>

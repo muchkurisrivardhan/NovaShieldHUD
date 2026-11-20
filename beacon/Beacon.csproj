@@ -40,6 +40,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Kai, Nova's 3D look: the model (meshes, face, hair) and the "?" shown while thinking. -->
+    <EmbeddedResource Include="Assets\Kai\kai.glb" LogicalName="Beacon.Kai.kai.glb" />
+    <EmbeddedResource Include="Assets\Kai\think.png" LogicalName="Beacon.Kai.think.png" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- UseWindowsForms adds these as implicit usings, which then collide with WPF in
          every file (Brush, Color, Point, KeyEventArgs, Application, Message...). WinForms
          is here only for NotifyIcon, so the handful of files that need it import it
