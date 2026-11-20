@@ -1,15 +1,14 @@
-using System.Diagnostics;
-using System.IO;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
+using Beacon.UI.Pet;
 
 namespace Beacon.UI;
 
-/// <summary>The Avatar page: Nova's look, its size, a live preview of every state and pose, and moods.</summary>
+/// <summary>The Avatar page: the 3D pet's size, behaviour and moods, with a live preview.</summary>
 public partial class SettingsWindow
 {
-    private string _avatarLook = "globe";
     private string _avatarSize = "default";
 
     private void InitAvatarPage()
@@ -18,14 +17,20 @@ public partial class SettingsWindow
         // The preview wears the style picked on the Appearance page, saved or not.
         ThemePicker.SelectionChanged += (_, _) => RefreshAvatarColour();
         AccentColor.TextChanged += (_, _) => RefreshAvatarColour();
+        // The preview looks at the pointer, as the real one does.
+        AvatarPreview.MouseMove += (_, e) => AvatarPreview.LookAt = e.GetPosition(AvatarPreview);
+        AvatarPreview.MouseLeave += (_, _) => AvatarPreview.LookAt = null;
+        BrainAvatar.MouseMove += (_, e) => BrainAvatar.LookAt = e.GetPosition(BrainAvatar);
+        BrainAvatar.MouseLeave += (_, _) => BrainAvatar.LookAt = null;
     }
 
     private void LoadAvatarPage()
     {
-        _avatarLook = _settings.AvatarLook;
         _avatarSize = _settings.AvatarSize;
         AvatarMoods.IsChecked = _settings.AvatarMoods;
+        PetFollows.IsChecked = _settings.PetFollowsCursor;
         AvatarPreview.FollowSettings(_settings);
+        BrainAvatar.FollowSettings(_settings);
         BuildAvatarChips();
     }
 
@@ -49,76 +54,40 @@ public partial class SettingsWindow
 
     private void BuildAvatarChips()
     {
-        AvatarLooks.Children.Clear();
         AvatarSizes.Children.Clear();
         AvatarStates.Children.Clear();
         AvatarMoodSamples.Children.Clear();
-
-        var hasArt = AvatarArt.Available;
-        foreach (var (key, label, sub) in new[]
-                 {
-                     ("character", "Character", hasArt ? "24 poses" : "add the art"),
-                     ("globe", "LED globe", "dots of light"),
-                     ("orb", "Orb", "a glowing sphere"),
-                 })
-        {
-            var chip = Chip(AvatarLooks, label, sub, key == _avatarLook, () =>
-            {
-                _avatarLook = key;
-                AvatarPreview.Look = key;
-                if (BrainAvatar is not null) BrainAvatar.Look = key;
-                BuildAvatarChips();
-            });
-            if (key == "character" && !hasArt) chip.ToolTip = "Put sheet.png (or one PNG per pose) in " + AvatarArt.UserFolder + ", then reopen Settings.";
-        }
-        AvatarPreview.Look = _avatarLook;
 
         foreach (var (key, label) in new[] { ("small", "Small"), ("default", "Default"), ("large", "Large") })
             Chip(AvatarSizes, label, null, key == _avatarSize, () => { _avatarSize = key; BuildAvatarChips(); });
 
         foreach (var (state, label) in new[]
                  {
-                     (NovaAvatar.Activity.Idle, "Idle"), (NovaAvatar.Activity.Listening, "Listening"),
-                     (NovaAvatar.Activity.Thinking, "Thinking"), (NovaAvatar.Activity.Speaking, "Speaking"),
+                     (NovaPet3D.Activity.Idle, "Idle"), (NovaPet3D.Activity.Listening, "Listening"),
+                     (NovaPet3D.Activity.Thinking, "Thinking"), (NovaPet3D.Activity.Speaking, "Speaking"),
                  })
             Chip(AvatarStates, label, null, false, () =>
             {
                 AvatarPreview.State = state;
-                AvatarPreview.Level = state == NovaAvatar.Activity.Listening ? 0.12 : 0;
+                AvatarPreview.Level = state == NovaPet3D.Activity.Listening ? 0.12 : 0;
             });
-
-        // With the character, every pose can be tried: they're what Nova shows in its moments.
-        if (_avatarLook == "character" && hasArt)
-            foreach (var pose in AvatarArt.Poses)
-                Chip(AvatarStates, pose, null, false, () => AvatarPreview.Flash(pose, 6));
-
-        AvatarArtNote.Text = hasArt
-            ? "The character's glow is recoloured to your Beacon style automatically."
-            : "No character art yet. Put sheet.png (the 6 × 4 design sheet) or one PNG per pose in "
-              + AvatarArt.UserFolder + " and reopen Settings.";
+        Chip(AvatarStates, "Appear", null, false, () => AvatarPreview.Appear());
 
         foreach (var (mood, label) in new[]
                  {
-                     (NovaAvatar.Feeling.Calm, "Calm"), (NovaAvatar.Feeling.Happy, "Happy"),
-                     (NovaAvatar.Feeling.Focused, "Focused"), (NovaAvatar.Feeling.Concerned, "Concerned"),
+                     (NovaPet3D.Feeling.Calm, "Calm"), (NovaPet3D.Feeling.Happy, "Happy"),
+                     (NovaPet3D.Feeling.Focused, "Focused"), (NovaPet3D.Feeling.Concerned, "Concerned"),
                  })
         {
-            var swatch = new Border
+            var row = new StackPanel { Orientation = Orientation.Horizontal };
+            row.Children.Add(new Border
             {
                 Width = 12, Height = 12, CornerRadius = new CornerRadius(6), Margin = new Thickness(0, 0, 8, 0),
-                Background = new SolidColorBrush(NovaAvatar.MoodColor(AvatarPreview.Accent, mood)),
-            };
-            var row = new StackPanel { Orientation = Orientation.Horizontal };
-            row.Children.Add(swatch);
+                Background = new SolidColorBrush(NovaPet3D.MoodColor(AvatarPreview.Accent, mood)),
+            });
             row.Children.Add(new TextBlock { Text = label, FontSize = 12.5 });
             var b = new Button { Style = (Style)FindResource("AiChip"), MinWidth = 0, Content = row };
-            b.Click += (_, _) => { AvatarPreview.Mood = mood; AvatarPreview.Flash(mood switch
-            {
-                NovaAvatar.Feeling.Happy => "Happy",
-                NovaAvatar.Feeling.Focused => "Idea",
-                NovaAvatar.Feeling.Concerned => "Sad",
-                _ => "Idle",
-            }, 4); };
+            b.Click += (_, _) => AvatarPreview.Mood = mood;
             AvatarMoodSamples.Children.Add(b);
         }
     }
@@ -146,8 +115,8 @@ public partial class SettingsWindow
 
     private void SaveAvatarPage()
     {
-        _settings.AvatarLook = _avatarLook;
         _settings.AvatarSize = _avatarSize;
         _settings.AvatarMoods = AvatarMoods.IsChecked == true;
+        _settings.PetFollowsCursor = PetFollows.IsChecked == true;
     }
 }

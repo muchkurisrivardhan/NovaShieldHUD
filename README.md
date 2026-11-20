@@ -10,7 +10,7 @@ gunmetal-and-amber style.
 |---|---|
 | **[Beacon](beacon/)** | A Spotlight-style launcher. `Alt+Space`, type, Enter. Apps, files, windows, system commands, timers, plain-English sentences, local voice, and Claude for anything else. |
 | **[Dotline](dotline/)** | Desktop widgets that sit on your wallpaper: your life and your goals as dots, a focus timer, and time zones on a world-map wallpaper. Set up through Beacon, always in Beacon's style. |
-| **Nova** | The talking assistant (`Ctrl+Alt+N`). Talk or type; it answers out loud, asks what you'd like next ("You've got two emails, summarize or open?"), opens apps and sites, and reads your inbox. Runs on your PC with a free AI model: no account, no key. Part of Beacon. |
+| **Nova** | A 3D pet assistant: `Ctrl+M` brings it up beside your cursor, listening; `Ctrl+Alt+N` sends it away. Pet it with the mouse. It answers out loud, asks what you'd like next ("You've got two emails, summarize or open?"), opens apps and sites, and reads your inbox. Runs on your PC with a free AI model: no account, no key. Part of Beacon. |
 | **Prompt Ring** | Dictate a request, select it, press `Ctrl+Alt+P` and pick what it's for (Build, Fix, Workflow, Research, Write, Explain, Plan, Clean up). A free AI model on your PC rewrites it into a well-structured prompt, in place. Part of Beacon. |
 | **[Filee](filee/)** | Drag-and-drop file converter. Hold `Ctrl`, drag files, drop them on a format in the ring that opens at your cursor: 270 formats, offline. A fork of the open-source [Filee](https://github.com/KnifeLemon/Filee) (MIT) that wears Beacon's style, live. |
 

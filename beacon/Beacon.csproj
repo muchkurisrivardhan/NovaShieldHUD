@@ -34,11 +34,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- Nova's character art (sheet.png, or one PNG per pose): copied next to Beacon.exe. -->
-    <None Include="Assets\Avatar\*.png" CopyToOutputDirectory="PreserveNewest" Link="Avatar\%(Filename)%(Extension)" />
-  </ItemGroup>
-
-  <ItemGroup>
     <!-- Generated artwork. The .ico carries 16-256px frames; the PNG is used in the UI. -->
     <Resource Include="Assets\Beacon.ico" />
     <Resource Include="Assets\Beacon.png" />

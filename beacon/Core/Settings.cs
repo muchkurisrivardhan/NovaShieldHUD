@@ -190,13 +190,19 @@ public sealed class Settings
         });
 
         // Added once: a binding the user clears afterwards stays cleared (see PromptRingOffered).
-        if (!AssistantOffered)
+        // Ctrl+M brings Nova up beside the cursor; Ctrl+Alt+N sends it away. Ctrl+Alt+N used to
+        // open Nova's chat window: that binding becomes Ctrl+M, unless the user picked their own.
+        if (!NovaPetOffered)
         {
-            BuiltInHotkeys.TryAdd(AssistantCommandId, new HotkeyBinding
+            if (!BuiltInHotkeys.TryGetValue(AssistantCommandId, out var old) || !old.IsSet
+                || (old.Modifiers == (NativeMethods.MOD_CONTROL | NativeMethods.MOD_ALT) && old.VirtualKey == 0x4E))
+                BuiltInHotkeys[AssistantCommandId] = new HotkeyBinding { Modifiers = NativeMethods.MOD_CONTROL, VirtualKey = 0x4D };   // M
+            BuiltInHotkeys.TryAdd(NovaDismissCommandId, new HotkeyBinding
             {
                 Modifiers = NativeMethods.MOD_CONTROL | NativeMethods.MOD_ALT,
                 VirtualKey = 0x4E,   // N
             });
+            NovaPetOffered = true;
             AssistantOffered = true;
         }
 
@@ -214,8 +220,13 @@ public sealed class Settings
     public const string PromptRingCommandId = "prompt_ring";
     public const string AssistantCommandId = "nova_assistant";
 
-    /// <summary>Set once Ctrl+Alt+N has been given to Nova, so clearing it sticks.</summary>
+    public const string NovaDismissCommandId = "nova_dismiss";
+
+    /// <summary>From before the pet: kept so old settings files still read.</summary>
     public bool AssistantOffered { get; set; }
+
+    /// <summary>Set once Ctrl+M and Ctrl+Alt+N have been given to the pet, so changing them sticks.</summary>
+    public bool NovaPetOffered { get; set; }
 
     /// <summary>Set once Ctrl+Alt+P has been given to the prompt ring, so clearing it sticks.</summary>
     public bool PromptRingOffered { get; set; }
@@ -257,13 +268,13 @@ public sealed class Settings
         }
     }
 
-    /// <summary>Nova's avatar: "orb" (a glowing sphere) or "globe" (LED dots).</summary>
-    public string AvatarLook { get; set; } = "globe";
+    /// <summary>Nova's 3D pet floats after the cursor (when it wanders off); off: it stays where it appeared.</summary>
+    public bool PetFollowsCursor { get; set; } = true;
 
-    /// <summary>"small", "default" or "large" in Nova's window.</summary>
+    /// <summary>"small", "default" or "large": the pet's size on screen.</summary>
     public string AvatarSize { get; set; } = "default";
 
-    /// <summary>The avatar's colour follows the tone of the conversation.</summary>
+    /// <summary>The pet's glow follows the tone of the conversation.</summary>
     public bool AvatarMoods { get; set; } = true;
 
     /// <summary>Speak Nova's replies aloud.</summary>

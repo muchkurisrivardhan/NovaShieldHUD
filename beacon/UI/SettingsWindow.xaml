@@ -2,6 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:ui="clr-namespace:Beacon.UI"
+        xmlns:pet="clr-namespace:Beacon.UI.Pet"
         Title="Beacon Settings"
         Icon="pack://application:,,,/Assets/Beacon.ico"
         Width="980" Height="720"
@@ -1231,7 +1232,7 @@
                         <!-- What answers now, with Nova's avatar in the same style as its window. -->
                         <Border Style="{StaticResource Card}">
                             <DockPanel>
-                                <ui:NovaAvatar x:Name="BrainAvatar" Width="64" Height="64" DockPanel.Dock="Left" Margin="0,0,16,0" />
+                                <pet:NovaPet3D x:Name="BrainAvatar" Width="84" Height="84" DockPanel.Dock="Left" Margin="0,0,16,0" />
                                 <StackPanel VerticalAlignment="Center">
                                     <TextBlock Text="ANSWERING NOW" FontSize="10.5" FontWeight="SemiBold" Foreground="{StaticResource TextTertiary}" />
                                     <TextBlock x:Name="BrainCurrent" FontSize="17" FontWeight="SemiBold" Margin="0,2,0,2" />
@@ -1379,7 +1380,7 @@
                 <StackPanel x:Name="PageAssistant" Visibility="Collapsed">
                     <TextBlock Text="Nova Assistant" Style="{StaticResource PageTitle}" />
                     <TextBlock Style="{StaticResource PageSubtitle}"
-                               Text="Press Ctrl+Alt+N and talk. Nova answers out loud, asks what you'd like next, opens apps and sites, and checks your email. It runs on this PC: free, no account, nothing sent to an AI company." />
+                               Text="Press Ctrl+M: Nova, your 3D pet, appears beside the cursor and listens. It answers out loud, asks what you'd like next, opens apps and sites, and checks your email. Ctrl+Alt+N sends it away." />
 
                     <Border Style="{StaticResource Card}">
                         <StackPanel>
@@ -1389,7 +1390,7 @@
                             <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
                                 <Button x:Name="AssistantGoModel" Content="AI model…" Margin="0,0,8,0" />
                                 <Button x:Name="AssistantGoVoice" Content="Speech model…" Margin="0,0,8,0" />
-                                <Button x:Name="AssistantOpen" Content="Talk to Nova" />
+                                <Button x:Name="AssistantOpen" Content="Call Nova" />
                             </StackPanel>
                         </StackPanel>
                     </Border>
@@ -1401,7 +1402,7 @@
                 <StackPanel x:Name="PageAvatar" Visibility="Collapsed">
                     <TextBlock Text="Avatar" Style="{StaticResource PageTitle}" />
                     <TextBlock Style="{StaticResource PageSubtitle}"
-                               Text="How Nova looks. It wears your Beacon style's colour (Appearance page), shows when it's listening, thinking and speaking, and can follow the mood of the conversation." />
+                               Text="Nova is a 3D pet. Ctrl+M brings it up beside your cursor, listening; Ctrl+Alt+N sends it away. It glows in your Beacon style's colour. Stroke its head with the mouse to pet it." />
 
                     <Border Style="{StaticResource Card}">
                         <Grid>
@@ -1409,28 +1410,39 @@
                                 <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
-                            <Border Width="170" Height="170" CornerRadius="10" Background="#FF101012" Margin="0,0,20,0">
-                                <ui:NovaAvatar x:Name="AvatarPreview" Width="150" Height="150" />
+                            <Border Width="230" Height="230" CornerRadius="10" Background="#FF101012" Margin="0,0,20,0">
+                                <pet:NovaPet3D x:Name="AvatarPreview" Width="220" Height="220" />
                             </Border>
                             <StackPanel Grid.Column="1">
-                                <TextBlock Text="Look" Style="{StaticResource Label}" />
-                                <WrapPanel x:Name="AvatarLooks" Margin="0,0,0,12" />
-                                <TextBlock Text="Size in Nova's window" Style="{StaticResource Label}" />
+                                <TextBlock Text="Size on screen" Style="{StaticResource Label}" />
                                 <WrapPanel x:Name="AvatarSizes" Margin="0,0,0,12" />
                                 <TextBlock Text="Try it" Style="{StaticResource Label}" />
-                                <WrapPanel x:Name="AvatarStates" />
-                                <TextBlock x:Name="AvatarArtNote" Style="{StaticResource Caption}" />
+                                <WrapPanel x:Name="AvatarStates" Margin="0,0,0,8" />
+                                <TextBlock Style="{StaticResource Caption}" Text="Move the mouse over the preview: it looks at the pointer. Stroke its head to pet it." />
                             </StackPanel>
                         </Grid>
                     </Border>
 
                     <Border Style="{StaticResource Card}">
                         <StackPanel>
-                            <TextBlock Text="Mood" Style="{StaticResource GroupHeader}" />
-                            <CheckBox x:Name="AvatarMoods" Content="Follow the mood of the conversation" />
+                            <TextBlock Text="Behaviour" Style="{StaticResource GroupHeader}" />
+                            <CheckBox x:Name="PetFollows" Content="Follow my cursor when it moves away" />
+                            <TextBlock Style="{StaticResource Caption}" Text="It stays put while the pointer is near, so you can pet it or click it. Off: it stays where it appeared." />
+                            <CheckBox x:Name="AvatarMoods" Margin="0,12,0,0" Content="Follow the mood of the conversation" />
                             <TextBlock Style="{StaticResource Caption}"
-                                       Text="Nova's colour leans warm and bright when things go well, cool and steady while it works something out, and amber when something went wrong. Off: always your accent colour." />
+                                       Text="Its glow leans warm and bright when things go well, cool while it works something out, and amber when something went wrong. Off: always your accent colour." />
                             <WrapPanel x:Name="AvatarMoodSamples" Margin="0,10,0,0" />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <TextBlock Text="With Nova on screen" Style="{StaticResource GroupHeader}" />
+                            <TextBlock TextWrapping="Wrap" Foreground="{StaticResource TextSecondary}" FontSize="12.5" LineHeight="19">
+                                <Run FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" Text="Ctrl+M" /> again, or click it: talk to it (again).<LineBreak />
+                                <Run FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" Text="Right-click" />, <Run FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" Text="Ctrl+Alt+N" />, or say “bye”: it leaves.<LineBreak />
+                                Change the keys on the Shortcuts page: “Call Nova” and “Send Nova Away”.
+                            </TextBlock>
                         </StackPanel>
                     </Border>
                 </StackPanel>

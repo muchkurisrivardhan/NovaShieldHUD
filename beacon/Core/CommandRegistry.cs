@@ -21,7 +21,7 @@ public sealed partial class CommandRegistry
 
     public CommandRegistry(
         AppIndex apps, IFileSearch files, Action rebuildIndex, Action openSettings, Action startVoice,
-        Func<IntPtr, Task> promptRing, Action<IntPtr> assistant)
+        Func<IntPtr, Task> promptRing, Action<IntPtr> assistant, Action dismissAssistant)
     {
         var commands = new List<BeaconCommand>();
 
@@ -62,15 +62,15 @@ public sealed partial class CommandRegistry
             },
         });
 
-        // Bindable in Settings > Shortcuts (Ctrl+Alt+N by default): the talking assistant.
+        // Ctrl+M by default: Nova, the 3D pet, appears beside the cursor and listens.
         commands.Add(new BeaconCommand
         {
             Id = Settings.AssistantCommandId,
-            Title = "Talk to Nova",
-            Subtitle = "The assistant: talk or type, it answers out loud, checks email, opens things",
-            Description = "Open Nova, the voice assistant that runs on this PC.",
+            Title = "Call Nova",
+            Subtitle = "Your 3D pet appears beside the cursor and listens",
+            Description = "Bring Nova up beside the mouse pointer, listening. Pressed again: done talking.",
             Glyph = "\uE720",
-            Keywords = ["nova", "assistant", "talk", "jarvis", "chat", "ask", "voice assistant", "hey nova"],
+            Keywords = ["nova", "assistant", "talk", "jarvis", "pet", "ask", "voice assistant", "hey nova", "call nova"],
             ExposeToAi = false,
             Category = "Beacon",
             RunAsync = ctx =>
@@ -78,6 +78,24 @@ public sealed partial class CommandRegistry
                 ctx.Dismiss();
                 assistant(ctx.TargetWindow);
                 return Task.FromResult("Nova.");
+            },
+        });
+
+        // Ctrl+Alt+N by default: Nova leaves the screen.
+        commands.Add(new BeaconCommand
+        {
+            Id = Settings.NovaDismissCommandId,
+            Title = "Send Nova Away",
+            Subtitle = "The pet leaves the screen",
+            Description = "Remove Nova, the 3D pet, from the screen.",
+            Glyph = "\uE711",
+            Keywords = ["nova", "dismiss", "go away", "hide pet", "send nova away"],
+            ExposeToAi = false,
+            Category = "Beacon",
+            RunAsync = ctx =>
+            {
+                dismissAssistant();
+                return Task.FromResult("Nova left.");
             },
         });
 

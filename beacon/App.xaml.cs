@@ -79,7 +79,8 @@ public partial class App : System.Windows.Application
             startVoice: StartVoiceSearch,
             promptRing: target => (_promptRing ??= new LocalAi.PromptRing(settings, Notify)).RunAsync(target),
             assistant: target => Dispatcher.Invoke(() =>
-                (_assistant ??= new UI.AssistantWindow(settings, _language!, _languageRunner!, () => BuildVoiceVocabulary(apps))).Toggle(target)));
+                (_pet ??= new UI.Pet.PetWindow(settings, _language!, _languageRunner!, () => BuildVoiceVocabulary(apps))).Summon(target)),
+            dismissAssistant: () => Dispatcher.Invoke(() => _pet?.Dismiss()));
 
         var planner = new AiPlanner(_registry, settings);
         var ai = new AiProvider(planner, settings);
@@ -216,7 +217,7 @@ public partial class App : System.Windows.Application
     /// silently does nothing is indistinguishable from a broken app.
     /// </summary>
     private LocalAi.PromptRing? _promptRing;
-    private UI.AssistantWindow? _assistant;
+    private UI.Pet.PetWindow? _pet;
     private Nl.NlParser? _language;
     private Nl.NlRunner? _languageRunner;
 
