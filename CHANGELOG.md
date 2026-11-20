@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### 2026-11-20 (Kai teaches and rewrites)
+- **Kai explains by drawing on your screen.** Say "explain…", "draw…", "how does … work", or name a picture: **mind map**, **concept map** (relationships), **timeline**, **process flow**, **cycle**, **hierarchy**, **compare**, **Venn**, **cutaway** or **3D illustration**. The screen dims into a sketchboard in your Beacon style, and Kai draws the picture part by part while talking it through: lines sketch themselves in, cards pop in, the part being explained glows while the rest steps back, and a caption shows what Kai is saying. Click for the next step, say "tell me more about…" to go deeper, and "got it", Esc or right-click to close.
+- The AI only describes the picture, as checked data (never code); Beacon lays it out and draws it. Works with every brain; on this PC the model is held to the exact shape by grammar.
+- **Rewrite selected text by voice.** Select text anywhere and say "fix it" (grammar, spelling, filler), "rewrite it" (the prompt ring opens at the cursor so you pick a style), "rewrite it as a research / bug report / build prompt", or ask for any change: "make it shorter", "more formal", "translate it to Spanish", "summarize it". Kai pastes the result over the selection; Ctrl+Z undoes it. Without an AI, prompt-ring styles still give you the guide.
+
 ### 2026-11-20 (push-to-talk)
 - **Push-to-talk for Nova.** Hold **Ctrl + Alt** and talk; let go and Kai gets it. A quick tap listens hands-free until you pause. Kai comes up beside the cursor if away. Pressing another key while holding (Ctrl+Alt+N, Ctrl+Alt+P, Ctrl+Alt+Del...) cancels, so shortcuts keep working; AltGr never starts talking. Change it to **Right Ctrl** or turn it off in Settings > Avatar.
 - **The Listening pill.** While Nova listens, a small pill rides beside your cursor with voice bars that move with your mic ("Listening · let go to send" while holding). When you stop, it shrinks to three pulsing dots until the reply starts. It wears your Beacon style: accent glow, surface and text colours, font, square-cut corners for Tactical/HUD/Cyberpunk/CRT and round for Mono/Classic. Clicks pass straight through it. It replaces the old "Listening…" speech bubble, for Ctrl+M and clicking Kai too.

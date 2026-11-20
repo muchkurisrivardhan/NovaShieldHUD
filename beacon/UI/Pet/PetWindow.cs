@@ -7,7 +7,11 @@ using System.Windows.Media.Effects;
 using Beacon.Assistant;
 using Beacon.Core;
 using Beacon.LocalAi;
+using Beacon.Interop;
 using Beacon.Nl;
+using Beacon.Teach;
+using Visual = Beacon.Teach.Visual;
+using PromptStyle = Beacon.LocalAi.PromptStyle;
 using Beacon.Voice;
 
 namespace Beacon.UI.Pet;
@@ -40,6 +44,9 @@ public sealed class PetWindow : Window
 
     readonly NovaPet3D _pet = new();
     readonly ListeningPill _pill;
+    ExplainBoard? _board;
+    string _boardTopic = "";
+    TaskCompletionSource? _spoken;   // the line being said aloud while explaining
     readonly Border _bubble = new();
     readonly TextBlock _bubbleText = new();
     readonly StackPanel _bubbleButtons = new() { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 8, 0, 0) };
@@ -68,7 +75,11 @@ public sealed class PetWindow : Window
         _voice.SetOutputToDefaultAudioDevice();
         if (settings.AssistantVoice is { Length: > 0 } name)
             try { _voice.SelectVoice(name); } catch (ArgumentException) { }
-        _voice.SpeakCompleted += (_, _) => Dispatcher.BeginInvoke(OnSpeechDone);
+        _voice.SpeakCompleted += (_, _) => Dispatcher.BeginInvoke(() =>
+        {
+            if (_spoken is { } s && _voice.State != SynthesizerState.Speaking) { _spoken = null; s.TrySetResult(); }
+            OnSpeechDone();
+        });
         _pill = new ListeningPill(settings);
         _mic.Level += level => Dispatcher.BeginInvoke(() => _pet.Level = _pill.Level = level);
 
@@ -166,6 +177,7 @@ public sealed class PetWindow : Window
         _voice.SpeakAsyncCancelAll();
         _pet.State = NovaPet3D.Activity.Idle;
         _pill.FadeOut(now: true);
+        _board?.Dismiss();
         HideBubble();
         Hide();
     }
@@ -304,6 +316,33 @@ public sealed class PetWindow : Window
                 return;
             }
 
+            // The drawing on the screen: "thanks, got it" puts it away.
+            if (_board is { IsVisible: true } && Intents.IsCloseBoard(text))
+            {
+                _board.Dismiss();
+                Say("Okay!");
+                return;
+            }
+
+            // "Fix it", "rewrite this as a research prompt", "make it shorter": the selected text.
+            if (Intents.FindRewrite(text) is { } rewrite && await RewriteAsync(rewrite, work.Token)) return;
+
+            // With a drawing up, "tell me more about the mantle" draws that part in more detail.
+            if (_board is { IsVisible: true } && System.Text.RegularExpressions.Regex.IsMatch(text,
+                    @"^(?:(?:can|could)\s+you\s+)?(?:go\s+deeper|tell\s+me\s+more|more\s+about|zoom\s+in|expand\s+on|what\s+about|explain\s+(?:the|that|this)\b)",
+                    System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+            {
+                await ExplainAsync(new Intents.Explain($"{text} (we were just looking at: {_boardTopic})", Visual.Guess(text)), work.Token);
+                return;
+            }
+
+            // "Explain...", "draw a mind map of...", "timeline of...": Kai draws it on the screen.
+            if (Intents.FindExplain(text) is { } explain)
+            {
+                await ExplainAsync(explain, work.Token);
+                return;
+            }
+
             // A plain command Beacon fully understands runs at once, without the model.
             var plan = _parser.Parse(text);
             if (plan is { Kind: NlKind.Actions, Confidence: >= 1, IsDestructive: false } && plan.Steps.Count > 0)
@@ -331,9 +370,14 @@ public sealed class PetWindow : Window
         }
     }
 
-    /// <summary>The brain chosen in Settings > Brain, or null (after saying what's missing).</summary>
-    Func<IReadOnlyList<(string Role, string Content)>, CancellationToken, Task<string>>? Brain()
+    /// <summary>
+    /// The brain chosen in Settings > Brain, or null (after saying what's missing). The grammar
+    /// and length are for the model on this PC; cloud models are told the shape in the prompt.
+    /// </summary>
+    Func<IReadOnlyList<(string Role, string Content)>, CancellationToken, Task<string>>? Brain(
+        string? gbnf = AssistantBrain.Gbnf, int maxTokens = 400, bool quiet = false)
     {
+        void Say(string line) { if (!quiet) this.Say(line); }
         var effort = _settings.BrainEffort;
         switch (_settings.Brain)
         {
@@ -361,7 +405,168 @@ public sealed class PetWindow : Window
             return null;
         }
         var path = LocalModels.PathFor(model);
-        return (messages, ct) => LocalLlm.Shared.ChatAsync(path, messages, 400, AssistantBrain.Gbnf, ct);
+        return (messages, ct) => LocalLlm.Shared.ChatAsync(path, messages, maxTokens, gbnf, ct);
+    }
+
+    // ------------------------------------------------------------------ rewriting the selection
+
+    /// <summary>
+    /// Rewrites the text selected in the app you were in: fixed, in a prompt-ring style (the ring
+    /// is shown when no style was named), or changed as asked. Pasted back over the selection;
+    /// Ctrl+Z in that app undoes it. False when it wasn't really about text (nothing selected
+    /// for "make it bigger"-like requests), so the request goes on to the conversation.
+    /// </summary>
+    async Task<bool> RewriteAsync(Intents.Rewrite ask, CancellationToken ct)
+    {
+        var target = _target[0];
+        SelectionTransfer.Snapshot? saved = null;
+        PromptRingWindow? ring = null;
+        try
+        {
+            await SelectionTransfer.WaitForModifiersReleasedAsync();
+            saved = SelectionTransfer.Save();
+            if (target != IntPtr.Zero) NativeMethods.SetForegroundWindow(target);
+            await Task.Delay(120, ct);
+            var text = (await SelectionTransfer.CopySelectionAsync()).Trim();
+            if (text.Length == 0)
+            {
+                if (ask.Instruction is not null) return false;   // "make it shorter" with nothing selected: not about text
+                Say("Select the text first, then ask me again.");
+                return true;
+            }
+            if (text.Length > 12_000)
+            {
+                Say("That's too much text for me to rewrite in one go. Try a smaller part.");
+                return true;
+            }
+
+            PromptStyle? style = ask.StyleId is { } id ? PromptStyles.Find(id) : null;
+            if (ask.AskStyle)
+            {
+                // The prompt ring, at the cursor: pick how to rewrite it.
+                Say("How should I rewrite it?");
+                ring = new PromptRingWindow(_settings, text, true);
+                ring.Show();
+                style = await ring.Choice;
+                if (style is null) { ring.Close(); ring = null; Say("Okay, I left it as it was."); return true; }
+                ring.ShowWorking(style, true);
+            }
+
+            _pet.State = NovaPet3D.Activity.Thinking;
+            IReadOnlyList<(string, string)> messages = style is not null
+                ? [("system", PromptStyles.SystemPrompt(style)), ("user", PromptStyles.UserMessage(text))]
+                : [("system", TeachPrompts.RewriteSystem(ask.Instruction!)), ("user", TeachPrompts.RewriteUser(text))];
+            string result;
+            if (Brain(null, 1500, quiet: style is not null) is { } brain)
+                result = TeachPrompts.CleanRewrite(await Task.Run(() => brain(messages, ct), ct));
+            else if (style is not null)
+                result = PromptStyles.Template(style, text);   // no AI: the prompt-ring guide, filled from the text
+            else
+                return true;   // Brain() said what's missing
+
+            ring?.Close();
+            ring = null;
+            if (result.Length == 0)
+            {
+                Say("I couldn't rewrite that one. Try again?");
+                return true;
+            }
+            await SelectionTransfer.PasteAsync(target, result);
+            _pet.Mood = NovaPet3D.Feeling.Happy;
+            Say(style?.Id == "clean" ? "Fixed! Ctrl+Z undoes it." : "Done! Ctrl+Z undoes it.");
+            return true;
+        }
+        finally
+        {
+            ring?.Close();
+            if (saved is not null) SelectionTransfer.Restore(saved);
+        }
+    }
+
+    // ------------------------------------------------------------------ explaining by drawing
+
+    /// <summary>
+    /// Kai explains by drawing: asks the brain for a picture (as data), takes over the screen
+    /// with the sketchboard, and talks through it step by step while each part draws in.
+    /// </summary>
+    async Task ExplainAsync(Intents.Explain ask, CancellationToken ct)
+    {
+        if (Brain(TeachPrompts.DrawGbnf, 1600) is not { } brain) return;
+        Say(ask.Kind switch
+        {
+            VisualKind.MindMap => "Let me map that out.",
+            VisualKind.Timeline => "Let me put that on a timeline.",
+            VisualKind.Cutaway => "Let me cut it open for you.",
+            VisualKind.Iso3D => "Let me build that in 3D.",
+            _ => "Let me draw that for you.",
+        });
+        _pet.State = NovaPet3D.Activity.Thinking;
+        var reply = await Task.Run(() => brain([("system", TeachPrompts.DrawSystem), ("user", TeachPrompts.DrawUser(ask.Question, ask.Kind))], ct), ct);
+        if (Visual.Parse(reply, ask.Kind) is not { } visual)
+        {
+            Say("Sorry, I couldn't work out a drawing for that. Could you ask it a little differently?");
+            return;
+        }
+        _brain.Remember(ask.Question, $"I drew a {Visual.Name(visual.Kind)} of {visual.Title} on the screen and explained it.");
+
+        // Take over the screen the pointer is on.
+        _board?.Dismiss();
+        var board = _board = new ExplainBoard(_settings, visual, ScreenDip());
+        _boardTopic = visual.Title;
+        using var closed = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        board.Dismissed += () =>
+        {
+            closed.Cancel();
+            _voice.SpeakAsyncCancelAll();
+            if (_target[0] != IntPtr.Zero) NativeMethods.SetForegroundWindow(_target[0]);   // back to your app
+        };
+        board.Skipped += () => _voice.SpeakAsyncCancelAll();
+        board.Show();
+        board.Activate();   // so Esc reaches it
+        Topmost = false;    // Kai stays in front of the board
+        Topmost = true;
+
+        try
+        {
+            await Task.Delay(300, closed.Token);
+            for (var i = 0; i < visual.Steps.Count; i++)
+            {
+                board.Step(i);
+                await SpeakAndWaitAsync(visual.Steps[i].Say, closed.Token);
+            }
+            board.Finish(visual.Title);
+            Say("Want me to go deeper into any part? Say “got it” when you're done.");
+        }
+        catch (OperationCanceledException) when (!ct.IsCancellationRequested) { }   // the board was closed
+    }
+
+    /// <summary>Says a line of the explanation (no bubble: the board captions it) and waits until it's said.</summary>
+    async Task SpeakAndWaitAsync(string line, CancellationToken ct)
+    {
+        _pet.Mood = NovaPet3D.Detect(line);
+        if (!_settings.AssistantSpeaks || !IsVisible)
+        {
+            await Task.Delay(Math.Clamp(line.Length * 65, 1800, 9000), ct);
+            return;
+        }
+        var done = _spoken = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        _pet.State = NovaPet3D.Activity.Speaking;
+        _voice.SpeakAsync(line);
+        using (ct.Register(() => done.TrySetCanceled()))
+            await done.Task;
+        _pet.State = NovaPet3D.Activity.Idle;
+        await Task.Delay(250, ct);
+    }
+
+    /// <summary>The screen the pointer is on, in this window's units.</summary>
+    Rect ScreenDip()
+    {
+        var px = System.Windows.Forms.Cursor.Position;
+        var b = System.Windows.Forms.Screen.FromPoint(px).Bounds;
+        var m = PresentationSource.FromVisual(this)?.CompositionTarget.TransformFromDevice ?? Matrix.Identity;
+        var tl = m.Transform(new Point(b.Left, b.Top));
+        var br = m.Transform(new Point(b.Right, b.Bottom));
+        return new Rect(tl, br);
     }
 
     void Say(string line)
