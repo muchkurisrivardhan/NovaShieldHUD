@@ -77,7 +77,11 @@ public partial class App : System.Windows.Application
             rebuildIndex: () => _ = fileIndex.BuildAsync(BuildIndexOptions(settings)),
             openSettings: OpenSettings,
             startVoice: StartVoiceSearch,
-            promptRing: target => (_promptRing ??= new LocalAi.PromptRing(settings, Notify)).RunAsync(target));
+            promptRing: target => (_promptRing ??= new LocalAi.PromptRing(settings, Notify)).RunAsync(target),
+            assistant: target => Dispatcher.Invoke(() => Pet().Summon(target)),
+            dismissAssistant: () => Dispatcher.Invoke(() => _pet?.Dismiss()));
+
+        _makePet = () => new UI.Pet.PetWindow(settings, _language!, _languageRunner!, () => BuildVoiceVocabulary(apps));
 
         var planner = new AiPlanner(_registry, settings);
         var ai = new AiProvider(planner, settings);
@@ -85,8 +89,8 @@ public partial class App : System.Windows.Application
         // The local sentence parser and the model are the same capability at two price
         // points: rules answer the common phrasings instantly and offline, and whatever they
         // cannot place falls through to the AI row underneath them.
-        var language = new NlParser(_registry, apps, settings);
-        var languageRunner = new NlRunner(_registry, settings);
+        var language = _language = new NlParser(_registry, apps, settings);
+        var languageRunner = _languageRunner = new NlRunner(_registry, settings);
 
         _favicons = new FaviconCache(Path.Combine(Settings.Directory, "favicons"))
         {
@@ -123,6 +127,14 @@ public partial class App : System.Windows.Application
         _hotkeys = HotkeyManager.Attach(_window);
         _hotkeys.Pressed += OnHotkeyPressed;
         ApplyHotkeys();
+
+        // Push-to-talk for Nova: hold the talk key to speak, let go to send.
+        _talkKey = new PushToTalkHook();
+        _talkKey.HoldStart += () => Pet().TalkHold(NativeMethods.GetForegroundWindow());
+        _talkKey.HoldEnd += () => _pet?.TalkRelease();
+        _talkKey.Cancel += () => _pet?.TalkCancel();
+        _talkKey.Tap += () => Pet().TalkTap(NativeMethods.GetForegroundWindow());
+        _talkKey.Use(settings.PushToTalk);
 
         BuildTrayIcon(settings);
         ApplyStartupRegistration(settings.RunAtStartup);
@@ -214,6 +226,13 @@ public partial class App : System.Windows.Application
     /// silently does nothing is indistinguishable from a broken app.
     /// </summary>
     private LocalAi.PromptRing? _promptRing;
+    private UI.Pet.PetWindow? _pet;
+    private Func<UI.Pet.PetWindow>? _makePet;
+    private PushToTalkHook? _talkKey;
+
+    private UI.Pet.PetWindow Pet() => _pet ??= _makePet!();
+    private Nl.NlParser? _language;
+    private Nl.NlRunner? _languageRunner;
 
     private void ApplyHotkeys()
     {
@@ -501,6 +520,7 @@ public partial class App : System.Windows.Application
 
         ApplyHotkeys();
         ApplyStartupRegistration(_settings.RunAtStartup);
+        _talkKey?.Use(_settings.PushToTalk);
 
         _window?.ApplyAppearance(_settings);
 
@@ -574,6 +594,7 @@ public partial class App : System.Windows.Application
     {
         _hotkeys?.Dispose();
         _tray?.Dispose();
+        _talkKey?.Dispose();
         _instanceLock?.Dispose();
         base.OnExit(e);
     }

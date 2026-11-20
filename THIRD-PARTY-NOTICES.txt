@@ -14,6 +14,10 @@ whisper.cpp / ggml (inside Whisper.net.Runtime)
                                        MIT      Copyright (c) 2023-2024 The ggml authors
 Microsoft.Extensions.AI.Abstractions   MIT      Copyright (c) Microsoft Corporation
 System.Numerics.Tensors                MIT      Copyright (c) .NET Foundation and Contributors
+MailKit, MimeKit                       MIT      Copyright (c) 2013-2026 .NET Foundation and Contributors
+BouncyCastle.Cryptography (via MimeKit)
+                                       MIT      Copyright (c) 2000-2026 The Legion of the Bouncy Castle Inc.
+System.Speech                          MIT      Copyright (c) .NET Foundation and Contributors
 LLamaSharp, LLamaSharp.Backend.Cpu      MIT      Copyright (c) 2023 Rinne, Martin Evans, Haiping Chen and LLamaSharp contributors
 llama.cpp / ggml (inside LLamaSharp.Backend.Cpu)
                                        MIT      Copyright (c) 2023-2026 The ggml authors

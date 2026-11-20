@@ -190,6 +190,22 @@ public sealed class Settings
         });
 
         // Added once: a binding the user clears afterwards stays cleared (see PromptRingOffered).
+        // Ctrl+M brings Nova up beside the cursor; Ctrl+Alt+N sends it away. Ctrl+Alt+N used to
+        // open Nova's chat window: that binding becomes Ctrl+M, unless the user picked their own.
+        if (!NovaPetOffered)
+        {
+            if (!BuiltInHotkeys.TryGetValue(AssistantCommandId, out var old) || !old.IsSet
+                || (old.Modifiers == (NativeMethods.MOD_CONTROL | NativeMethods.MOD_ALT) && old.VirtualKey == 0x4E))
+                BuiltInHotkeys[AssistantCommandId] = new HotkeyBinding { Modifiers = NativeMethods.MOD_CONTROL, VirtualKey = 0x4D };   // M
+            BuiltInHotkeys.TryAdd(NovaDismissCommandId, new HotkeyBinding
+            {
+                Modifiers = NativeMethods.MOD_CONTROL | NativeMethods.MOD_ALT,
+                VirtualKey = 0x4E,   // N
+            });
+            NovaPetOffered = true;
+            AssistantOffered = true;
+        }
+
         if (!PromptRingOffered)
         {
             BuiltInHotkeys.TryAdd(PromptRingCommandId, new HotkeyBinding
@@ -202,14 +218,124 @@ public sealed class Settings
     }
 
     public const string PromptRingCommandId = "prompt_ring";
+    public const string AssistantCommandId = "nova_assistant";
+
+    public const string NovaDismissCommandId = "nova_dismiss";
+
+    /// <summary>From before the pet: kept so old settings files still read.</summary>
+    public bool AssistantOffered { get; set; }
+
+    /// <summary>Set once Ctrl+M and Ctrl+Alt+N have been given to the pet, so changing them sticks.</summary>
+    public bool NovaPetOffered { get; set; }
 
     /// <summary>Set once Ctrl+Alt+P has been given to the prompt ring, so clearing it sticks.</summary>
     public bool PromptRingOffered { get; set; }
 
+    // -------------------------------------------------------------- assistant
+
+    /// <summary>
+    /// Which brain answers Nova: "local" (this PC), "claude" (API key), "openrouter",
+    /// "claudecode" (the user's Claude Code sign-in) or "codex" (the user's Codex sign-in).
+    /// </summary>
+    public string Brain { get; set; } = "local";
+
+    public string BrainClaudeModel { get; set; } = "claude-haiku-5-5";
+
+    /// <summary>Claude Code model alias: "haiku", "sonnet" or "opus".</summary>
+    public string BrainClaudeCodeModel { get; set; } = "haiku";
+
+    /// <summary>"openrouter/free" picks among OpenRouter's free models by itself.</summary>
+    public string BrainOpenRouterModel { get; set; } = "openrouter/free";
+
+    /// <summary>"low", "medium", "high" or "max". Higher is smarter but slower (cloud brains).</summary>
+    public string BrainEffort { get; set; } = "low";
+
+    /// <summary>The key OpenRouter handed over when the user clicked Authorize, encrypted (DPAPI).</summary>
+    public string? OpenRouterKeyProtected { get; set; }
+
+    public void SetOpenRouterKey(string? key) => OpenRouterKeyProtected = string.IsNullOrWhiteSpace(key)
+        ? null
+        : Convert.ToBase64String(ProtectedData.Protect(Encoding.UTF8.GetBytes(key.Trim()), null, DataProtectionScope.CurrentUser));
+
+    [JsonIgnore]
+    public string? OpenRouterKey
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(OpenRouterKeyProtected)) return null;
+            try { return Encoding.UTF8.GetString(ProtectedData.Unprotect(Convert.FromBase64String(OpenRouterKeyProtected), null, DataProtectionScope.CurrentUser)); }
+            catch (Exception e) when (e is CryptographicException or FormatException) { return null; }
+        }
+    }
+
+    /// <summary>Nova's 3D pet floats after the cursor (when it wanders off); off: it stays where it appeared.</summary>
+    public bool PetFollowsCursor { get; set; } = true;
+
+    /// <summary>"small", "default" or "large": the pet's size on screen.</summary>
+    public string AvatarSize { get; set; } = "default";
+
+    /// <summary>
+    /// Push-to-talk for Nova: "ctrl+alt" (hold Ctrl+Alt to talk, let go to send; tap to listen
+    /// hands-free), "rctrl" (the same with Right Ctrl), or "off".
+    /// </summary>
+    public string PushToTalk { get; set; } = "ctrl+alt";
+
+    /// <summary>
+    /// When asked about the screen ("what's this?", "where do I click?"), Kai takes a screenshot
+    /// and sends it to the chosen brain to look at. Only on such a request; never saved.
+    /// </summary>
+    public bool KaiSeesScreen { get; set; } = true;
+
+    /// <summary>The pet's glow follows the tone of the conversation.</summary>
+    public bool AvatarMoods { get; set; } = true;
+
+    /// <summary>Speak Nova's replies aloud.</summary>
+    public bool AssistantSpeaks { get; set; } = true;
+
+    /// <summary>After Nova asks a question, listen for the answer without a key press.</summary>
+    public bool AssistantListensForReply { get; set; } = true;
+
+    /// <summary>Which Windows voice speaks (its name), or null for the default.</summary>
+    public string? AssistantVoice { get; set; }
+
+    public string EmailAddress { get; set; } = "";
+
+    /// <summary>IMAP server; empty means the one EmailInbox.HostFor picks from the address.</summary>
+    public string EmailImapHost { get; set; } = "";
+
+    public int EmailImapPort { get; set; } = 993;
+
+    /// <summary>The app password, encrypted for this Windows user (DPAPI), like the API key.</summary>
+    public string? EmailPasswordProtected { get; set; }
+
+    public void SetEmailPassword(string? plaintext) => EmailPasswordProtected = string.IsNullOrWhiteSpace(plaintext)
+        ? null
+        : Convert.ToBase64String(ProtectedData.Protect(Encoding.UTF8.GetBytes(plaintext.Trim()), null, DataProtectionScope.CurrentUser));
+
+    /// <summary>The account to sign in with, or null when it isn't set up (or can't be decrypted here).</summary>
+    public Assistant.EmailAccount? EmailAccount()
+    {
+        if (string.IsNullOrWhiteSpace(EmailAddress) || string.IsNullOrWhiteSpace(EmailPasswordProtected)) return null;
+        var host = string.IsNullOrWhiteSpace(EmailImapHost) ? Assistant.EmailInbox.HostFor(EmailAddress) : EmailImapHost.Trim();
+        if (host is null) return null;
+        try
+        {
+            var password = Encoding.UTF8.GetString(ProtectedData.Unprotect(
+                Convert.FromBase64String(EmailPasswordProtected), null, DataProtectionScope.CurrentUser));
+            // Google shows app passwords in groups of four ("abcd efgh ijkl mnop"); spaces are not part of it.
+            if (host == "imap.gmail.com") password = password.Replace(" ", "");
+            return new Assistant.EmailAccount(EmailAddress.Trim(), password, host, EmailImapPort is > 0 and < 65536 ? EmailImapPort : 993);
+        }
+        catch (Exception e) when (e is CryptographicException or FormatException)
+        {
+            return null;
+        }
+    }
+
     // -------------------------------------------------------------- local ai
 
     /// <summary>Which free local model the prompt ring uses (LocalModels id).</summary>
-    public string LocalModel { get; set; } = "qwen2.5-1.5b";
+    public string LocalModel { get; set; } = "qwen3-4b";
 
     // -------------------------------------------------------------------- ai
 
