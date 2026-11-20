@@ -1437,9 +1437,18 @@
 
                     <Border Style="{StaticResource Card}">
                         <StackPanel>
-                            <TextBlock Text="With Nova on screen" Style="{StaticResource GroupHeader}" />
+                            <TextBlock Text="Talk to Nova" Style="{StaticResource GroupHeader}" />
+                            <TextBlock Text="Push-to-talk key" Style="{StaticResource Label}" />
+                            <ComboBox x:Name="PushToTalkKey" Width="300" HorizontalAlignment="Left">
+                                <ComboBoxItem Tag="ctrl+alt" Content="Hold Ctrl + Alt" />
+                                <ComboBoxItem Tag="rctrl" Content="Hold Right Ctrl" />
+                                <ComboBoxItem Tag="off" Content="Off" />
+                            </ComboBox>
+                            <TextBlock Style="{StaticResource Caption}"
+                                       Text="Hold it and talk; let go to send. A quick tap listens hands-free until you pause. While Nova listens, a Listening pill rides beside your cursor, moving with your voice. Pressing another key while holding it (Ctrl+Alt+N, say) cancels, so your shortcuts still work. AltGr never starts talking." />
+                            <TextBlock Text="With Nova on screen" Style="{StaticResource GroupHeader}" Margin="0,16,0,6" />
                             <TextBlock TextWrapping="Wrap" Foreground="{StaticResource TextSecondary}" FontSize="12.5" LineHeight="19">
-                                <Run FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" Text="Ctrl+M" /> again, or click it: talk to it (again).<LineBreak />
+                                <Run FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" Text="Ctrl+M" />, a tap of the talk key, or click Kai: listen hands-free (again).<LineBreak />
                                 <Run FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" Text="Right-click" />, <Run FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" Text="Ctrl+Alt+N" />, or say “bye”: it leaves.<LineBreak />
                                 Change the keys on the Shortcuts page: “Call Nova” and “Send Nova Away”.
                             </TextBlock>

@@ -19,6 +19,10 @@ namespace Beacon.UI.Pet;
 /// small speech bubble, and listens again when it asked something. Click it to talk, right-click
 /// it to send it away.
 ///
+/// Push-to-talk: hold Ctrl+Alt (Settings > Avatar) to talk and let go to send; a quick tap
+/// listens hands-free until you pause. While listening, the "Listening" pill rides beside the
+/// cursor with voice bars, then shows dots until the reply starts.
+///
 /// The window is see-through and never takes the keyboard: whatever you were typing in keeps
 /// typing. Only the pet and its bubble catch the mouse.
 /// </summary>
@@ -35,6 +39,7 @@ public sealed class PetWindow : Window
     readonly IntPtr[] _target = [IntPtr.Zero];
 
     readonly NovaPet3D _pet = new();
+    readonly ListeningPill _pill;
     readonly Border _bubble = new();
     readonly TextBlock _bubbleText = new();
     readonly StackPanel _bubbleButtons = new() { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 8, 0, 0) };
@@ -42,7 +47,8 @@ public sealed class PetWindow : Window
 
     CancellationTokenSource? _work;
     TaskCompletionSource<bool>? _approval;
-    bool _busy, _lastWasQuestion, _discardListen, _leaving;
+    bool _busy, _lastWasQuestion, _discardListen, _leaving, _holding;
+    int _listens;   // which listen is the latest, so an older one finishing doesn't tidy away a newer one
     DateTime _hideBubbleAt = DateTime.MaxValue;
     Point _pos;
 
@@ -63,7 +69,8 @@ public sealed class PetWindow : Window
         if (settings.AssistantVoice is { Length: > 0 } name)
             try { _voice.SelectVoice(name); } catch (ArgumentException) { }
         _voice.SpeakCompleted += (_, _) => Dispatcher.BeginInvoke(OnSpeechDone);
-        _mic.Level += level => Dispatcher.BeginInvoke(() => _pet.Level = level);
+        _pill = new ListeningPill(settings);
+        _mic.Level += level => Dispatcher.BeginInvoke(() => _pet.Level = _pill.Level = level);
 
         _pet.FollowSettings(settings);
         _pet.Tapped += () =>
@@ -104,8 +111,16 @@ public sealed class PetWindow : Window
             else _ = ListenAsync();
             return;
         }
-        _leaving = false;
+        Appear(target);
+        if (WhisperModels.IsDownloaded(WhisperModels.Find(_settings.VoiceModel))) _ = ListenAsync();
+        else Say("I need a speech model to hear you. Get one in Beacon Settings, on the Voice page.");
+    }
+
+    void Appear(IntPtr target)
+    {
         _target[0] = target;
+        if (IsVisible && !_leaving) return;
+        _leaving = false;
         _pet.FollowSettings(_settings);
         var cursor = CursorDip();
         _pos = Beside(cursor);
@@ -113,9 +128,33 @@ public sealed class PetWindow : Window
         Opacity = 1;
         Show();
         _pet.Appear();
-        if (WhisperModels.IsDownloaded(WhisperModels.Find(_settings.VoiceModel))) _ = ListenAsync();
-        else Say("I need a speech model to hear you. Get one in Beacon Settings, on the Voice page.");
     }
+
+    // ------------------------------------------------------------------ push-to-talk
+
+    /// <summary>The talk key has been held: Nova comes (if away) and listens until it's let go.</summary>
+    public void TalkHold(IntPtr target)
+    {
+        Appear(target);
+        _ = ListenAsync(hold: true);
+    }
+
+    /// <summary>The talk key was let go: what was said is sent.</summary>
+    public void TalkRelease()
+    {
+        if (_holding) _work?.Cancel();
+    }
+
+    /// <summary>Another key was pressed mid-hold (a shortcut): what was heard is thrown away.</summary>
+    public void TalkCancel()
+    {
+        if (!_holding) return;
+        _discardListen = true;
+        _work?.Cancel();
+    }
+
+    /// <summary>A quick tap of the talk key: like Ctrl+M, listening hands-free until a pause.</summary>
+    public void TalkTap(IntPtr target) => Summon(target);
 
     /// <summary>Ctrl+Alt+N or right-click: gone from the screen, everything stopped.</summary>
     public void Dismiss()
@@ -126,6 +165,7 @@ public sealed class PetWindow : Window
         _approval?.TrySetResult(false);
         _voice.SpeakAsyncCancelAll();
         _pet.State = NovaPet3D.Activity.Idle;
+        _pill.FadeOut(now: true);
         HideBubble();
         Hide();
     }
@@ -179,7 +219,7 @@ public sealed class PetWindow : Window
 
     // ------------------------------------------------------------------ conversation
 
-    async Task ListenAsync()
+    async Task ListenAsync(bool hold = false)
     {
         var model = WhisperModels.Find(_settings.VoiceModel);
         if (!WhisperModels.IsDownloaded(model))
@@ -191,29 +231,43 @@ public sealed class PetWindow : Window
         _work?.Cancel();
         var work = _work = new CancellationTokenSource();
         _discardListen = false;
+        _holding = hold;
+        var listen = ++_listens;
         _pet.State = NovaPet3D.Activity.Listening;
-        ShowBubble("Listening…", 30);
+        HideBubble();
+        _pill.Listen(hold);
+        // Load the speech model while you talk, so it's ready when you stop.
+        _ = _transcriber.PreloadAsync(model, CancellationToken.None).ContinueWith(t => _ = t.Exception, TaskScheduler.Default);
         try
         {
-            var recording = await _mic.RecordAsync(_settings.VoiceDevice, autoStop: true, work.Token);
-            _pet.Level = 0;
+            // Held: until the key is let go. Otherwise: until you pause.
+            var recording = await _mic.RecordAsync(_settings.VoiceDevice, autoStop: !hold, work.Token);
+            if (listen == _listens) _holding = false;
+            _pet.Level = _pill.Level = 0;
             if (_discardListen || recording.End == RecordingEnd.NoSpeech || recording.Samples.Length == 0)
             {
                 _pet.State = NovaPet3D.Activity.Idle;
-                HideBubble();
+                _pill.FadeOut();
                 return;
             }
             _pet.State = NovaPet3D.Activity.Thinking;
-            ShowBubble("…", 30);
+            _pill.Think();
             var heard = await _transcriber.TranscribeAsync(model, recording.Samples, _vocabulary(), CancellationToken.None);
             _pet.State = NovaPet3D.Activity.Idle;
             if (!string.IsNullOrWhiteSpace(heard)) await HandleAsync(heard);
-            else HideBubble();
         }
         catch (Exception e) when (e is not OutOfMemoryException)
         {
             _pet.State = NovaPet3D.Activity.Idle;
             Say("I couldn't hear you: " + e.Message);
+        }
+        finally
+        {
+            if (listen == _listens)
+            {
+                _holding = false;
+                _pill.FadeOut();
+            }
         }
     }
 
@@ -312,6 +366,7 @@ public sealed class PetWindow : Window
 
     void Say(string line)
     {
+        _pill.FadeOut();   // the reply has started
         _pet.Mood = NovaPet3D.Detect(line);
         _lastWasQuestion = line.TrimEnd().EndsWith('?');
         ShowBubble(line, 6 + line.Length / 18.0);

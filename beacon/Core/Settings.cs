@@ -274,6 +274,12 @@ public sealed class Settings
     /// <summary>"small", "default" or "large": the pet's size on screen.</summary>
     public string AvatarSize { get; set; } = "default";
 
+    /// <summary>
+    /// Push-to-talk for Nova: "ctrl+alt" (hold Ctrl+Alt to talk, let go to send; tap to listen
+    /// hands-free), "rctrl" (the same with Right Ctrl), or "off".
+    /// </summary>
+    public string PushToTalk { get; set; } = "ctrl+alt";
+
     /// <summary>The pet's glow follows the tone of the conversation.</summary>
     public bool AvatarMoods { get; set; } = true;
 

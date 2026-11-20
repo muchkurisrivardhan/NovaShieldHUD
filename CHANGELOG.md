@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### 2026-11-20 (push-to-talk)
+- **Push-to-talk for Nova.** Hold **Ctrl + Alt** and talk; let go and Kai gets it. A quick tap listens hands-free until you pause. Kai comes up beside the cursor if away. Pressing another key while holding (Ctrl+Alt+N, Ctrl+Alt+P, Ctrl+Alt+Del...) cancels, so shortcuts keep working; AltGr never starts talking. Change it to **Right Ctrl** or turn it off in Settings > Avatar.
+- **The Listening pill.** While Nova listens, a small pill rides beside your cursor with voice bars that move with your mic ("Listening · let go to send" while holding). When you stop, it shrinks to three pulsing dots until the reply starts. It wears your Beacon style: accent glow, surface and text colours, font, square-cut corners for Tactical/HUD/Cyberpunk/CRT and round for Mono/Classic. Clicks pass straight through it. It replaces the old "Listening…" speech bubble, for Ctrl+M and clicking Kai too.
+- The speech model now starts loading the moment you start talking, so the reply comes sooner after you stop.
+
 ### 2026-11-20 (Kai)
 - **Nova now appears as Kai**, a 3D chibi companion in a glowing cyber suit on a holo base, replacing the robot. Kai's glow, suit, hair and eyes all take your Beacon style's colour (amber Tactical, cyan HUD, pink Cyberpunk, green CRT, grey Mono), and follow the mood of the conversation.
 - **Kai acts and has expressions:** waves hello when called; breathes, bobs and blinks; turns to look at your pointer; lifts a hand to the headphone with wide eyes while listening, with sound waves pulsing to your voice; puts a hand to the face under a "?" with half-closed eyes while thinking; gestures and moves the mouth while talking; makes a worried face when something went wrong; walks after the pointer when it wanders off; and cheers with ^ ^ eyes and hearts when you stroke the head. The hair strand springs as Kai moves, and the base's rings turn (faster while thinking).
