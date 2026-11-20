@@ -280,6 +280,12 @@ public sealed class Settings
     /// </summary>
     public string PushToTalk { get; set; } = "ctrl+alt";
 
+    /// <summary>
+    /// When asked about the screen ("what's this?", "where do I click?"), Kai takes a screenshot
+    /// and sends it to the chosen brain to look at. Only on such a request; never saved.
+    /// </summary>
+    public bool KaiSeesScreen { get; set; } = true;
+
     /// <summary>The pet's glow follows the tone of the conversation.</summary>
     public bool AvatarMoods { get; set; } = true;
 

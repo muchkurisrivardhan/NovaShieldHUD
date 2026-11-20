@@ -46,6 +46,7 @@ public sealed class PetWindow : Window
     readonly ListeningPill _pill;
     ExplainBoard? _board;
     string _boardTopic = "";
+    Point? _goTo;   // where Kai walks while pointing something out on the screen (this window's units)
     TaskCompletionSource? _spoken;   // the line being said aloud while explaining
     readonly Border _bubble = new();
     readonly TextBlock _bubbleText = new();
@@ -211,8 +212,18 @@ public sealed class PetWindow : Window
         var petCenter = new Point(Left + Width / 2, Top + Height - _petSize / 2);
         _pet.LookAt = new Point(cursor.X - (Left + (Width - _petSize) / 2), cursor.Y - (Top + Height - _petSize));
 
+        // Pointing something out: walk over beside it and look at it.
+        if (_goTo is { } spot)
+        {
+            _pet.LookAt = new Point(spot.X - (Left + (Width - _petSize) / 2), spot.Y - (Top + Height - _petSize));
+            var target = Beside(spot);
+            var step = (target.X - _pos.X) * 0.08;
+            _pos = new Point(_pos.X + step, _pos.Y + (target.Y - _pos.Y) * 0.08);
+            Left = _pos.X; Top = _pos.Y;
+            _pet.Walk = Math.Clamp(step / 10, -1, 1);
+        }
         // Follow when the pointer wanders off; stay put when it comes near, so it can be petted.
-        if (_settings.PetFollowsCursor && (cursor - petCenter).Length > _petSize * 1.4)
+        else if (_settings.PetFollowsCursor && (cursor - petCenter).Length > _petSize * 1.4)
         {
             var target = Beside(cursor);
             var step = (target.X - _pos.X) * 0.12;
@@ -326,6 +337,13 @@ public sealed class PetWindow : Window
 
             // "Fix it", "rewrite this as a research prompt", "make it shorter": the selected text.
             if (Intents.FindRewrite(text) is { } rewrite && await RewriteAsync(rewrite, work.Token)) return;
+
+            // "What's this?", "where do I click to...": Kai looks at the screen and points.
+            if (Intents.FindScreen(text) is { } look && _settings.KaiSeesScreen)
+            {
+                await SeeAsync(look, work.Token);
+                return;
+            }
 
             // With a drawing up, "tell me more about the mantle" draws that part in more detail.
             if (_board is { IsVisible: true } && System.Text.RegularExpressions.Regex.IsMatch(text,
@@ -538,6 +556,102 @@ public sealed class PetWindow : Window
             Say("Want me to go deeper into any part? Say “got it” when you're done.");
         }
         catch (OperationCanceledException) when (!ct.IsCancellationRequested) { }   // the board was closed
+    }
+
+    // ------------------------------------------------------------------ looking at the screen
+
+    /// <summary>
+    /// Kai looks at the screen: a screenshot of the monitor the pointer is on (Kai and the pill
+    /// step out of the picture for it) goes to the brain with the question, and the answer comes
+    /// back as callouts on the real screen. Kai walks to each thing while explaining it.
+    /// </summary>
+    async Task SeeAsync(Intents.Explain ask, CancellationToken ct)
+    {
+        if (SeeingBrain() is not { } see) return;
+        _board?.Dismiss();
+        _bubble.Visibility = Visibility.Collapsed;
+
+        // Out of the picture for a moment, so the screenshot shows the screen, not Kai.
+        var px = System.Windows.Forms.Cursor.Position;
+        Opacity = 0;
+        _pill.FadeOut(now: true);
+        await Task.Delay(120, ct);
+        ScreenCapture.Shot shot;
+        try { shot = ScreenCapture.Capture(new System.Drawing.Point(px.X, px.Y)); }
+        finally { Opacity = 1; }
+
+        Say("Let me take a look.");
+        _pet.State = NovaPet3D.Activity.Thinking;
+        var system = TeachPrompts.SeeSystem(shot.Width, shot.Height);
+        var reply = await Task.Run(() => see(system, TeachPrompts.SeeUser(ask.Question), shot.Jpeg, ct), ct);
+        if (Visual.Parse(reply, VisualKind.Screen) is not { } visual)
+        {
+            Say("Hmm, I couldn't make sense of the screen this time. Could you ask again?");
+            return;
+        }
+        _brain.Remember(ask.Question, "I looked at the screen and answered: " + string.Join(" ", visual.Steps.Select(s => s.Say)));
+
+        var screen = ScreenDip();
+        var board = _board = new ExplainBoard(_settings, visual, screen, new Size(shot.Width, shot.Height));
+        _boardTopic = visual.Title;
+        using var closed = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        board.Dismissed += () => { closed.Cancel(); _voice.SpeakAsyncCancelAll(); _goTo = null; };
+        board.Show();
+        Topmost = false;   // Kai stays in front of the callouts
+        Topmost = true;
+
+        // Where each thing is, in this window's units: the screenshot scaled onto the screen.
+        Point? Spot(string id)
+        {
+            var n = visual.Nodes.FirstOrDefault(n => n.Id.Equals(id, StringComparison.OrdinalIgnoreCase));
+            if (n is null) return null;
+            var (x, y) = n.Box is { } b ? (b[0] + b[2] / 2, b[1] + b[3]) : (n.Point![0], n.Point[1]);
+            return new Point(screen.Left + x * screen.Width / shot.Width, screen.Top + y * screen.Height / shot.Height);
+        }
+
+        try
+        {
+            for (var i = 0; i < visual.Steps.Count; i++)
+            {
+                board.Step(i);
+                _goTo = visual.Steps[i].Focus.Select(Spot).FirstOrDefault(p => p is not null) ?? _goTo;
+                await SpeakAndWaitAsync(visual.Steps[i].Say, closed.Token);
+            }
+            board.Finish(visual.Title);
+            _goTo = null;
+            // Over the real screen it can't be clicked away, so it goes by itself after a while.
+            _ = Task.Delay(TimeSpan.FromSeconds(20), closed.Token).ContinueWith(t =>
+            {
+                if (!t.IsCanceled) Dispatcher.BeginInvoke(() => { if (_board == board) board.Dismiss(); });
+            }, TaskScheduler.Default);
+        }
+        catch (OperationCanceledException) when (!ct.IsCancellationRequested) { }
+        finally { if (_board != board || !board.IsVisible) _goTo = null; }
+    }
+
+    /// <summary>A brain that can look at a picture, or null (after saying what's missing).</summary>
+    Func<string, string, byte[], CancellationToken, Task<string>>? SeeingBrain()
+    {
+        var effort = _settings.BrainEffort;
+        switch (_settings.Brain)
+        {
+            case "claude" when _settings.ApiKey is { Length: > 0 } key:
+                var claudeModel = _settings.BrainClaudeModel;
+                return (system, q, jpeg, ct) => CloudBrains.ClaudeSeeAsync(key, claudeModel, effort, system, q, jpeg, ct);
+            case "openrouter" when _settings.OpenRouterKey is { Length: > 0 } orKey && _settings.BrainOpenRouterModel.Length > 0:
+                var orModel = _settings.BrainOpenRouterModel;
+                return (system, q, jpeg, ct) => CloudBrains.OpenRouterSeeAsync(orKey, orModel, effort, system, q, jpeg, ct);
+            case "claudecode":
+                var ccModel = _settings.BrainClaudeCodeModel;
+                return (system, q, jpeg, ct) => CliBrains.ChatAsync(CliBrains.Cli.ClaudeCode, ccModel, effort, [("system", system), ("user", q)], ct, jpeg);
+            case "codex":
+                return (system, q, jpeg, ct) => CliBrains.ChatAsync(CliBrains.Cli.Codex, null, effort, [("system", system), ("user", q)], ct, jpeg);
+            case "claude" or "openrouter":
+                Brain();   // says what's missing
+                return null;
+        }
+        Say("To see your screen I need a brain that can look at pictures: Claude, OpenRouter, Claude Code or ChatGPT. Pick one in Settings, on the Brain page.");
+        return null;
     }
 
     /// <summary>Says a line of the explanation (no bubble: the board captions it) and waits until it's said.</summary>

@@ -78,6 +78,49 @@ public static class CloudBrains
         return text.ToString();
     }
 
+    /// <summary>
+    /// One question about a picture (a screenshot of the user's screen): the image and the text
+    /// go to Claude together. Nothing is kept: the request is the only copy that leaves the PC.
+    /// </summary>
+    public static async Task<string> ClaudeSeeAsync(string apiKey, string model, string effort,
+        string system, string question, byte[] jpeg, CancellationToken ct)
+    {
+        if (_claude is null || _claudeKey != apiKey)
+        {
+            _claude = new AnthropicClient { ApiKey = apiKey };
+            _claudeKey = apiKey;
+        }
+        var request = new MessageCreateParams
+        {
+            Model = model,
+            MaxTokens = 8000,
+            System = system + "\n\nReply with the JSON object only.",
+            Messages =
+            [
+                new MessageParam
+                {
+                    Role = Role.User,
+                    Content = new List<ContentBlockParam>
+                    {
+                        new ImageBlockParam { Source = new Base64ImageSource { Data = Convert.ToBase64String(jpeg), MediaType = MediaType.ImageJpeg } },
+                        new TextBlockParam { Text = question },
+                    },
+                },
+            ],
+            OutputConfig = new OutputConfig
+            {
+                Effort = effort switch { "medium" => Effort.Medium, "high" => Effort.High, "max" => Effort.Max, _ => Effort.Low },
+            },
+        };
+        var response = await _claude.Messages.Create(request, cancellationToken: ct).ConfigureAwait(false);
+        if (response.StopReason == "refusal")
+            return """{"kind": "screen", "title": "", "nodes": [], "links": [], "steps": [{"say": "I can't help with that one.", "focus": []}]}""";
+        var text = new StringBuilder();
+        foreach (var block in response.Content)
+            if (block.TryPickText(out TextBlock? t)) text.Append(t.Text);
+        return text.ToString();
+    }
+
     // ------------------------------------------------------------------ openrouter
 
     public static async Task<string> OpenRouterAsync(string key, string model, string effort,
@@ -111,6 +154,43 @@ public static class CloudBrains
                 : response.StatusCode == HttpStatusCode.PaymentRequired
                     ? "Your OpenRouter balance is empty. Pick a free model, or add credit on openrouter.ai."
                     : "OpenRouter: " + message);
+        }
+        return (JsonNode.Parse(json) as JsonObject)?["choices"]?[0]?["message"]?["content"]?.GetValue<string>() ?? "";
+    }
+
+    /// <summary>A question about a picture, through OpenRouter (the chosen model has to read images).</summary>
+    public static async Task<string> OpenRouterSeeAsync(string key, string model, string effort,
+        string system, string question, byte[] jpeg, CancellationToken ct)
+    {
+        var body = new JsonObject
+        {
+            ["model"] = model,
+            ["max_tokens"] = 4000,
+            ["messages"] = new JsonArray(
+                new JsonObject { ["role"] = "system", ["content"] = system + "\n\nReply with the JSON object only." },
+                new JsonObject
+                {
+                    ["role"] = "user",
+                    ["content"] = new JsonArray(
+                        new JsonObject { ["type"] = "image_url", ["image_url"] = new JsonObject { ["url"] = "data:image/jpeg;base64," + Convert.ToBase64String(jpeg) } },
+                        new JsonObject { ["type"] = "text", ["text"] = question }),
+                }),
+            ["reasoning"] = new JsonObject { ["effort"] = effort == "max" ? "high" : effort, ["exclude"] = true },
+        };
+        using var request = new HttpRequestMessage(HttpMethod.Post, "https://openrouter.ai/api/v1/chat/completions")
+        {
+            Content = new StringContent(body.ToJsonString(), Encoding.UTF8, "application/json"),
+        };
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", key);
+        request.Headers.Add("X-Title", "NovaShield HUD");
+        using var response = await Http.SendAsync(request, ct).ConfigureAwait(false);
+        var json = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
+        if (!response.IsSuccessStatusCode)
+        {
+            var message = (JsonNode.Parse(json) as JsonObject)?["error"]?["message"]?.GetValue<string>() ?? response.StatusCode.ToString();
+            throw new HttpRequestException(message.Contains("image", StringComparison.OrdinalIgnoreCase) || message.Contains("modalit", StringComparison.OrdinalIgnoreCase)
+                ? "Your OpenRouter model can't see pictures. On the Brain page, pick one that can (most Gemini, Claude, GPT and Qwen-VL models)."
+                : "OpenRouter: " + message);
         }
         return (JsonNode.Parse(json) as JsonObject)?["choices"]?[0]?["message"]?["content"]?.GetValue<string>() ?? "";
     }

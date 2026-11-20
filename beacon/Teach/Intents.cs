@@ -100,6 +100,19 @@ public static partial class Intents
         return null;
     }
 
+    [GeneratedRegex(@"\b(?:on\s+(?:my|the|this)\s+screen|my\s+screen|this\s+screen|screen\s+(?:shot|is\s+showing)|what\s+am\s+i\s+looking\s+at|look\s+at\s+(?:this|that|my|the)|point\s+(?:at|to|out)|show\s+me\s+where|highlight\s+(?:the|where)|where\s+(?:do|can|should|would)\s+i\s+(?:click|find|go|press|tap|type|change|turn|set|put)|where(?:'s|\s+is)\s+the\s+\w+\s+(?:button|icon|setting|option|menu|tab|link|field)|(?:what(?:'s|\s+is|\s+does)|explain|read)\s+(?:this|that|these)\s+(?:button|icon|chart|graph|page|window|error|message|code|diagram|setting|menu|table|form|app|site|website|tab|dialog|pop-?up|screen|warning|option|toolbar|panel|report|slide|thing)|what\s+(?:is|does)\s+this\s+(?:mean|do|say|show)|help\s+me\s+with\s+this|what(?:'s|\s+is)\s+this\s*\??$|explain\s+(?:this|what's\s+on|what\s+is\s+on)\b)", RegexOptions.IgnoreCase)]
+    private static partial Regex ScreenRx();
+
+    /// <summary>A question about what's on the screen: Kai looks, then points things out.</summary>
+    public static Explain? FindScreen(string said)
+    {
+        var s = said.Trim();
+        if (s.Length < 5 || Regex.IsMatch(s, @"\b(e-?mails?|inbox)\b", RegexOptions.IgnoreCase)) return null;
+        // "Fix this", "rewrite this": the selected text, not the screen.
+        if (FindRewrite(s) is not null) return null;
+        return ScreenRx().IsMatch(s) ? new Explain(s, VisualKind.Screen) : null;
+    }
+
     /// <summary>"Close it", "thanks, got it": the drawing can go.</summary>
     public static bool IsCloseBoard(string said) =>
         Regex.IsMatch(said.Trim(), @"^(?:ok(?:ay)?[, ]+)?(?:close(?:\s+(?:it|that|the\s+(?:drawing|board|picture)))?|clear(?:\s+(?:it|the\s+screen|my\s+screen))?|got\s+it|thanks?(?:\s+you)?(?:[, ]+got\s+it)?|done|that'?s\s+(?:enough|all|it))[.!]*$", RegexOptions.IgnoreCase);

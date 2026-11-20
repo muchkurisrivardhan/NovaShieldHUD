@@ -87,9 +87,12 @@ public static class CliBrains
         return true;
     }
 
-    /// <summary>One reply from the conversation, as the text the program printed.</summary>
+    /// <summary>
+    /// One reply from the conversation, as the text the program printed. With an image (a
+    /// screenshot), Claude Code may read that one file, and Codex gets it attached.
+    /// </summary>
     public static async Task<string> ChatAsync(Cli cli, string? model, string effort,
-        IReadOnlyList<(string Role, string Content)> messages, CancellationToken ct)
+        IReadOnlyList<(string Role, string Content)> messages, CancellationToken ct, byte[]? jpeg = null)
     {
         var exe = Find(cli) ?? throw new InvalidOperationException(
             (cli == Cli.ClaudeCode ? "Claude Code" : "Codex") + " isn't installed. See Settings > Brain > Accounts.");
@@ -100,54 +103,70 @@ public static class CliBrains
             transcript.Append(role == "assistant" ? "NOVA: " : "USER: ").AppendLine(content).AppendLine();
 
         var folder = Path.Combine(Path.GetTempPath(), "NovaShield", "brain");
-        Directory.CreateDirectory(folder);   // empty: nothing for the program to read
-
-        if (cli == Cli.ClaudeCode)
+        Directory.CreateDirectory(folder);   // nothing for the program to read, but the screenshot when there is one
+        var image = Path.Combine(folder, "screen.jpg");
+        if (jpeg is not null) await File.WriteAllBytesAsync(image, jpeg, ct);
+        else File.Delete(image);
+        try
         {
-            var promptFile = Path.Combine(folder, "nova-system.txt");
-            await File.WriteAllTextAsync(promptFile, system + "\n\nThe conversation so far is on standard input. Reply to the last USER message as Nova, with the JSON object only.", ct);
-            List<string> full =
-            [
-                "-p", "Reply to the conversation on standard input, as Nova, with the JSON object only.",
-                "--output-format", "json", "--system-prompt-file", promptFile,
-                "--tools", "", "--strict-mcp-config", "--no-session-persistence", "--max-turns", "1",
-                "--safe-mode", "--effort", effort,
-            ];
-            if (!string.IsNullOrEmpty(model)) full.AddRange(["--model", model]);
-            var (code, output, error) = await RunAsync(exe, full, transcript.ToString(), ct, TimeSpan.FromMinutes(3), folder);
-            if (code != 0 && Unknown(error))
+            if (cli == Cli.ClaudeCode)
             {
-                // An older Claude Code without --safe-mode or --effort: the same run without them.
-                full.RemoveRange(full.IndexOf("--safe-mode"), 3);
-                (code, output, error) = await RunAsync(exe, full, transcript.ToString(), ct, TimeSpan.FromMinutes(3), folder);
+                var promptFile = Path.Combine(folder, "nova-system.txt");
+                var see = jpeg is not null
+                    ? "\n\nThe screenshot is the file screen.jpg in the current folder. Read it with the Read tool first; read nothing else."
+                    : "";
+                await File.WriteAllTextAsync(promptFile, system + see + "\n\nThe conversation so far is on standard input. Reply to the last USER message as Nova, with the JSON object only.", ct);
+                List<string> full =
+                [
+                    "-p", "Reply to the conversation on standard input, as Nova, with the JSON object only.",
+                    "--output-format", "json", "--system-prompt-file", promptFile,
+                    // Only the screenshot may be read, and only when there is one.
+                    "--tools", jpeg is not null ? "Read" : "", "--strict-mcp-config", "--no-session-persistence", "--max-turns", jpeg is not null ? "3" : "1",
+                    "--safe-mode", "--effort", effort,
+                ];
+                if (jpeg is not null) full.AddRange(["--allowedTools", "Read(./screen.jpg)"]);
+                if (!string.IsNullOrEmpty(model)) full.AddRange(["--model", model]);
+                var (code, output, error) = await RunAsync(exe, full, transcript.ToString(), ct, TimeSpan.FromMinutes(3), folder);
+                if (code != 0 && Unknown(error))
+                {
+                    // An older Claude Code without --safe-mode or --effort: the same run without them.
+                    full.RemoveRange(full.IndexOf("--safe-mode"), 3);
+                    (code, output, error) = await RunAsync(exe, full, transcript.ToString(), ct, TimeSpan.FromMinutes(3), folder);
+                }
+                var result = (JsonNode.Parse(output.Trim().Length > 0 ? output : "{}") as JsonObject)?["result"]?.GetValue<string>();
+                if (result is null) throw new InvalidOperationException("Claude Code didn't answer: " + Short(error.Length > 0 ? error : output));
+                if (code != 0) throw new InvalidOperationException("Claude Code: " + Short(result));
+                return result;
             }
-            var result = (JsonNode.Parse(output.Trim().Length > 0 ? output : "{}") as JsonObject)?["result"]?.GetValue<string>();
-            if (result is null) throw new InvalidOperationException("Claude Code didn't answer: " + Short(error.Length > 0 ? error : output));
-            if (code != 0) throw new InvalidOperationException("Claude Code: " + Short(result));
-            return result;
+            else
+            {
+                var answerFile = Path.Combine(folder, "nova-codex-answer.txt");
+                File.Delete(answerFile);
+                List<string> args =
+                [
+                    "exec", "--skip-git-repo-check", "--ephemeral", "--sandbox", "read-only",
+                    "-c", $"model_reasoning_effort={(effort == "max" ? "high" : effort)}",
+                    "-o", answerFile,
+                ];
+                if (!string.IsNullOrEmpty(model)) args.AddRange(["-m", model]);
+                if (jpeg is not null) args.AddRange(["-i", image]);   // the screenshot, attached
+                args.Add("-");   // the prompt comes on standard input
+                var prompt = system + "\n\nDo not run commands or use tools: only reply.\n\n" + transcript +
+                             "Reply to the last USER message as Nova, with the JSON object only.";
+                var (code, output, error) = await RunAsync(exe, args, prompt, ct, TimeSpan.FromMinutes(3), folder);
+                if (code != 0 && Unknown(error))
+                {
+                    args.RemoveRange(args.IndexOf("-c"), 2);
+                    (code, output, error) = await RunAsync(exe, args, prompt, ct, TimeSpan.FromMinutes(3), folder);
+                }
+                if (File.Exists(answerFile)) return await File.ReadAllTextAsync(answerFile, ct);
+                throw new InvalidOperationException("Codex didn't answer: " + Short(error.Length > 0 ? error : output));
+            }
         }
-        else
+        finally
         {
-            var answerFile = Path.Combine(folder, "nova-codex-answer.txt");
-            File.Delete(answerFile);
-            List<string> args =
-            [
-                "exec", "--skip-git-repo-check", "--ephemeral", "--sandbox", "read-only",
-                "-c", $"model_reasoning_effort={(effort == "max" ? "high" : effort)}",
-                "-o", answerFile,
-            ];
-            if (!string.IsNullOrEmpty(model)) args.AddRange(["-m", model]);
-            args.Add("-");   // the prompt comes on standard input
-            var prompt = system + "\n\nDo not run commands or use tools: only reply.\n\n" + transcript +
-                         "Reply to the last USER message as Nova, with the JSON object only.";
-            var (code, output, error) = await RunAsync(exe, args, prompt, ct, TimeSpan.FromMinutes(3), folder);
-            if (code != 0 && Unknown(error))
-            {
-                args.RemoveRange(args.IndexOf("-c"), 2);
-                (code, output, error) = await RunAsync(exe, args, prompt, ct, TimeSpan.FromMinutes(3), folder);
-            }
-            if (File.Exists(answerFile)) return await File.ReadAllTextAsync(answerFile, ct);
-            throw new InvalidOperationException("Codex didn't answer: " + Short(error.Length > 0 ? error : output));
+            // The screenshot doesn't stay on disk.
+            try { File.Delete(image); } catch (IOException) { }
         }
     }
 

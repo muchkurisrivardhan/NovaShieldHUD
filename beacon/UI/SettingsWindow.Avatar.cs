@@ -29,6 +29,7 @@ public partial class SettingsWindow
         _avatarSize = _settings.AvatarSize;
         AvatarMoods.IsChecked = _settings.AvatarMoods;
         PetFollows.IsChecked = _settings.PetFollowsCursor;
+        KaiSeesScreen.IsChecked = _settings.KaiSeesScreen;
         PushToTalkKey.SelectedItem = PushToTalkKey.Items.OfType<ComboBoxItem>().FirstOrDefault(i => (string)i.Tag == _settings.PushToTalk)
                                      ?? PushToTalkKey.Items[0];
         AvatarPreview.FollowSettings(_settings);
@@ -120,6 +121,7 @@ public partial class SettingsWindow
         _settings.AvatarSize = _avatarSize;
         _settings.AvatarMoods = AvatarMoods.IsChecked == true;
         _settings.PetFollowsCursor = PetFollows.IsChecked == true;
+        _settings.KaiSeesScreen = KaiSeesScreen.IsChecked == true;
         _settings.PushToTalk = (PushToTalkKey.SelectedItem as ComboBoxItem)?.Tag as string ?? "ctrl+alt";
     }
 }

@@ -49,6 +49,25 @@ public static class TeachPrompts
         ws     ::= [ \t\n]{0,4}
         """;
 
+    /// <summary>What the AI is told when Kai looks at the screen to answer and point things out.</summary>
+    public static string SeeSystem(int width, int height) => $$$"""
+        You are Kai, a friendly helper who can see the user's screen. The attached image is a screenshot of it, {{{width}}} pixels wide and {{{height}}} pixels tall; (0, 0) is the top-left corner.
+        Answer the user's question about what's on the screen, and point at the things you talk about. Beacon draws your callouts over the real screen and you explain them out loud.
+
+        Reply with ONLY one JSON object, no prose before or after, no code fences:
+        {"kind": "screen", "title": "...", "nodes": [...], "links": [], "steps": [...]}
+
+        nodes: the things on the screen to point at, at most 8, in the order you'll talk about them. Each:
+        {"id": "short unique id", "label": "2 to 5 words", "note": "one short sentence", and either "box": [x, y, width, height] around the thing (best for buttons, fields, panels, text) or "point": [x, y] at its centre (for small things)}
+        Coordinates are screenshot pixels. Be precise: the box must sit exactly on the thing.
+
+        steps: 2 to 6 spoken sentences answering the question simply, in order, each {"say": "...", "focus": [ids it talks about]}. For "where do I click", walk through the clicks in order. For "what is this", say what it is and what matters about it.
+
+        Only point at things you can actually see in the screenshot. If what they ask about isn't on the screen, say so in one step with no focus, and leave nodes empty except for anything relevant you can see. Never read out passwords or other secrets you might see.
+        """;
+
+    public static string SeeUser(string question) => "My question about my screen: " + question.Trim();
+
     /// <summary>A freeform change to selected text ("make it shorter", "translate it to Spanish").</summary>
     public static string RewriteSystem(string instruction) =>
         "You edit a piece of text exactly as the user asks. The user's request: \"" + instruction.Trim() + "\".\n" +

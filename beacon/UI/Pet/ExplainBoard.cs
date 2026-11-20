@@ -43,8 +43,12 @@ public sealed class ExplainBoard : Window
     /// <summary>Clicked: move on to the next step now.</summary>
     public event Action? Skipped;
 
-    public ExplainBoard(Settings settings, Visual visual, Rect screen)
+    readonly bool _overScreen;
+
+    /// <param name="image">For pointing at things on the screen: the screenshot's size, which callouts are measured in.</param>
+    public ExplainBoard(Settings settings, Visual visual, Rect screen, Size? image = null)
     {
+        _overScreen = visual.Kind == VisualKind.Screen;
         _settings = settings;
         var p = Suite.PaletteFor(settings);
         Color C(string key, string fallback)
@@ -75,7 +79,7 @@ public sealed class ExplainBoard : Window
         Height = screen.Height;
         FontFamily = _font;
 
-        _scene = Sketch.Layout(visual, screen.Width, screen.Height);
+        _scene = Sketch.Layout(visual, screen.Width, screen.Height, image?.Width ?? 0, image?.Height ?? 0);
         _steps = visual.Steps;
         Content = Build(visual.Title);
         foreach (var m in _scene.Marks) Add(m);
@@ -87,6 +91,19 @@ public sealed class ExplainBoard : Window
         };
         MouseRightButtonUp += (_, _) => Dismiss();
         MouseLeftButtonUp += (_, _) => Skipped?.Invoke();
+        if (_overScreen)
+        {
+            // Over the real screen: see-through and click-through, so you can do what Kai shows
+            // while Kai shows it. It never takes the keyboard either; "got it" or Ctrl+Alt+N closes it.
+            ShowActivated = false;
+            SourceInitialized += (_, _) =>
+            {
+                var hwnd = new System.Windows.Interop.WindowInteropHelper(this).Handle;
+                var ex = Interop.NativeMethods.GetWindowLongPtr(hwnd, Interop.NativeMethods.GWL_EXSTYLE).ToInt64();
+                ex |= Interop.NativeMethods.WS_EX_TOOLWINDOW | Interop.NativeMethods.WS_EX_NOACTIVATE | 0x20 /* WS_EX_TRANSPARENT */;
+                Interop.NativeMethods.SetWindowLongPtr(hwnd, Interop.NativeMethods.GWL_EXSTYLE, new IntPtr(ex));
+            };
+        }
         Opacity = 0;
         Loaded += (_, _) => BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(220)));
     }
@@ -104,6 +121,7 @@ public sealed class ExplainBoard : Window
     UIElement Build(string title)
     {
         var root = new Grid();
+        if (_overScreen) return BuildOverScreen(root, title);
 
         // The board: the style's page colour over the screen, with a faint drafting grid.
         root.Children.Add(new Rectangle { Fill = new SolidColorBrush(Color.FromArgb(0xEB, _page.R, _page.G, _page.B)) });
@@ -136,6 +154,35 @@ public sealed class ExplainBoard : Window
         corner.Children.Add(close);
         root.Children.Add(corner);
 
+        AddCaption(root);
+        return root;
+    }
+
+    /// <summary>Over the real screen: barely dimmed, the title in a small tag at the top, and the caption.</summary>
+    UIElement BuildOverScreen(Grid root, string title)
+    {
+        root.Children.Add(new Rectangle { Fill = new SolidColorBrush(Color.FromArgb(0x24, _page.R, _page.G, _page.B)) });
+        root.Children.Add(_canvas);
+        var tag = new Border
+        {
+            HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, 14, 0, 0),
+            Padding = new Thickness(16, 6, 16, 7), CornerRadius = new CornerRadius(_corner),
+            Background = new SolidColorBrush(Color.FromArgb(0xF0, _surface.R, _surface.G, _surface.B)),
+            BorderBrush = new SolidColorBrush(Color.FromArgb(0xB0, _accent.R, _accent.G, _accent.B)), BorderThickness = new Thickness(1),
+            Effect = new DropShadowEffect { Color = _accent, BlurRadius = 16, ShadowDepth = 0, Opacity = 0.4 },
+        };
+        var line = new TextBlock { FontSize = 14.5, Foreground = new SolidColorBrush(_text) };
+        line.Inlines.Add(new System.Windows.Documents.Run("Kai is looking: ") { Foreground = new SolidColorBrush(_accent) });
+        line.Inlines.Add(new System.Windows.Documents.Run(title) { FontWeight = FontWeights.SemiBold });
+        line.Inlines.Add(new System.Windows.Documents.Run("   ·   say “got it” to close") { Foreground = new SolidColorBrush(_muted), FontSize = 12.5 });
+        tag.Child = line;
+        root.Children.Add(tag);
+        AddCaption(root);
+        return root;
+    }
+
+    void AddCaption(Grid root)
+    {
         // The caption: what Kai is saying, at the bottom.
         _caption.TextWrapping = TextWrapping.Wrap;
         _caption.FontSize = 19;
@@ -161,7 +208,6 @@ public sealed class ExplainBoard : Window
         _captionPlate.Margin = new Thickness(0, 0, 0, 22);
         _captionPlate.Visibility = Visibility.Collapsed;
         root.Children.Add(_captionPlate);
-        return root;
     }
 
     // ------------------------------------------------------------------ marks to shapes

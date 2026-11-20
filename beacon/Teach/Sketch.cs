@@ -57,9 +57,10 @@ public static class Sketch
     public const int Accent = -1, Ink = -2, Muted = -3, OnAccent = -4;
     public const int Colours = 6;
 
-    public static Scene Layout(Visual v, double width, double height)
+    /// <param name="imageWidth">For Screen pictures: the screenshot's width in pixels, to place callouts on the board.</param>
+    public static Scene Layout(Visual v, double width, double height, double imageWidth = 0, double imageHeight = 0)
     {
-        var b = new Builder(v, width, height);
+        var b = new Builder(v, width, height, v.Kind == VisualKind.Screen);
         switch (v.Kind)
         {
             case VisualKind.MindMap: b.MindMap(); break;
@@ -71,6 +72,7 @@ public static class Sketch
             case VisualKind.Compare: b.Compare(); break;
             case VisualKind.Venn: b.Venn(); break;
             case VisualKind.Cutaway: b.Cutaway(); break;
+            case VisualKind.Screen: b.Callouts(imageWidth > 0 ? width / imageWidth : 1, imageHeight > 0 ? height / imageHeight : 1); break;
             default: b.Iso3D(); break;
         }
         return new Scene(v.Kind, v.Title, width, height, b.Marks, v.Steps.Count);
@@ -89,10 +91,11 @@ public static class Sketch
         readonly Dictionary<string, (P C, double W, double H)> _boxes = new(StringComparer.OrdinalIgnoreCase);
         public readonly List<Mark> Marks = [];
 
-        public Builder(Visual v, double width, double height)
+        public Builder(Visual v, double width, double height, bool overScreen = false)
         {
             _v = v;
-            (_l, _t, _r, _b) = (64, 118, width - 64, height - 96);   // room for the title above and the caption below
+            // Room for the title above and the caption below; over the screen, almost all of it.
+            (_l, _t, _r, _b) = overScreen ? (16, 64, width - 16, height - 96) : (64, 118, width - 64, height - 96);
             for (var i = 0; i < v.Steps.Count; i++)
                 foreach (var id in v.Steps[i].Focus)
                     _order.TryAdd(id, i);
@@ -607,6 +610,92 @@ public static class Sketch
             }
         }
 
+        // ---------------------------------------------------------------- callouts on the screen
+
+        /// <summary>
+        /// Pointing at things on the real screen: a ring or a box exactly on each thing, a numbered
+        /// card with its label and note beside it (on whichever side has room, clear of the
+        /// other cards), and a leader joining them.
+        /// </summary>
+        public void Callouts(double sx, double sy)
+        {
+            var placed = new List<Area>();
+            var targets = _v.Nodes.Select(n =>
+            {
+                if (n.Box is { } b)
+                {
+                    var r = new Area(b[0] * sx, b[1] * sy, Math.Max(8, b[2] * sx), Math.Max(8, b[3] * sy));
+                    return (Node: n, Centre: new P(r.X + r.W / 2, r.Y + r.H / 2), Rect: (Area?)r);
+                }
+                var p = n.Point!;
+                return (Node: n, Centre: new P(p[0] * sx, p[1] * sy), Rect: (Area?)null);
+            }).ToList();
+            // Nothing should cover what's being pointed at.
+            foreach (var t in targets)
+                placed.Add(t.Rect is { } r ? new Area(r.X - 6, r.Y - 6, r.W + 12, r.H + 12) : new Area(t.Centre.X - 30, t.Centre.Y - 30, 60, 60));
+
+            bool Free(Area c) =>
+                c.X >= _l && c.Y >= _t && c.X + c.W <= _r && c.Y + c.H <= _b &&
+                !placed.Any(o => c.X < o.X + o.W && c.X + c.W > o.X && c.Y < o.Y + o.H && c.Y + c.H > o.Y);
+
+            for (var i = 0; i < targets.Count; i++)
+            {
+                var (n, c, rect) = targets[i];
+                var ink = i % Colours;
+                var order = Order(n.Id);
+
+                // The mark on the thing itself.
+                if (rect is { } r)
+                {
+                    var pad = 5.0;
+                    P[] box = [new(r.X - pad, r.Y - pad), new(r.X + r.W + pad, r.Y - pad), new(r.X + r.W + pad, r.Y + r.H + pad), new(r.X - pad, r.Y + r.H + pad)];
+                    Marks.Add(new Mark(MarkKind.Polygon, box, ink, order) { Fill = 0.1, Stroke = 3, Node = n.Id });
+                }
+                else
+                    Marks.Add(new Mark(MarkKind.Ellipse, [c, new(26, 26)], ink, order) { Fill = 0.12, Stroke = 3, Node = n.Id });
+                var halfW = rect is { } rr ? rr.W / 2 + 5 : 26;
+                var halfH = rect is { } rh ? rh.H / 2 + 5 : 26;
+
+                // The card: right of it, else left, else below, else above; nudged down past other cards.
+                var cw = Math.Min(300, Math.Max(200, Sketch.TextWidth(n.Label, 17) + 40));
+                var ch = CardHeight(n, cw);
+                Area? spot = null;
+                foreach (var (dx, dy) in new[] { (1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (-1, 1), (1, -1), (-1, -1) })
+                {
+                    var cx = dx > 0 ? c.X + halfW + 60 : dx < 0 ? c.X - halfW - 60 - cw : c.X - cw / 2;
+                    var cy = dy > 0 ? c.Y + halfH + 50 : dy < 0 ? c.Y - halfH - 50 - ch : c.Y - ch / 2;
+                    for (var tries = 0; tries < 8 && spot is null; tries++)
+                    {
+                        var cand = new Area(Math.Clamp(cx, _l, _r - cw), Math.Clamp(cy + (ch + 12) * (tries % 2 == 0 ? 1 : -1) * ((tries + 1) / 2), _t, _b - ch), cw, ch);
+                        if (Free(cand)) spot = cand;
+                    }
+                    if (spot is not null) break;
+                }
+                var s = spot ?? new Area(Math.Clamp(c.X + halfW + 40, _l, _r - cw), Math.Clamp(c.Y - ch / 2, _t, _b - ch), cw, ch);
+                placed.Add(s);
+                var cardC = new P(s.X + cw / 2, s.Y + ch / 2);
+
+                // Leader: from the mark's edge to the card's nearest edge.
+                var to = new P(Math.Clamp(c.X, s.X, s.X + cw), Math.Clamp(c.Y, s.Y, s.Y + ch));
+                if (to.X > s.X && to.X < s.X + cw && to.Y > s.Y && to.Y < s.Y + ch) to = new P(s.X, cardC.Y);
+                var d = to - c;
+                var len = d.Length;
+                if (len > 1)
+                {
+                    var u = d * (1 / len);
+                    var from = rect is not null
+                        ? c + u * Math.Min(Math.Abs(u.X) > 1e-6 ? halfW / Math.Abs(u.X) : double.MaxValue, Math.Abs(u.Y) > 1e-6 ? halfH / Math.Abs(u.Y) : double.MaxValue)
+                        : c + u * 26;
+                    Marks.Add(new Mark(MarkKind.Line, [from, to], ink, order) { Stroke = 2.5, Node = n.Id });
+                }
+                Card(n, cardC, cw, ink, 0.22);
+                // The number, so "first click here, then there" reads at a glance.
+                var badge = new P(s.X + 2, s.Y + 2);
+                Marks.Add(new Mark(MarkKind.Ellipse, [badge, new(14, 14)], ink, order) { Fill = 1, Stroke = 0, Node = n.Id });
+                Marks.Add(new Mark(MarkKind.Text, [badge], OnAccent, order) { Text = (i + 1).ToString(), Size = 13, Bold = true, Node = n.Id });
+            }
+        }
+
         // ---------------------------------------------------------------- 3D illustration
 
         public void Iso3D()
@@ -721,6 +810,8 @@ public static class Sketch
                 yy += h + 12;
             }
         }
+
+        readonly record struct Area(double X, double Y, double W, double H);
 
         static IEnumerable<(double x, double y, double z)> Corners(double[] at, double[] size)
         {

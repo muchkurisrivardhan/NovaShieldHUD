@@ -3,14 +3,21 @@ using System.Text.Json;
 namespace Beacon.Teach;
 
 /// <summary>The kinds of picture Kai can draw on the screen.</summary>
-public enum VisualKind { MindMap, ConceptMap, Timeline, Flow, Cycle, Hierarchy, Compare, Venn, Cutaway, Iso3D }
+public enum VisualKind { MindMap, ConceptMap, Timeline, Flow, Cycle, Hierarchy, Compare, Venn, Cutaway, Iso3D, Screen }
 
 /// <summary>
 /// One thing in a picture. Which fields matter depends on the kind: Parent for mind maps and
 /// trees, When for timelines, Group for comparison columns and Venn regions, Shape/At/Size for
 /// the parts of a 3D illustration.
 /// </summary>
-public sealed record VNode(string Id, string Label, string Note, string Parent, string Group, string When, string Shape, double[]? At, double[]? Size);
+public sealed record VNode(string Id, string Label, string Note, string Parent, string Group, string When, string Shape, double[]? At, double[]? Size)
+{
+    /// <summary>On the screen (Screen pictures): a spot [x, y] in screenshot pixels.</summary>
+    public double[]? Point { get; init; }
+
+    /// <summary>On the screen: an area [x, y, width, height] in screenshot pixels.</summary>
+    public double[]? Box { get; init; }
+}
 
 public sealed record VLink(string From, string To, string Label);
 
@@ -64,9 +71,13 @@ public sealed record Visual(VisualKind Kind, string Title, List<VNode> Nodes, Li
                     ids.Add(id);
                     nodes.Add(new VNode(id, label, Clip(Str(n, "note", "description", "detail"), 140), Str(n, "parent"),
                         Clip(Str(n, "group", "set", "column"), 32), Clip(Str(n, "when", "date", "time", "year"), 24),
-                        Str(n, "shape").ToLowerInvariant(), Vec(n, "at", "position"), Vec(n, "size")));
+                        Str(n, "shape").ToLowerInvariant(), Vec(n, "at", "position"), Vec(n, "size"))
+                    {
+                        Point = Nums(n, 2, "point", "at", "position"),
+                        Box = Nums(n, 4, "box", "area", "rect"),
+                    });
                 }
-            if (nodes.Count == 0) return null;
+            if (nodes.Count == 0 && kind != VisualKind.Screen) return null;
 
             // Parents that don't exist are dropped (the node hangs off the root instead).
             nodes = [.. nodes.Select(n => n.Parent.Length > 0 && !ids.Contains(n.Parent) || n.Parent == n.Id ? n with { Parent = "" } : n)];
@@ -101,7 +112,15 @@ public sealed record Visual(VisualKind Kind, string Title, List<VNode> Nodes, Li
                 foreach (var n in nodes.Take(MaxSteps - 1))
                     steps.Add(new VStep(n.Note.Length > 0 ? $"{n.Label}: {n.Note}" : n.Label + ".", [n.Id]));
             }
-            if (title.Length == 0) title = nodes[0].Label;
+            if (kind == VisualKind.Screen)
+            {
+                // Things on the screen must say where they are; anything else can't be pointed at.
+                nodes = [.. nodes.Where(n => n.Point is not null || n.Box is not null)];
+                if (nodes.Count == 0 && steps.Count == 0) return null;
+                var kept = new HashSet<string>(nodes.Select(n => n.Id), StringComparer.OrdinalIgnoreCase);
+                steps = [.. steps.Select(s => s with { Focus = [.. s.Focus.Where(kept.Contains)] })];
+            }
+            if (title.Length == 0) title = nodes.Count > 0 ? nodes[0].Label : "On your screen";
             return new Visual(kind, title, nodes, links, steps);
         }
     }
@@ -135,6 +154,7 @@ public sealed record Visual(VisualKind Kind, string Title, List<VNode> Nodes, Li
         VisualKind.Compare => "compare",
         VisualKind.Venn => "venn",
         VisualKind.Cutaway => "cutaway",
+        VisualKind.Screen => "screen",
         _ => "3d",
     };
 
@@ -154,6 +174,7 @@ public sealed record Visual(VisualKind Kind, string Title, List<VNode> Nodes, Li
             "venn" or "overlap" => VisualKind.Venn,
             "cutaway" or "crosssection" or "layers" or "section" => VisualKind.Cutaway,
             "3d" or "iso3d" or "isometric" or "illustration" or "3dillustration" => VisualKind.Iso3D,
+            "screen" or "callouts" or "callout" or "pointing" or "annotations" => VisualKind.Screen,
             _ => null,
         };
     }
@@ -169,6 +190,18 @@ public sealed record Visual(VisualKind Kind, string Title, List<VNode> Nodes, Li
                     _ => "",
                 };
         return "";
+    }
+
+    /// <summary>Exactly `count` finite non-negative numbers (screen positions), or null.</summary>
+    static double[]? Nums(JsonElement e, int count, params string[] names)
+    {
+        foreach (var name in names)
+            if (e.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.Array)
+            {
+                var nums = v.EnumerateArray().Where(x => x.ValueKind == JsonValueKind.Number).Select(x => x.GetDouble()).ToArray();
+                if (nums.Length == count && nums.All(x => double.IsFinite(x) && x >= 0)) return nums;
+            }
+        return null;
     }
 
     static double[]? Vec(JsonElement e, params string[] names)

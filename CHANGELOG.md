@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### 2026-11-20 (Kai sees the screen)
+- **Kai can look at your screen and point at things.** Ask "what's this?", "where do I click to turn on backups?", "what does this error mean?", "explain this chart" or "look at my screen". Kai takes a screenshot of the screen your pointer is on (stepping out of the picture), has your brain look at it, then circles or boxes the right things on your **real** screen with numbered labels, and walks over to each one while explaining. The overlay is see-through and click-through, so you can follow along and click while Kai shows you; say "got it" (or Ctrl+Alt+N) to clear it, or it fades by itself.
+- Works with Claude (API key), OpenRouter (a model that can see images), Claude Code (it may read only the screenshot) and ChatGPT through Codex (attached). The model on this PC can't see, so Kai says so. Only on such a request, never saved; turn it off in Settings > Avatar ("Let Kai look at my screen").
+
 ### 2026-11-20 (Kai teaches and rewrites)
 - **Kai explains by drawing on your screen.** Say "explain…", "draw…", "how does … work", or name a picture: **mind map**, **concept map** (relationships), **timeline**, **process flow**, **cycle**, **hierarchy**, **compare**, **Venn**, **cutaway** or **3D illustration**. The screen dims into a sketchboard in your Beacon style, and Kai draws the picture part by part while talking it through: lines sketch themselves in, cards pop in, the part being explained glows while the rest steps back, and a caption shows what Kai is saying. Click for the next step, say "tell me more about…" to go deeper, and "got it", Esc or right-click to close.
 - The AI only describes the picture, as checked data (never code); Beacon lays it out and draws it. Works with every brain; on this PC the model is held to the exact shape by grammar.
