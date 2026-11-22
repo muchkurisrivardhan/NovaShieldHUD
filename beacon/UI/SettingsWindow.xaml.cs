@@ -153,6 +153,7 @@ public partial class SettingsWindow : Window
             new("Brain", "\uE9D9", PageBrain),
             new("Nova Assistant", "\uE720", PageAssistant),
             new("Avatar", "\uE77B", PageAvatar),
+            new("Drawing", "\uE70F", PageDrawing),
             new("Voice", "\uE767", PageVoice),
             new("Connectors", "\uE71B", PageConnectors),
             new("Plain English", "\uE8F2", PageAi),
@@ -274,6 +275,7 @@ public partial class SettingsWindow : Window
         InitAssistantPage();
         InitBrainPage();
         InitAvatarPage();
+        InitDrawingPage();
 
         ModelPicker.SelectionChanged += (_, _) =>
         {
@@ -536,6 +538,7 @@ public partial class SettingsWindow : Window
         LoadAssistantPage();
         LoadBrainPage();
         LoadAvatarPage();
+        LoadDrawingPage();
         LaunchDotline.IsChecked = _settings.LaunchDotline;
         var dot = Suite.ReadDotline();
         DotBirthday.Text = dot.Birthday?.ToString("yyyy-MM-dd") ?? "";
@@ -1061,6 +1064,7 @@ public partial class SettingsWindow : Window
         SaveAssistantPage();
         SaveBrainPage();
         SaveAvatarPage();
+        SaveDrawingPage();
         if (VoiceDevice.SelectedItem is DeviceChoice device) _settings.VoiceDevice = device.Index;
 
         _settings.FaviconMode = TagOf(FaviconMode) ?? "direct";

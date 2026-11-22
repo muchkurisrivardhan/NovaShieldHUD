@@ -165,8 +165,41 @@ public sealed class PetWindow : Window
         _work?.Cancel();
     }
 
-    /// <summary>A quick tap of the talk key: like Ctrl+M, listening hands-free until a pause.</summary>
-    public void TalkTap(IntPtr target) => Summon(target);
+    QuickAskBox? _ask;
+
+    /// <summary>
+    /// A quick tap of the talk key: the quick-ask box opens beside Kai, to type to the AI
+    /// (Settings > Avatar can make a tap listen hands-free instead, like Ctrl+M).
+    /// </summary>
+    public void TalkTap(IntPtr target)
+    {
+        if (_settings.TalkTap == "listen") { Summon(target); return; }
+        if (_ask is not null) { _ask.Activate(); return; }
+        Appear(target);
+        if (_pet.State == NovaPet3D.Activity.Listening) _work?.Cancel();
+        HideBubble();
+        var box = _ask = new QuickAskBox(_settings);
+        box.PlaceBeside(new Rect(Left + (Width - _petSize) / 2, Top + Height - _petSize, _petSize, _petSize));
+        void Back() { if (_target[0] != IntPtr.Zero) NativeMethods.SetForegroundWindow(_target[0]); }
+        box.Closed += (_, _) => { if (_ask == box) _ask = null; };
+        box.Sent += text => { Back(); _ = HandleAsync(text); };
+        box.Talk += () => { Back(); _ = ListenAsync(); };
+        box.Cancelled += Back;
+        box.Show();
+        _pet.State = NovaPet3D.Activity.Listening;
+        _pet.Level = 0;
+        box.Closed += (_, _) => { if (_pet.State == NovaPet3D.Activity.Listening && !_busy) _pet.State = NovaPet3D.Activity.Idle; };
+    }
+
+    /// <summary>
+    /// Typed to Kai from elsewhere (the launcher's "?" row when there's no API key): Kai comes
+    /// and answers with the brain chosen in Settings > Brain, your subscription included.
+    /// </summary>
+    public void Ask(string text, IntPtr target)
+    {
+        Appear(target);
+        _ = HandleAsync(text);
+    }
 
     /// <summary>Ctrl+Alt+N or right-click: gone from the screen, everything stopped.</summary>
     public void Dismiss()
@@ -179,6 +212,7 @@ public sealed class PetWindow : Window
         _pet.State = NovaPet3D.Activity.Idle;
         _pill.FadeOut(now: true);
         _board?.Dismiss();
+        _ask?.Close();
         HideBubble();
         Hide();
     }
@@ -223,7 +257,7 @@ public sealed class PetWindow : Window
             _pet.Walk = Math.Clamp(step / 10, -1, 1);
         }
         // Follow when the pointer wanders off; stay put when it comes near, so it can be petted.
-        else if (_settings.PetFollowsCursor && (cursor - petCenter).Length > _petSize * 1.4)
+        else if (_settings.PetFollowsCursor && _ask is null && (cursor - petCenter).Length > _petSize * 1.4)
         {
             var target = Beside(cursor);
             var step = (target.X - _pos.X) * 0.12;
@@ -509,7 +543,10 @@ public sealed class PetWindow : Window
     /// </summary>
     async Task ExplainAsync(Intents.Explain ask, CancellationToken ct)
     {
-        if (Brain(TeachPrompts.DrawGbnf, 1600) is not { } brain) return;
+        if (Brain(TeachPrompts.DrawGbnf, _settings.DrawDetail == "detailed" ? 2200 : 1600) is not { } brain) return;
+        // The question names no kind: the one picked in Settings > Drawing, if any.
+        if (ask.Kind is null && _settings.DrawKind != "auto" && Visual.KindFrom(_settings.DrawKind) is { } preferred)
+            ask = ask with { Kind = preferred };
         Say(ask.Kind switch
         {
             VisualKind.MindMap => "Let me map that out.",
@@ -519,7 +556,8 @@ public sealed class PetWindow : Window
             _ => "Let me draw that for you.",
         });
         _pet.State = NovaPet3D.Activity.Thinking;
-        var reply = await Task.Run(() => brain([("system", TeachPrompts.DrawSystem), ("user", TeachPrompts.DrawUser(ask.Question, ask.Kind))], ct), ct);
+        var system = TeachPrompts.DrawSystemFor(_settings.DrawDetail, _settings.DrawInstructions);
+        var reply = await Task.Run(() => brain([("system", system), ("user", TeachPrompts.DrawUser(ask.Question, ask.Kind))], ct), ct);
         if (Visual.Parse(reply, ask.Kind) is not { } visual)
         {
             Say("Sorry, I couldn't work out a drawing for that. Could you ask it a little differently?");
@@ -527,22 +565,29 @@ public sealed class PetWindow : Window
         }
         _brain.Remember(ask.Question, $"I drew a {Visual.Name(visual.Kind)} of {visual.Title} on the screen and explained it.");
 
-        // Take over the screen the pointer is on.
+        // The drawing panel, in the corner of the screen the pointer is on (Settings > Drawing).
         _board?.Dismiss();
-        var board = _board = new ExplainBoard(_settings, visual, ScreenDip());
+        var board = _board = new ExplainBoard(_settings, visual, ScreenDip(), null, WorkDip());
         _boardTopic = visual.Title;
         using var closed = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        TaskCompletionSource? skip = null;
         board.Dismissed += () =>
         {
             closed.Cancel();
             _voice.SpeakAsyncCancelAll();
+            _goTo = null;
             if (_target[0] != IntPtr.Zero) NativeMethods.SetForegroundWindow(_target[0]);   // back to your app
         };
-        board.Skipped += () => _voice.SpeakAsyncCancelAll();
+        board.Skipped += () => { _voice.SpeakAsyncCancelAll(); skip?.TrySetResult(); };
         board.Show();
         board.Activate();   // so Esc reaches it
         Topmost = false;    // Kai stays in front of the board
         Topmost = true;
+        // Kai walks over beside the panel (not over it) and presents from there.
+        if (_settings.DrawPlace != "full")
+            _goTo = board.Left + board.Width / 2 < ScreenDip().Left + ScreenDip().Width / 2
+                ? new Point(board.Left + board.Width + 6, board.Top + board.Height - _petSize - 20)
+                : new Point(board.Left - _petSize - 60, board.Top + board.Height - _petSize - 20);
 
         try
         {
@@ -550,12 +595,26 @@ public sealed class PetWindow : Window
             for (var i = 0; i < visual.Steps.Count; i++)
             {
                 board.Step(i);
-                await SpeakAndWaitAsync(visual.Steps[i].Say, closed.Token);
+                if (_settings.DrawNarrate) await SpeakAndWaitAsync(visual.Steps[i].Say, closed.Token);
+                else
+                {
+                    // Not read aloud: long enough to read the caption, or until a click.
+                    skip = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+                    var words = visual.Steps[i].Say.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length;
+                    await Task.WhenAny(skip.Task, Task.Delay(TimeSpan.FromSeconds(Math.Clamp(words * 0.38, 2.5, 12)), closed.Token));
+                    closed.Token.ThrowIfCancellationRequested();
+                }
             }
             board.Finish(visual.Title);
             Say("Want me to go deeper into any part? Say “got it” when you're done.");
+            if (_settings.DrawCloseAfter > 0)
+                _ = Task.Delay(TimeSpan.FromSeconds(_settings.DrawCloseAfter), closed.Token).ContinueWith(t =>
+                {
+                    if (!t.IsCanceled) Dispatcher.BeginInvoke(() => { if (_board == board) board.Dismiss(); });
+                }, TaskScheduler.Default);
         }
         catch (OperationCanceledException) when (!ct.IsCancellationRequested) { }   // the board was closed
+        finally { if (!board.IsVisible) _goTo = null; }
     }
 
     // ------------------------------------------------------------------ looking at the screen
@@ -673,6 +732,15 @@ public sealed class PetWindow : Window
     }
 
     /// <summary>The screen the pointer is on, in this window's units.</summary>
+    /// <summary>The work area (screen without the taskbar) of the monitor the pointer is on, in this window's units.</summary>
+    Rect WorkDip()
+    {
+        var px = System.Windows.Forms.Cursor.Position;
+        var b = System.Windows.Forms.Screen.FromPoint(px).WorkingArea;
+        var m = PresentationSource.FromVisual(this)?.CompositionTarget.TransformFromDevice ?? Matrix.Identity;
+        return new Rect(m.Transform(new Point(b.Left, b.Top)), m.Transform(new Point(b.Right, b.Bottom)));
+    }
+
     Rect ScreenDip()
     {
         var px = System.Windows.Forms.Cursor.Position;

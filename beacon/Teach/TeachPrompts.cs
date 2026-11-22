@@ -28,6 +28,26 @@ public static class TeachPrompts
         Be accurate. If you're not sure of a fact, leave it out.
         """;
 
+    /// <summary>
+    /// The drawing instructions with the user's Drawing settings: how detailed ("brief",
+    /// "normal", "detailed") and their own instructions, which come last so they win.
+    /// </summary>
+    public static string DrawSystemFor(string detail, string? custom)
+    {
+        var s = detail switch
+        {
+            "brief" => DrawSystem.Replace("Use at most 14 nodes.", "Keep it brief: at most 6 nodes.")
+                                 .Replace("steps: 3 to 7 spoken sentences", "steps: 2 to 4 short spoken sentences"),
+            "detailed" => DrawSystem.Replace("Use at most 14 nodes.", "Be thorough: 10 to 16 nodes.")
+                                    .Replace("steps: 3 to 7 spoken sentences", "steps: 5 to 9 spoken sentences"),
+            _ => DrawSystem,
+        };
+        if (custom?.Trim() is { Length: > 0 } c)
+            s += "\n\nThe user's own instructions for every drawing (follow them unless they break the JSON shape above):\n" +
+                 (c.Length > 1500 ? c[..1500] : c);
+        return s;
+    }
+
     public static string DrawUser(string question, VisualKind? kind) =>
         "Draw and explain: " + question.Trim() +
         (kind is { } k ? $"\nUse kind \"{Visual.Name(k)}\"." : "");
@@ -36,14 +56,14 @@ public static class TeachPrompts
     public const string DrawGbnf = """
         root   ::= "{" ws "\"kind\":" ws kind "," ws "\"title\":" ws string "," ws "\"nodes\":" ws nodes "," ws "\"links\":" ws links "," ws "\"steps\":" ws steps ws "}"
         kind   ::= "\"mindmap\"" | "\"conceptmap\"" | "\"timeline\"" | "\"flow\"" | "\"cycle\"" | "\"hierarchy\"" | "\"compare\"" | "\"venn\"" | "\"cutaway\"" | "\"3d\""
-        nodes  ::= "[" ws node ( ws "," ws node ){0,13} ws "]"
+        nodes  ::= "[" ws node ( ws "," ws node ){0,15} ws "]"
         node   ::= "{" ws "\"id\":" ws string "," ws "\"label\":" ws string ( ws "," ws field ){0,6} ws "}"
         field  ::= ( "\"note\"" | "\"parent\"" | "\"group\"" | "\"when\"" | "\"shape\"" ) ws ":" ws string | ( "\"at\"" | "\"size\"" ) ws ":" ws vec
         vec    ::= "[" ws num ws "," ws num ws "," ws num ws "]"
         num    ::= "-"? [0-9] [0-9]? ( "." [0-9] [0-9]? )?
         links  ::= "[" ws ( link ( ws "," ws link ){0,15} )? ws "]"
         link   ::= "{" ws "\"from\":" ws string "," ws "\"to\":" ws string ( ws "," ws "\"label\":" ws string )? ws "}"
-        steps  ::= "[" ws step ( ws "," ws step ){0,7} ws "]"
+        steps  ::= "[" ws step ( ws "," ws step ){0,9} ws "]"
         step   ::= "{" ws "\"say\":" ws string "," ws "\"focus\":" ws "[" ws ( string ( ws "," ws string )* )? ws "]" ws "}"
         string ::= "\"" ( [^"\\\x7F\x00-\x1F] | "\\" ["\\/bfnrt] ){0,300} "\""
         ws     ::= [ \t\n]{0,4}

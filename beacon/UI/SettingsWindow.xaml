@@ -717,7 +717,13 @@
                     <Border Style="{StaticResource Card}">
                         <StackPanel>
                             <TextBlock Text="Launcher style" Style="{StaticResource GroupHeader}" />
-                            <ComboBox x:Name="ThemePicker" Width="300" HorizontalAlignment="Left">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel>
+                            <ComboBox x:Name="ThemePicker" Width="270" HorizontalAlignment="Left">
                                 <ComboBoxItem Content="Tactical — gunmetal and amber" Tag="tactical" />
                                 <ComboBoxItem Content="HUD — cyan holographic" Tag="hud" />
                                 <ComboBoxItem Content="Classic — clean and minimal" Tag="classic" />
@@ -725,8 +731,17 @@
                                 <ComboBoxItem Content="Retro CRT — phosphor green terminal" Tag="crt" />
                                 <ComboBoxItem Content="Minimal mono — black, white and grey" Tag="mono" />
                             </ComboBox>
-                            <TextBlock Style="{StaticResource Caption}"
-                                       Text="Tactical: machined grey panels, amber stripes, an emblem header with the time and date. HUD: glowing cyan lines, scanlines and a power-up sweep. Cyberpunk: the HUD frame in hot pink on deep violet. Retro CRT: green-screen terminal, monospace text. Minimal mono: Classic with the colour taken out. Dotline's widgets follow the same style. Each uses your accent colour below if you pick one." />
+                            <TextBlock Style="{StaticResource Caption}" Width="270" HorizontalAlignment="Left"
+                                       Text="Tactical: machined grey panels, amber stripes, an emblem header with the time and date. HUD: glowing cyan lines, scanlines and a power-up sweep. Cyberpunk: the HUD frame in hot pink on deep violet. Retro CRT: green-screen terminal, monospace text. Minimal mono: Classic with the colour taken out. Dotline, Filee, Kai and Kai's drawings follow the same style. Each uses your accent colour below if you pick one." />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Margin="20,0,0,0">
+                                    <TextBlock Text="Preview" Style="{StaticResource Label}" />
+                                    <Border CornerRadius="8" Background="#FF0B0C0E" Padding="12" ClipToBounds="True">
+                                        <ContentControl x:Name="StylePreview" Height="200" />
+                                    </Border>
+                                    <TextBlock Style="{StaticResource Caption}" Text="Changes as you pick a style or an accent colour; nothing changes for real until you save." />
+                                </StackPanel>
+                            </Grid>
                         </StackPanel>
                     </Border>
 
@@ -1444,20 +1459,121 @@
                                 <ComboBoxItem Tag="rctrl" Content="Hold Right Ctrl" />
                                 <ComboBoxItem Tag="off" Content="Off" />
                             </ComboBox>
+                            <TextBlock Text="A quick tap of it" Style="{StaticResource Label}" Margin="0,12,0,6" />
+                            <ComboBox x:Name="TalkTapMode" Width="300" HorizontalAlignment="Left">
+                                <ComboBoxItem Tag="type" Content="Opens a box to type to Kai" />
+                                <ComboBoxItem Tag="listen" Content="Listens hands-free" />
+                            </ComboBox>
                             <TextBlock Style="{StaticResource Caption}"
-                                       Text="Hold it and talk; let go to send. A quick tap listens hands-free until you pause. While Nova listens, a Listening pill rides beside your cursor, moving with your voice. Pressing another key while holding it (Ctrl+Alt+N, say) cancels, so your shortcuts still work. AltGr never starts talking." />
+                                       Text="Hold it and talk; let go to send. A quick tap opens a small box beside Kai: type, press Enter, and your brain answers (Esc closes it; its mic button talks instead). Or set a tap to listen hands-free until you pause. While Nova listens, a Listening pill rides beside your cursor, moving with your voice. Pressing another key while holding it (Ctrl+Alt+N, say) cancels, so your shortcuts still work. AltGr never starts talking." />
                             <CheckBox x:Name="KaiSeesScreen" Margin="0,14,0,0" Content="Let Kai look at my screen when I ask about it" />
                             <TextBlock Style="{StaticResource Caption}"
                                        Text="“What's this?”, “where do I click to…?”, “explain this chart”: Kai takes a screenshot of the screen your pointer is on, sends it to your brain (Claude, OpenRouter, Claude Code or ChatGPT; not the model on this PC, which can't see), then points at the answer on your real screen. Only when you ask; the screenshot isn't saved." />
                             <TextBlock Text="With Nova on screen" Style="{StaticResource GroupHeader}" Margin="0,16,0,6" />
                             <TextBlock TextWrapping="Wrap" Foreground="{StaticResource TextSecondary}" FontSize="12.5" LineHeight="19">
-                                <Run FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" Text="Ctrl+M" />, a tap of the talk key, or click Kai: listen hands-free (again).<LineBreak />
+                                <Run FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" Text="Ctrl+M" /> or click Kai: listen hands-free (again). A tap of the talk key: type to Kai.<LineBreak />
                                 <Run FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" Text="Right-click" />, <Run FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" Text="Ctrl+Alt+N" />, or say “bye”: it leaves.<LineBreak />
                                 Change the keys on the Shortcuts page: “Call Nova” and “Send Nova Away”.<LineBreak /><LineBreak />
                                 <Run FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" Text="Rewrite selected text" />: select it, then say “fix it”, “rewrite it” (the prompt ring opens), “rewrite it as a research prompt”, “make it shorter” or “translate it to Spanish”. Ctrl+Z undoes it.<LineBreak />
                                 <Run FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" Text="Ask about your screen" />: “what's this?”, “where do I click to turn on backups?”, “what does this error mean?”. Kai circles the right things on your screen and walks over to each; you can keep clicking while it shows you.<LineBreak />
-                                <Run FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" Text="Learn by drawing" />: say “explain…”, “draw a mind map of…”, “timeline of…”, “cutaway of…”, “3D illustration of…”, “compare X and Y”. Kai draws it over your screen and talks it through. Click for the next step, “tell me more about…” to go deeper, “got it” or Esc to close.
+                                <Run FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" Text="Learn by drawing" />: say “explain…”, “draw a mind map of…”, “timeline of…”, “cutaway of…”, “3D illustration of…”, “compare X and Y”. Kai draws it in a panel in the corner of your screen (the Drawing page sets where, how big and how it looks) and talks it through. Click for the next step, “tell me more about…” to go deeper, “got it” or Esc to close.
                             </TextBlock>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <!-- ========================== Drawing ========================= -->
+                <StackPanel x:Name="PageDrawing" Visibility="Collapsed">
+                    <TextBlock Text="Drawing" Style="{StaticResource PageTitle}" />
+                    <TextBlock Style="{StaticResource PageSubtitle}"
+                               Text="When you ask Kai to explain something (“explain how vaccines work”, “mind map of…”, “timeline of…”, “cutaway of…”), Kai draws it in a panel and talks it through. It wears your launcher style. Set here where it goes, how it looks and what Kai draws." />
+
+                    <Border Style="{StaticResource Card}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <TextBlock Text="Where Kai draws" Style="{StaticResource GroupHeader}" />
+                                <WrapPanel x:Name="DrawPlaces" Margin="0,0,0,10" MaxWidth="330" />
+                                <TextBlock Text="Panel width" Style="{StaticResource Label}" />
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                    <Slider x:Name="DrawWidth" Minimum="0.3" Maximum="0.9" TickFrequency="0.05" IsSnapToTickEnabled="True" Width="220" />
+                                    <TextBlock x:Name="DrawWidthValue" Margin="12,0,0,0" VerticalAlignment="Center" Foreground="{StaticResource TextSecondary}" />
+                                </StackPanel>
+                                <TextBlock Text="Panel height" Style="{StaticResource Label}" />
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                    <Slider x:Name="DrawHeight" Minimum="0.35" Maximum="1" TickFrequency="0.05" IsSnapToTickEnabled="True" Width="220" />
+                                    <TextBlock x:Name="DrawHeightValue" Margin="12,0,0,0" VerticalAlignment="Center" Foreground="{StaticResource TextSecondary}" />
+                                </StackPanel>
+                                <TextBlock Text="Background" Style="{StaticResource Label}" />
+                                <StackPanel Orientation="Horizontal">
+                                    <Slider x:Name="DrawOpacity" Minimum="0.6" Maximum="1" TickFrequency="0.02" IsSnapToTickEnabled="True" Width="220" />
+                                    <TextBlock x:Name="DrawOpacityValue" Margin="12,0,0,0" VerticalAlignment="Center" Foreground="{StaticResource TextSecondary}" />
+                                </StackPanel>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Margin="20,0,0,0">
+                                <TextBlock Text="On your screen" Style="{StaticResource Label}" />
+                                <Border CornerRadius="8" Background="#FF0B0C0E" Padding="10">
+                                    <ContentControl x:Name="DrawPreview" Height="190" />
+                                </Border>
+                                <Button x:Name="DrawTry" Content="Try a sample drawing" HorizontalAlignment="Left" Margin="0,10,0,0" Padding="14,6" />
+                                <TextBlock Style="{StaticResource Caption}" Text="Uses the settings on this page as they are now, saved or not. You can also drag the panel by its header and resize it from its corner; the drawing re-fits." />
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <TextBlock Text="Look" Style="{StaticResource GroupHeader}" />
+                            <TextBlock Text="Lines" Style="{StaticResource Label}" />
+                            <WrapPanel x:Name="DrawStyles" Margin="0,0,0,10" />
+                            <TextBlock Text="Drawing speed" Style="{StaticResource Label}" />
+                            <WrapPanel x:Name="DrawSpeeds" Margin="0,0,0,10" />
+                            <CheckBox x:Name="DrawGrid" Content="Faint drafting grid behind the drawing" />
+                            <CheckBox x:Name="DrawCaptions" Margin="0,8,0,0" Content="Show what Kai says as a caption" />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <TextBlock Text="What Kai draws" Style="{StaticResource GroupHeader}" />
+                            <TextBlock Text="Detail" Style="{StaticResource Label}" />
+                            <WrapPanel x:Name="DrawDetails" Margin="0,0,0,10" />
+                            <TextBlock Text="When the question doesn't say what kind of picture" Style="{StaticResource Label}" />
+                            <ComboBox x:Name="DrawKind" Width="300" HorizontalAlignment="Left" Margin="0,0,0,10">
+                                <ComboBoxItem Tag="auto" Content="Kai picks the best kind" />
+                                <ComboBoxItem Tag="mindmap" Content="Mind map" />
+                                <ComboBoxItem Tag="conceptmap" Content="Concept map (relationships)" />
+                                <ComboBoxItem Tag="timeline" Content="Timeline" />
+                                <ComboBoxItem Tag="flow" Content="Process / flow" />
+                                <ComboBoxItem Tag="cycle" Content="Cycle" />
+                                <ComboBoxItem Tag="hierarchy" Content="Hierarchy / tree" />
+                                <ComboBoxItem Tag="compare" Content="Side-by-side comparison" />
+                                <ComboBoxItem Tag="venn" Content="Venn diagram" />
+                                <ComboBoxItem Tag="cutaway" Content="Cutaway" />
+                                <ComboBoxItem Tag="3d" Content="3D illustration" />
+                            </ComboBox>
+                            <CheckBox x:Name="DrawNarrate" Content="Kai explains each step out loud" />
+                            <TextBlock Style="{StaticResource Caption}" Text="Off: the steps move on by themselves after you've had time to read them, or when you click." />
+                            <TextBlock Text="Close the drawing" Style="{StaticResource Label}" Margin="0,12,0,6" />
+                            <ComboBox x:Name="DrawCloseAfter" Width="300" HorizontalAlignment="Left">
+                                <ComboBoxItem Tag="0" Content="When I close it" />
+                                <ComboBoxItem Tag="15" Content="15 seconds after the last step" />
+                                <ComboBoxItem Tag="30" Content="30 seconds after the last step" />
+                                <ComboBoxItem Tag="60" Content="A minute after the last step" />
+                            </ComboBox>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <TextBlock Text="Your instructions" Style="{StaticResource GroupHeader}" />
+                            <TextBox x:Name="DrawInstructions" Height="110" AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" />
+                            <TextBlock Style="{StaticResource Caption}"
+                                       Text="Told to Kai with every drawing. For example: “Explain like I'm 12.” “Always add one real-world example.” “Prefer mind maps for science.” “Labels in Spanish.” “Keep notes under 8 words.”" />
+                            <WrapPanel x:Name="DrawInstructionSamples" Margin="0,8,0,0" />
                         </StackPanel>
                     </Border>
                 </StackPanel>

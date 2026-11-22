@@ -24,6 +24,13 @@ public sealed class AiProvider : IResultProvider
     /// </summary>
     public event Func<string, Task>? Requested;
 
+    /// <summary>
+    /// Raised instead when the ask goes to Kai and the brain chosen in Settings > Brain (your
+    /// Claude or ChatGPT subscription, OpenRouter, or the model on this PC): the prompt and the
+    /// window that was in front.
+    /// </summary>
+    public event Action<string, IntPtr>? HandOff;
+
     public AiProvider(AiPlanner planner, Settings settings)
     {
         _planner = planner;
@@ -41,6 +48,7 @@ public sealed class AiProvider : IResultProvider
         var explicitAsk = query.Text.StartsWith(Prefix, StringComparison.Ordinal);
         var prompt = explicitAsk ? query.Text[Prefix.Length..].Trim() : query.Text;
 
+        var viaBrain = UsesBrain(_planner, _settings);
         if (prompt.Length == 0)
         {
             return Task.FromResult<IReadOnlyList<SearchResult>>(explicitAsk
@@ -48,8 +56,10 @@ public sealed class AiProvider : IResultProvider
                 [
                     new SearchResult
                     {
-                        Title = "Ask Claude to do something",
-                        Subtitle = "Type an instruction, e.g. \"snap this left and mute the volume\"",
+                        Title = viaBrain ? "Ask Kai to do something" : "Ask Claude to do something",
+                        Subtitle = viaBrain
+                            ? $"Answered by {BrainLabel(_settings)}. Type an instruction or a question"
+                            : "Type an instruction, e.g. \"snap this left and mute the volume\"",
                         Source = "AI",
                         Glyph = "",
                         Score = 1200,
@@ -62,6 +72,28 @@ public sealed class AiProvider : IResultProvider
         // Implicit offers only for things that read like instructions, not partial words.
         if (!explicitAsk && !LooksLikeInstruction(prompt))
             return Task.FromResult<IReadOnlyList<SearchResult>>([]);
+
+        if (viaBrain)
+        {
+            return Task.FromResult<IReadOnlyList<SearchResult>>(
+            [
+                new SearchResult
+                {
+                    Title = $"Ask Kai: “{prompt}”",
+                    Subtitle = $"{BrainLabel(_settings)} answers, and Kai acts on your PC",
+                    Source = "AI",
+                    Glyph = "",
+                    Score = explicitAsk ? 1200 : Nl.NlParser.LooksLikeCommandSentence(prompt) ? 1000 : Weight,
+                    InvokeAsync = ctx =>
+                    {
+                        var target = ctx.TargetWindow;
+                        ctx.Dismiss();
+                        HandOff?.Invoke(prompt, target);
+                        return Task.CompletedTask;
+                    },
+                },
+            ]);
+        }
 
         var configured = _planner.IsConfigured;
 
@@ -92,6 +124,23 @@ public sealed class AiProvider : IResultProvider
 
         return Task.FromResult<IReadOnlyList<SearchResult>>([result]);
     }
+
+    /// <summary>
+    /// The ask goes to Kai's brain when that brain is a subscription (Claude Code, Codex) or when
+    /// there's no API key for the launcher's own Claude: never a dead end saying "no API key".
+    /// </summary>
+    public static bool UsesBrain(AiPlanner planner, Settings settings) =>
+        settings.Brain is "claudecode" or "codex" || !planner.IsConfigured;
+
+    /// <summary>The brain from Settings > Brain, in words.</summary>
+    public static string BrainLabel(Settings s) => s.Brain switch
+    {
+        "claudecode" => "Claude (your subscription)",
+        "codex" => "ChatGPT (your plan)",
+        "openrouter" => "OpenRouter",
+        "claude" => "Claude",
+        _ => "the AI on this PC",
+    };
 
     /// <summary>
     /// Three or more words, or a trailing question mark. Crude, but it is only deciding
