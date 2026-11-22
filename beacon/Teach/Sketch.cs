@@ -58,9 +58,10 @@ public static class Sketch
     public const int Colours = 6;
 
     /// <param name="imageWidth">For Screen pictures: the screenshot's width in pixels, to place callouts on the board.</param>
-    public static Scene Layout(Visual v, double width, double height, double imageWidth = 0, double imageHeight = 0)
+    /// <param name="framed">Drawn in a panel whose own frame shows the title and caption: only a small margin is kept.</param>
+    public static Scene Layout(Visual v, double width, double height, double imageWidth = 0, double imageHeight = 0, bool framed = false)
     {
-        var b = new Builder(v, width, height, v.Kind == VisualKind.Screen);
+        var b = new Builder(v, width, height, v.Kind == VisualKind.Screen, framed);
         switch (v.Kind)
         {
             case VisualKind.MindMap: b.MindMap(); break;
@@ -91,11 +92,14 @@ public static class Sketch
         readonly Dictionary<string, (P C, double W, double H)> _boxes = new(StringComparer.OrdinalIgnoreCase);
         public readonly List<Mark> Marks = [];
 
-        public Builder(Visual v, double width, double height, bool overScreen = false)
+        public Builder(Visual v, double width, double height, bool overScreen = false, bool framed = false)
         {
             _v = v;
-            // Room for the title above and the caption below; over the screen, almost all of it.
-            (_l, _t, _r, _b) = overScreen ? (16, 64, width - 16, height - 96) : (64, 118, width - 64, height - 96);
+            // Room for the title above and the caption below; over the screen, almost all of it;
+            // in a panel that shows them itself, just a margin.
+            (_l, _t, _r, _b) = overScreen ? (16, 64, width - 16, height - 96)
+                : framed ? (36, 28, width - 36, height - 28)
+                : (64, 118, width - 64, height - 96);
             for (var i = 0; i < v.Steps.Count; i++)
                 foreach (var id in v.Steps[i].Focus)
                     _order.TryAdd(id, i);

@@ -286,6 +286,45 @@ public sealed class Settings
     /// </summary>
     public bool KaiSeesScreen { get; set; } = true;
 
+    /// <summary>A quick tap of the talk key: "type" opens a small box beside Kai to type to the AI; "listen" listens hands-free.</summary>
+    public string TalkTap { get; set; } = "type";
+
+    // ---- Kai's drawings (Settings > Drawing)
+
+    /// <summary>Where Kai draws: "bottom-left", "bottom-right", "left", "right" (half the screen) or "full".</summary>
+    public string DrawPlace { get; set; } = "bottom-left";
+
+    /// <summary>The panel's width and height as parts of the screen (corner panels only).</summary>
+    public double DrawWidth { get; set; } = 0.5;
+    public double DrawHeight { get; set; } = 0.6;
+
+    /// <summary>How solid the panel's background is, 0.6 to 1.</summary>
+    public double DrawOpacity { get; set; } = 0.96;
+
+    /// <summary>"clean" lines, or "sketch": hand-drawn, slightly wobbly lines.</summary>
+    public string DrawStyle { get; set; } = "clean";
+
+    /// <summary>"slow", "normal" or "fast": how quickly the parts draw in.</summary>
+    public string DrawSpeed { get; set; } = "normal";
+
+    /// <summary>"brief", "normal" or "detailed": how many parts and steps a drawing has.</summary>
+    public string DrawDetail { get; set; } = "normal";
+
+    /// <summary>The kind drawn when the question doesn't name one: "auto" (Kai picks) or a kind (mindmap, timeline...).</summary>
+    public string DrawKind { get; set; } = "auto";
+
+    public bool DrawGrid { get; set; } = true;
+    public bool DrawCaptions { get; set; } = true;
+
+    /// <summary>Kai says each step aloud; off, the steps move on by themselves (or on a click).</summary>
+    public bool DrawNarrate { get; set; } = true;
+
+    /// <summary>Seconds after the last step until the drawing closes by itself; 0 keeps it until closed.</summary>
+    public int DrawCloseAfter { get; set; } = 0;
+
+    /// <summary>The user's own instructions for every drawing ("use simple words", "always add an example").</summary>
+    public string DrawInstructions { get; set; } = "";
+
     /// <summary>The pet's glow follows the tone of the conversation.</summary>
     public bool AvatarMoods { get; set; } = true;
 

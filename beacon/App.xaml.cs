@@ -85,6 +85,8 @@ public partial class App : System.Windows.Application
 
         var planner = new AiPlanner(_registry, settings);
         var ai = new AiProvider(planner, settings);
+        // No API key, or a subscription brain: the launcher's "?" goes to Kai and that brain.
+        ai.HandOff += (prompt, target) => Dispatcher.BeginInvoke(() => Pet().Ask(prompt, target));
 
         // The local sentence parser and the model are the same capability at two price
         // points: rules answer the common phrasings instantly and offline, and whatever they
