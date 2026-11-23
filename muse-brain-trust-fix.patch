@@ -1,0 +1,18 @@
+--- a/beacon/Assistant/MuseBrain.cs
++++ b/beacon/Assistant/MuseBrain.cs
+@@ -132,6 +132,7 @@
+             List<string> full =
+             [
+                 "exec", "--json", "--no-session-log", "--max-model-steps", "1",
++                "--workspace", folder, "--trust-workspace",
+                 "--disable-write", "--disable-shell",
+                 "--approval-mode", "on-request", "--reasoning-effort", Effort(effort),
+                 "--prompt-file", promptFile,
+@@ -147,6 +148,7 @@
+                 List<string> minimal =
+                 [
+                     "exec", "--json", "--no-session-log", "--max-model-steps", "1",
++                    "--trust-workspace",
+                     "--reasoning-effort", Effort(effort), "--prompt-file", promptFile,
+                 ];
+                 if (jpeg is not null) minimal.AddRange(["--image", image]);

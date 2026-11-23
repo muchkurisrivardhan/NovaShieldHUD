@@ -111,6 +111,9 @@ public partial class SettingsWindow
         CodexCheck.Click += async (_, _) => await CheckCliAsync(CliBrains.Cli.Codex, CodexStatus);
         ClaudeCodeInstall.Click += (_, _) => OpenUrl("https://code.claude.com/docs/en/setup");
         CodexInstall.Click += (_, _) => OpenUrl("https://developers.openai.com/codex/cli");
+        MuseSignIn.Click += (_, _) => SignInMuse();
+        MuseCheck.Click += async (_, _) => await CheckMuseAsync();
+        MuseInstall.Click += (_, _) => OpenUrl(MuseBrain.InstallUrl);
         Closed += (_, _) => _openRouterCts?.Cancel();
     }
 
@@ -129,6 +132,20 @@ public partial class SettingsWindow
         status.Text = "Checking…";
         try { status.Text = (await CliBrains.StatusAsync(cli, CancellationToken.None)).Status; }
         catch (Exception e) when (e is not OutOfMemoryException) { status.Text = "Couldn't check: " + e.Message; }
+    }
+
+    private void SignInMuse()
+    {
+        MuseStatus.Text = MuseBrain.StartSignIn()
+            ? "A window opened: it shows Meta's link and a short code — open the link, approve it, then press Check."
+            : "Muse Code isn't installed yet: press Get, install it, then Sign in.";
+    }
+
+    private async Task CheckMuseAsync()
+    {
+        MuseStatus.Text = "Checking…";
+        try { MuseStatus.Text = (await MuseBrain.StatusAsync(CancellationToken.None)).Status; }
+        catch (Exception e) when (e is not OutOfMemoryException) { MuseStatus.Text = "Couldn't check: " + e.Message; }
     }
 
     private void ShowBrainTab(bool accounts)
@@ -150,6 +167,7 @@ public partial class SettingsWindow
         _ = LoadOpenRouterModelsAsync();
         _ = CheckCliAsync(CliBrains.Cli.ClaudeCode, ClaudeCodeStatus);
         _ = CheckCliAsync(CliBrains.Cli.Codex, CodexStatus);
+        _ = CheckMuseAsync();
     }
 
     private void RefreshOpenRouterState()
@@ -166,6 +184,7 @@ public partial class SettingsWindow
         "claude" => new("claude", _settings.BrainClaudeModel, CloudBrains.ClaudeModels.FirstOrDefault(m => m.Id == _settings.BrainClaudeModel)?.Label ?? _settings.BrainClaudeModel, "With your API key."),
         "claudecode" => new("claudecode", _settings.BrainClaudeCodeModel, CliBrains.ClaudeCodeModels.FirstOrDefault(m => m.Id == _settings.BrainClaudeCodeModel)?.Label ?? "Claude", "With your Claude subscription, through Claude Code."),
         "codex" => new("codex", "", "ChatGPT", "With your ChatGPT plan, through Codex."),
+        "muse" => new("muse", _settings.BrainMuseModel, MuseBrain.MuseModels.FirstOrDefault(m => m.Id == _settings.BrainMuseModel)?.Label ?? "Muse", "With your Muse subscription, through Muse Code."),
         "openrouter" => new("openrouter", _settings.BrainOpenRouterModel,
             TopTen.FirstOrDefault(t => t.Id == _settings.BrainOpenRouterModel).Name ?? _settings.BrainOpenRouterModel, "Through OpenRouter." + OpenRouterHint()),
         _ => new("local", _settings.LocalModel, "On this PC: " + (LocalModels.ForAssistant(_settings.LocalModel)?.Label ?? "no model yet"), "Free and private: nothing leaves this PC."),
@@ -182,6 +201,7 @@ public partial class SettingsWindow
         BrainClaudeSub.Children.Clear();
         BrainClaudeApi.Children.Clear();
         BrainChatGpt.Children.Clear();
+        BrainMuseSub.Children.Clear();
         BrainLocalChips.Children.Clear();
         BrainPrefs.Children.Clear();
 
@@ -205,6 +225,9 @@ public partial class SettingsWindow
         foreach (var m in CloudBrains.ClaudeModels)
             AddChip(BrainClaudeApi, new BrainChoice("claude", m.Id, m.Label, m.Note + " With your API key."), m.Label, m.Note.Split(':')[0]);
         AddChip(BrainChatGpt, new BrainChoice("codex", "", "ChatGPT", "With your ChatGPT plan, through OpenAI's Codex app."), "ChatGPT", "your ChatGPT plan");
+        foreach (var m in MuseBrain.MuseModels)
+            AddChip(BrainMuseSub, new BrainChoice("muse", m.Id, m.Label.Replace(" (your Muse subscription)", ""), m.Note),
+                m.Label.Replace(" (your Muse subscription)", ""), "your subscription");
 
         foreach (var m in LocalModels.All)
         {
@@ -290,6 +313,7 @@ public partial class SettingsWindow
         _settings.Brain = c.Kind;
         if (c.Kind == "claude") _settings.BrainClaudeModel = c.Model;
         if (c.Kind == "claudecode") _settings.BrainClaudeCodeModel = c.Model;
+        if (c.Kind == "muse") _settings.BrainMuseModel = c.Model;
         if (c.Kind == "openrouter") _settings.BrainOpenRouterModel = c.Model;
         if (c.Kind == "local" && c.Model.Length > 0) _settings.LocalModel = c.Model;
         _settings.BrainEffort = CloudBrains.EffortLevels[(int)Math.Clamp(BrainEffort.Value, 0, 3)];

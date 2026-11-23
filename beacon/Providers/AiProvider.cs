@@ -126,17 +126,18 @@ public sealed class AiProvider : IResultProvider
     }
 
     /// <summary>
-    /// The ask goes to Kai's brain when that brain is a subscription (Claude Code, Codex) or when
-    /// there's no API key for the launcher's own Claude: never a dead end saying "no API key".
+    /// The ask goes to Kai's brain when that brain is a subscription (Claude Code, Codex, Muse)
+    /// or when there's no API key for the launcher's own Claude: never a dead end saying "no API key".
     /// </summary>
     public static bool UsesBrain(AiPlanner planner, Settings settings) =>
-        settings.Brain is "claudecode" or "codex" || !planner.IsConfigured;
+        settings.Brain is "claudecode" or "codex" or "muse" || !planner.IsConfigured;
 
     /// <summary>The brain from Settings > Brain, in words.</summary>
     public static string BrainLabel(Settings s) => s.Brain switch
     {
         "claudecode" => "Claude (your subscription)",
         "codex" => "ChatGPT (your plan)",
+        "muse" => "Muse (your subscription)",
         "openrouter" => "OpenRouter",
         "claude" => "Claude",
         _ => "the AI on this PC",

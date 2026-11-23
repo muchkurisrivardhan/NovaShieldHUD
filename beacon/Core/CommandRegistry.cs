@@ -21,7 +21,7 @@ public sealed partial class CommandRegistry
 
     public CommandRegistry(
         AppIndex apps, IFileSearch files, Action rebuildIndex, Action openSettings, Action startVoice,
-        Func<IntPtr, Task> promptRing, Action<IntPtr> assistant, Action dismissAssistant)
+        Func<IntPtr, Task> promptRing, Func<IntPtr, Task> codeRing, Action<IntPtr> assistant, Action dismissAssistant)
     {
         var commands = new List<BeaconCommand>();
 
@@ -103,17 +103,35 @@ public sealed partial class CommandRegistry
         commands.Add(new BeaconCommand
         {
             Id = Settings.PromptRingCommandId,
-            Title = "Shape Prompt",
-            Subtitle = "Select dictated text, pick Build, Fix, Research... rewritten in place, on this PC",
-            Description = "Rewrite the selected text as a well-structured AI prompt, using a free model on this PC.",
+            Title = "Shape Prompt or Code",
+            Subtitle = "Select text to shape a prompt, or code for a code action - opens the right ring, in place, on this PC",
+            Description = "Looks at the selection: prose opens the prompt ring (Build, Fix, Research...), code opens the Code Ring (Explain, Fix, Tests...). A free model on this PC does it.",
             Glyph = "\uE8BD",
-            Keywords = ["prompt", "rewrite", "shape", "improve prompt", "prompt ring", "dictation", "clean up"],
+            Keywords = ["prompt", "rewrite", "shape", "improve prompt", "prompt ring", "dictation", "clean up", "ring"],
             ExposeToAi = false,
             Category = "Beacon",
             RunAsync = async ctx =>
             {
                 await promptRing(ctx.TargetWindow);
                 return "Prompt ring.";
+            },
+        });
+
+        // Bindable in Settings > Shortcuts (Ctrl+Alt+K by default): run a code action on the selection.
+        commands.Add(new BeaconCommand
+        {
+            Id = Settings.CodeRingCommandId,
+            Title = "Code Ring",
+            Subtitle = "Always the code actions (Explain, Fix, Tests, Regex...) - even on a plain-text selection",
+            Description = "Force the Code Ring on the selection, skipping the prose/code guess - useful for a regex you describe in words. Has no default shortcut; bind one in Settings > Shortcuts. A free model on this PC does it.",
+            Glyph = "",
+            Keywords = ["code", "explain code", "fix code", "comment code", "refactor", "unit tests", "regex", "code ring", "review code"],
+            ExposeToAi = false,
+            Category = "Beacon",
+            RunAsync = async ctx =>
+            {
+                await codeRing(ctx.TargetWindow);
+                return "Code ring.";
             },
         });
 

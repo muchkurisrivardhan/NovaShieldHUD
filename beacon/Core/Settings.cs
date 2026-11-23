@@ -218,6 +218,7 @@ public sealed class Settings
     }
 
     public const string PromptRingCommandId = "prompt_ring";
+    public const string CodeRingCommandId = "code_ring";
     public const string AssistantCommandId = "nova_assistant";
 
     public const string NovaDismissCommandId = "nova_dismiss";
@@ -231,11 +232,15 @@ public sealed class Settings
     /// <summary>Set once Ctrl+Alt+P has been given to the prompt ring, so clearing it sticks.</summary>
     public bool PromptRingOffered { get; set; }
 
+    /// <summary>Set once Ctrl+Alt+K has been given to the code ring, so clearing it sticks.</summary>
+    public bool CodeRingOffered { get; set; }
+
     // -------------------------------------------------------------- assistant
 
     /// <summary>
     /// Which brain answers Nova: "local" (this PC), "claude" (API key), "openrouter",
-    /// "claudecode" (the user's Claude Code sign-in) or "codex" (the user's Codex sign-in).
+    /// "claudecode" (the user's Claude Code sign-in), "codex" (the user's Codex sign-in)
+    /// or "muse" (the user's Muse Code sign-in).
     /// </summary>
     public string Brain { get; set; } = "local";
 
@@ -243,6 +248,9 @@ public sealed class Settings
 
     /// <summary>Claude Code model alias: "haiku", "sonnet" or "opus".</summary>
     public string BrainClaudeCodeModel { get; set; } = "haiku";
+
+    /// <summary>Muse Code model id: "muse-spark-1.3", "muse-ember-1.0" or "muse-wonder-1.0".</summary>
+    public string BrainMuseModel { get; set; } = "muse-spark-1.3";
 
     /// <summary>"openrouter/free" picks among OpenRouter's free models by itself.</summary>
     public string BrainOpenRouterModel { get; set; } = "openrouter/free";

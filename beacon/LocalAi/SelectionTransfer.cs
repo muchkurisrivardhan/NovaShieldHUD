@@ -84,6 +84,35 @@ public static class SelectionTransfer
         return text;
     }
 
+    /// <summary>
+    /// Like <see cref="CopySelectionAsync"/>, but also reports a file selection (Explorer, the
+    /// desktop) and whether the Ctrl+C actually copied anything just now. The caller uses
+    /// <c>Changed</c> to tell a real empty selection from a stale clipboard, and falls back to
+    /// <c>Files</c> when the selection was a file rather than text.
+    /// </summary>
+    public static async Task<(bool Changed, string Text, IReadOnlyList<string> Files)> CopySelectionRichAsync()
+    {
+        var before = GetClipboardSequenceNumber();
+        Chord(0x43);   // C
+        for (var i = 0; i < 40; i++)
+        {
+            await Task.Delay(15);
+            if (GetClipboardSequenceNumber() != before) break;
+        }
+        if (GetClipboardSequenceNumber() == before) return (false, "", []);
+        await Task.Delay(30);
+        string text = "";
+        var files = new List<string>();
+        Retry(() =>
+        {
+            text = Clipboard.ContainsText() ? Clipboard.GetText() : "";
+            if (Clipboard.ContainsFileDropList())
+                foreach (string? f in Clipboard.GetFileDropList())
+                    if (!string.IsNullOrEmpty(f)) files.Add(f);
+        });
+        return (true, text, files);
+    }
+
     /// <summary>Brings <paramref name="target"/> back to the front and pastes <paramref name="text"/> over its selection.</summary>
     public static async Task PasteAsync(IntPtr target, string text)
     {

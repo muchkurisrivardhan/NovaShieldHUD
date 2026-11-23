@@ -444,6 +444,9 @@ public sealed class PetWindow : Window
                 return (messages, ct) => CliBrains.ChatAsync(CliBrains.Cli.ClaudeCode, ccModel, effort, messages, ct);
             case "codex":
                 return (messages, ct) => CliBrains.ChatAsync(CliBrains.Cli.Codex, null, effort, messages, ct);
+            case "muse":
+                var museModel = _settings.BrainMuseModel;
+                return (messages, ct) => MuseBrain.ChatAsync(museModel, effort, messages, ct);
             case "openrouter" when _settings.OpenRouterKey is { Length: > 0 } orKey && _settings.BrainOpenRouterModel.Length > 0:
                 var orModel = _settings.BrainOpenRouterModel;
                 return (messages, ct) => CloudBrains.OpenRouterAsync(orKey, orModel, effort, messages, ct);
@@ -705,11 +708,14 @@ public sealed class PetWindow : Window
                 return (system, q, jpeg, ct) => CliBrains.ChatAsync(CliBrains.Cli.ClaudeCode, ccModel, effort, [("system", system), ("user", q)], ct, jpeg);
             case "codex":
                 return (system, q, jpeg, ct) => CliBrains.ChatAsync(CliBrains.Cli.Codex, null, effort, [("system", system), ("user", q)], ct, jpeg);
+            case "muse":
+                var museModel = _settings.BrainMuseModel;
+                return (system, q, jpeg, ct) => MuseBrain.ChatAsync(museModel, effort, [("system", system), ("user", q)], ct, jpeg);
             case "claude" or "openrouter":
                 Brain();   // says what's missing
                 return null;
         }
-        Say("To see your screen I need a brain that can look at pictures: Claude, OpenRouter, Claude Code or ChatGPT. Pick one in Settings, on the Brain page.");
+        Say("To see your screen I need a brain that can look at pictures: Claude, OpenRouter, Claude Code, ChatGPT or Muse. Pick one in Settings, on the Brain page.");
         return null;
     }
 

@@ -1283,6 +1283,14 @@
                             </StackPanel>
                         </Border>
 
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel>
+                                <TextBlock Text="Muse" Style="{StaticResource GroupHeader}" />
+                                <TextBlock Text="With your Muse subscription (through Muse Code)" Style="{StaticResource Label}" />
+                                <WrapPanel x:Name="BrainMuseSub" />
+                            </StackPanel>
+                        </Border>
+
                     <Border Style="{StaticResource Card}">
                         <StackPanel>
                             <TextBlock Text="On this PC" Style="{StaticResource GroupHeader}" />
@@ -1358,6 +1366,20 @@
                                     <Button x:Name="CodexInstall" Content="Get Codex" />
                                 </StackPanel>
                                 <TextBlock x:Name="CodexStatus" Style="{StaticResource Caption}" />
+                            </StackPanel>
+                        </Border>
+
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel>
+                                <TextBlock Text="Your Muse subscription (through Muse Code)" Style="{StaticResource GroupHeader}" />
+                                <TextBlock TextWrapping="Wrap" Foreground="{StaticResource TextSecondary}" FontSize="12.5"
+                                           Text="Nova talks through Meta's Muse Code app installed on this PC, signed in with your own Meta account on Meta's own page. NovaShield never sees your login. Uses your Muse plan's usage: the $5 Everyday plan allows roughly 10–50 prompts every 5 hours." />
+                                <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                                    <Button x:Name="MuseSignIn" Content="Sign in" Style="{StaticResource PrimaryButton}" Margin="0,0,8,0" />
+                                    <Button x:Name="MuseCheck" Content="Check" Margin="0,0,8,0" />
+                                    <Button x:Name="MuseInstall" Content="Get Muse Code" />
+                                </StackPanel>
+                                <TextBlock x:Name="MuseStatus" Style="{StaticResource Caption}" />
                             </StackPanel>
                         </Border>
 

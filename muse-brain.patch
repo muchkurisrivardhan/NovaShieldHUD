@@ -1,0 +1,582 @@
+diff --git a/MUSE-BRAIN-SETUP.md b/MUSE-BRAIN-SETUP.md
+new file mode 100644
+index 0000000..876ab56
+--- /dev/null
++++ b/MUSE-BRAIN-SETUP.md
+@@ -0,0 +1,114 @@
++# Muse brain — Nova answers through Muse Code
++
++Beacon can use Meta's **Muse Code** as Nova's brain, the same way it already uses
++Claude Code: it runs the `muse` app you installed on your PC, signed in with your
++own Meta account, and reads the reply. No API key is involved anywhere — NovaShield
++never sees your login, and it never sends a key. Each run is text-only, read-only
++(no writes, no shell), in an empty folder, and nothing is saved afterwards.
++
++## What you need
++
++- **Muse Code installed** on the PC (see below).
++- **Signed in** to Muse Code in your browser (see below).
++- **A Muse Code plan.** Signing in alone may not be enough: Muse Code is billed
++  separately from the Muse personal-agent app — its plans start at **$5/month
++  (Everyday Usage, roughly 10–50 prompts every 5 hours)**. If sign-in asks for
++  payment, that is the plan it wants. The moment of truth is the sign-in step: if
++  it completes without asking for payment, you are covered.
++
++## 1. Install Muse Code (Windows)
++
++In PowerShell:
++
++```powershell
++irm https://dev.meta.ai/install.ps1 | iex
++```
++
++Then check it is there:
++
++```powershell
++muse --version
++```
++
++That puts `muse.cmd` in `%LOCALAPPDATA%\Programs\muse` and adds it to your user
++PATH. If `muse` is not found in a fresh terminal, close and reopen the terminal
++(or sign out and back in) so the new PATH loads.
++
++## 2. Sign in
++
++Either run this once in a terminal:
++
++```powershell
++muse login
++```
++
++It prints Meta's link and a short code: open the link, approve it, and the sign-in
++is saved on your PC. Or, in Beacon: **Settings → Brain → Accounts → Your Muse
++subscription → Sign in**, which opens the same sign-in in a console window, then
++press **Check** — it should say "Signed in to Muse Code with your Muse
++subscription."
++
++## 3. Pick the Muse brain
++
++**Settings → Brain**, in the **Muse** card, pick a model:
++
++| Chip | What it is |
++|---|---|
++| Muse Spark 1.3 | The fast all-rounder. The default. |
++| Muse Ember 1.0 | The lightest and cheapest. |
++| Muse Wonder 1.0 | The most capable. Needs a higher plan for full use. |
++
++Save the Brain page as usual. (Nova's effort slider maps to Muse's reasoning
++effort: Low → low, Medium → medium, High → high, Max → xhigh.)
++
++## 4. Test it
++
++Press `Alt+Space` or `Ctrl+M` and ask Kai something, for example "what time is
++it" or "open notepad". Kai should answer in Muse's voice. Then try "what's this?"
++with the screen visible — Muse can look at a screenshot, so the "what's on my
++screen" answers work with this brain too.
++
++## How it works (for the curious)
++
++Each turn runs one headless command, roughly:
++
++```text
++muse exec --json --no-session-log --max-model-steps 1 --workspace <empty temp folder>
++  --trust-workspace --disable-write --disable-shell --approval-mode on-request
++  --reasoning-effort <low|medium|high|xhigh> --model <id>
++  --prompt-file <system prompt + conversation>
++```
++
++`--trust-workspace` is required, not optional: Muse Code treats every workspace
++as untrusted by default, and an untrusted workspace disables agent delegation,
++so the run answers nothing at all ("Agent delegation: auto unavailable:
++workspace is untrusted"). The brain's folder is an empty temp folder that is
++never trusted by hand, so every run trusts it explicitly.
++
++The prompt file holds the system prompt and the conversation so far (as
++`USER:` / `NOVA:` lines), with the instruction to reply with the JSON object
++only. The reply is read from the `run.terminal.completed` event of the JSON
++stream. The prompt file and any screenshot are deleted when the run ends. If
++your installed Muse Code is older and rejects one of the flags, Beacon retries
++once with a minimal flag set. If `META_API_KEY` or `MODEL_API_KEY` is set in
++your environment (scripts or CI), Beacon strips it from the brain's process so
++the browser subscription sign-in wins — an API key would otherwise outrank it.
++
++## If it doesn't work
++
++| What you see | What to do |
++|---|---|
++| "Muse Code isn't installed" | Run the install command above, then close and reopen the terminal / Beacon. |
++| "Muse Code is installed but not signed in" | Press **Sign in** on the Accounts tab and approve the link in your browser. |
++| Sign-in asks for payment | You need a Muse Code plan — $5/month Everyday at dev.meta.ai/billing. Your Muse personal-agent subscription does not cover it. |
++| "Muse Code didn't answer" | In a terminal run `muse exec --json "say hi"` — if that fails, the problem is sign-in or plan, not Beacon. Press **Check** on the Accounts tab. |
++| "Agent delegation: auto unavailable: workspace is untrusted" | An older build of this patch, before `--trust-workspace` was added. Re-apply the latest patch and rebuild — every run now trusts its folder. The "project MCP servers from .mcp.json … are not loaded" line next to it is only a warning: there is no `.mcp.json` in the brain's empty folder, so nothing was skipped that matters. |
++| Kai says "Something went wrong: …" | Read the message after the colon: it is Muse Code's own error (auth, plan limit, or an old CLI). |
++| Answers are slow | Drop the effort slider to Low, or pick Ember. Wonder is the slowest. |
++| "I hit my plan limit" | The $5 plan allows roughly 10–50 prompts every 5 hours. Wait for the window to reset, or raise the plan at dev.meta.ai/billing. |
++
++## Uninstalling / going back
++
++Pick any other brain on Settings → Brain (for example "On this PC") and save.
++To remove Muse Code itself, uninstall it from Settings → Apps like any program;
++NovaShield never touches it otherwise.
+diff --git a/README.md b/README.md
+index ce1943f..fa056d7 100644
+--- a/README.md
++++ b/README.md
+@@ -47,7 +47,7 @@ Everything is in **Beacon Settings** (tray icon > Settings, or type `settings`):
+ | **Dotline** | Your birthday and lifespan, dot size, background, lock positions, time-zone dots |
+ | **Filee** | Start with Beacon, follow Beacon's look (with a live preview of the ring), ring size and opacity, captions, pause |
+ | **Voice** | Download a Whisper model to speak instead of typing (`Alt+M`) |
+-| **Brain** | Which AI thinks for Nova: on this PC (free), your Claude subscription through Claude Code, your ChatGPT plan through Codex, OpenRouter (one-click Authorize) or a Claude API key; and the effort level |
++| **Brain** | Which AI thinks for Nova: on this PC (free), your Claude subscription through Claude Code, your Muse subscription through Muse Code, your ChatGPT plan through Codex, OpenRouter (one-click Authorize) or a Claude API key; and the effort level |
+ | **Nova Assistant** | Speak replies and which voice, listen for answers, your email address and app password (optional) |
+ | **Prompt Ring** | Download a free AI model (1–2.5 GB) so `Ctrl+Alt+P` rewrites selected text into a structured prompt, on your PC |
+ | **Plain English** | Your Anthropic API key, only if you want `?` / Claude |
+diff --git a/beacon/Assistant/MuseBrain.cs b/beacon/Assistant/MuseBrain.cs
+new file mode 100644
+index 0000000..d4943e2
+--- /dev/null
++++ b/beacon/Assistant/MuseBrain.cs
+@@ -0,0 +1,246 @@
++using System.Diagnostics;
++using System.IO;
++using System.Text;
++using System.Text.Json.Nodes;
++
++namespace Beacon.Assistant;
++
++/// <summary>
++/// Nova's brain through the user's own installed copy of Muse Code (their Muse
++/// subscription, signed in with the browser). Mirrors <see cref="CliBrains"/>.
++///
++/// NovaShield only starts the unmodified program the user installed, hands it the
++/// conversation as text and reads the reply. It never reads, stores or passes on a login:
++/// signing in happens inside Muse Code, on Meta's own page, and each user signs in with
++/// their own account. Every run is text-only (no tools, no writes, no shell), in an empty
++/// folder, with nothing saved.
++///
++/// How it works: <c>muse exec --json --prompt-file …</c> runs one prompt to completion
++/// and streams JSONL events on stdout; the final text is the
++/// <c>run.terminal.completed</c> event's <c>payload.text</c>. The prompt goes in a file
++/// (not on the command line) so a long conversation can't hit the command-line length
++/// limit. A run is stateless (<c>--no-session-log</c>, no <c>--session-id</c>), capped at
++/// one model step, and scoped to the empty temp folder (<c>--workspace</c>).
++///
++/// Flags were checked against Meta's own Muse Code docs (dev.meta.ai) and the
++/// <c>muse-cli</c> skill mirror of <c>muse exec --help</c>. They move fast: if the
++/// installed CLI rejects one, the run retries once with a minimal flag set, exactly like
++/// <see cref="CliBrains"/> does for older Claude Code versions.
++///
++/// <c>--trust-workspace</c> is not optional: Muse Code treats every workspace as
++/// untrusted by default, and an untrusted workspace disables agent delegation
++/// ("Agent delegation: auto unavailable: workspace is untrusted"), which makes the
++/// run produce no answer at all. The brain runs in an empty temp folder that is
++/// never trusted by hand, so every run must trust it explicitly. It is in both
++/// flag sets — the minimal retry included — because without it the retry fails
++/// the same way.
++/// </summary>
++public static class MuseBrain
++{
++    /// <summary>Muse models by their Model API id. Standard (non-contributor) ids only.</summary>
++    public static readonly CloudBrains.Choice[] MuseModels =
++    [
++        new("muse-spark-1.3", "Muse Spark 1.3 (your Muse subscription)", "The fast all-rounder. Uses your Muse plan's usage, through Muse Code."),
++        new("muse-ember-1.0", "Muse Ember 1.0 (your Muse subscription)", "The lightest and cheapest. Uses your Muse plan's usage, through Muse Code."),
++        new("muse-wonder-1.0", "Muse Wonder 1.0 (your Muse subscription)", "The most capable. Uses your Muse plan's usage, through Muse Code."),
++    ];
++
++    /// <summary>Where the user gets Muse Code. (The codebase keeps install links in the UI file.)</summary>
++    public const string InstallUrl = "https://dev.meta.ai/docs/muse-code";
++
++    /// <summary>The program's path: the installer's place first, then PATH (where.exe).</summary>
++    public static string? Find()
++    {
++        var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
++        var native = Path.Combine(localAppData, "Programs", "muse", "muse.cmd");
++        if (File.Exists(native)) return native;
++        try
++        {
++            using var where = Process.Start(new ProcessStartInfo("where.exe", "muse")
++            {
++                RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false, CreateNoWindow = true,
++            });
++            var lines = where?.StandardOutput.ReadToEnd().Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries) ?? [];
++            where?.WaitForExit(3000);
++            return lines.FirstOrDefault(l => l.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
++                   ?? lines.FirstOrDefault(l => l.EndsWith(".cmd", StringComparison.OrdinalIgnoreCase));
++        }
++        catch (Exception e) when (e is System.ComponentModel.Win32Exception or InvalidOperationException)
++        {
++            return null;
++        }
++    }
++
++    /// <summary>
++    /// Installed and signed in? With a line for the Settings page either way.
++    ///
++    /// Muse Code exposes no credential-status command, so this checks what a sign-in leaves
++    /// behind: the credential file at %USERPROFILE%\.config\muse\auth.json (only its
++    /// existence is read, never its contents). A stale or expired session still fails at
++    /// run time, and that failure comes back as the reply error, so sign in again then.
++    /// </summary>
++    public static Task<(bool Ready, string Status)> StatusAsync(CancellationToken ct)
++    {
++        if (Find() is null)
++            return Task.FromResult((false, "Muse Code isn't installed. Install it from dev.meta.ai, then press Sign in."));
++        var auth = Path.Combine(
++            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".config", "muse", "auth.json");
++        return Task.FromResult(File.Exists(auth)
++            ? (true, "Signed in to Muse Code with your Muse subscription.")
++            : (false, "Muse Code is installed but not signed in. Press Sign in."));
++    }
++
++    /// <summary>
++    /// Opens the program's own sign-in in a console window: <c>muse login</c> prints Meta's
++    /// link and a short code, and the browser page does the rest.
++    /// </summary>
++    public static bool StartSignIn()
++    {
++        if (Find() is not { } exe) return false;
++        Process.Start(new ProcessStartInfo("cmd.exe", $"/k \"\"{exe}\" login\"") { UseShellExecute = true });
++        return true;
++    }
++
++    /// <summary>
++    /// One reply from the conversation, as the text the program printed. With an image (a
++    /// screenshot), it goes in with --image so Muse can look at it.
++    /// </summary>
++    public static async Task<string> ChatAsync(string? model, string effort,
++        IReadOnlyList<(string Role, string Content)> messages, CancellationToken ct, byte[]? jpeg = null)
++    {
++        var exe = Find() ?? throw new InvalidOperationException(
++            "Muse Code isn't installed. See Settings > Brain > Accounts.");
++
++        var system = string.Join("\n\n", messages.Where(m => m.Role == "system").Select(m => m.Content));
++        var transcript = new StringBuilder();
++        foreach (var (role, content) in messages.Where(m => m.Role != "system"))
++            transcript.Append(role == "assistant" ? "NOVA: " : "USER: ").AppendLine(content).AppendLine();
++
++        var folder = Path.Combine(Path.GetTempPath(), "NovaShield", "brain");
++        Directory.CreateDirectory(folder);   // nothing for the program to read, but the screenshot when there is one
++        var image = Path.Combine(folder, "screen.jpg");
++        if (jpeg is not null) await File.WriteAllBytesAsync(image, jpeg, ct);
++        else File.Delete(image);
++        var promptFile = Path.Combine(folder, "nova-muse-prompt.txt");
++        try
++        {
++            await File.WriteAllTextAsync(promptFile,
++                system +
++                "\n\nDo not run commands, use tools, edit files or access the network: only reply." +
++                "\n\nThe conversation so far:\n" + transcript +
++                "Reply to the last USER message as Nova, with the JSON object only.", ct);
++            List<string> full =
++            [
++                "exec", "--json", "--no-session-log", "--max-model-steps", "1",
++                "--workspace", folder, "--trust-workspace",
++                "--disable-write", "--disable-shell",
++                "--approval-mode", "on-request", "--reasoning-effort", Effort(effort),
++                "--prompt-file", promptFile,
++            ];
++            if (jpeg is not null) full.AddRange(["--image", image]);
++            if (!string.IsNullOrEmpty(model)) full.AddRange(["--model", model]);
++            var (code, output, error) = await RunAsync(exe, full, ct, TimeSpan.FromMinutes(3), folder);
++            if (code != 0 && Unknown(error))
++            {
++                // An older Muse Code without --disable-write, --disable-shell, --approval-mode
++                // or --workspace: the same run without them. Still read-only by instruction,
++                // one model step, and in an empty folder.
++                List<string> minimal =
++                [
++                    "exec", "--json", "--no-session-log", "--max-model-steps", "1",
++                    "--trust-workspace",
++                    "--reasoning-effort", Effort(effort), "--prompt-file", promptFile,
++                ];
++                if (jpeg is not null) minimal.AddRange(["--image", image]);
++                if (!string.IsNullOrEmpty(model)) minimal.AddRange(["--model", model]);
++                (code, output, error) = await RunAsync(exe, minimal, ct, TimeSpan.FromMinutes(3), folder);
++            }
++            var text = FinalText(output);
++            if (text is null) throw new InvalidOperationException("Muse Code didn't answer: " + Short(error.Length > 0 ? error : output));
++            if (code != 0) throw new InvalidOperationException("Muse Code: " + Short(text));
++            return text;
++        }
++        finally
++        {
++            // The screenshot and the prompt (which holds the conversation) don't stay on disk.
++            try { File.Delete(image); } catch (IOException) { }
++            try { File.Delete(promptFile); } catch (IOException) { }
++        }
++    }
++
++    /// <summary>Nova's effort levels to Muse's --reasoning-effort levels.</summary>
++    static string Effort(string effort) => effort switch
++    {
++        "medium" => "medium",
++        "high" => "high",
++        "max" => "xhigh",
++        _ => "low",
++    };
++
++    /// <summary>
++    /// The final text out of a --json JSONL stream: the run.terminal.completed event's
++    /// payload.text. Streaming run.output.delta chunks are the fallback, concatenated.
++    /// </summary>
++    static string? FinalText(string output)
++    {
++        string? terminal = null;
++        var deltas = new StringBuilder();
++        foreach (var line in output.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
++        {
++            JsonObject? obj;
++            try { obj = JsonNode.Parse(line) as JsonObject; }
++            catch (System.Text.Json.JsonException) { continue; }
++            if (obj is null) continue;
++            var type = obj["payload_type"]?.GetValue<string>();
++            var text = (obj["payload"] as JsonObject)?["text"]?.GetValue<string>();
++            if (text is null) continue;
++            if (type == "run.terminal.completed") terminal = text;
++            else if (type == "run.output.delta") deltas.Append(text);
++        }
++        if (!string.IsNullOrWhiteSpace(terminal)) return terminal;
++        return deltas.Length > 0 ? deltas.ToString() : null;
++    }
++
++    static bool Unknown(string error) =>
++        error.Contains("unknown option", StringComparison.OrdinalIgnoreCase) ||
++        error.Contains("unexpected argument", StringComparison.OrdinalIgnoreCase) ||
++        error.Contains("unrecognized", StringComparison.OrdinalIgnoreCase) ||
++        error.Contains("not supported", StringComparison.OrdinalIgnoreCase);
++
++    static string Short(string s) => s.Trim().Length > 300 ? s.Trim()[..300] + "…" : s.Trim();
++
++    static async Task<(int Code, string Output, string Error)> RunAsync(string exe, IEnumerable<string> args,
++        CancellationToken ct, TimeSpan timeout, string? folder = null)
++    {
++        // A .cmd shim (the Muse installer drops muse.cmd) has to go through cmd.exe.
++        var shim = exe.EndsWith(".cmd", StringComparison.OrdinalIgnoreCase);
++        var psi = new ProcessStartInfo(shim ? "cmd.exe" : exe)
++        {
++            RedirectStandardInput = true, RedirectStandardOutput = true, RedirectStandardError = true,
++            UseShellExecute = false, CreateNoWindow = true,
++            StandardOutputEncoding = Encoding.UTF8, StandardErrorEncoding = Encoding.UTF8,
++            WorkingDirectory = folder ?? Path.GetTempPath(),
++        };
++        if (shim) { psi.ArgumentList.Add("/c"); psi.ArgumentList.Add(exe); }
++        foreach (var a in args) psi.ArgumentList.Add(a);
++        // An API key in the environment outranks the browser subscription sign-in, so the
++        // key (if one is set for scripts or CI) must not leak into the brain's process.
++        foreach (var key in new[] { "META_API_KEY", "MODEL_API_KEY" })
++            psi.Environment.Remove(key);
++
++        using var process = Process.Start(psi) ?? throw new InvalidOperationException("Couldn't start " + exe);
++        var output = process.StandardOutput.ReadToEndAsync(ct);
++        var error = process.StandardError.ReadToEndAsync(ct);
++        process.StandardInput.Close();
++
++        using var limit = CancellationTokenSource.CreateLinkedTokenSource(ct);
++        limit.CancelAfter(timeout);
++        try { await process.WaitForExitAsync(limit.Token); }
++        catch (OperationCanceledException)
++        {
++            try { process.Kill(entireProcessTree: true); } catch (InvalidOperationException) { }
++            throw;
++        }
++        return (process.ExitCode, await output, await error);
++    }
++}
+diff --git a/beacon/Core/Settings.cs b/beacon/Core/Settings.cs
+index cad0004..a63bdbd 100644
+--- a/beacon/Core/Settings.cs
++++ b/beacon/Core/Settings.cs
+@@ -235,7 +235,8 @@ public sealed class Settings
+ 
+     /// <summary>
+     /// Which brain answers Nova: "local" (this PC), "claude" (API key), "openrouter",
+-    /// "claudecode" (the user's Claude Code sign-in) or "codex" (the user's Codex sign-in).
++    /// "claudecode" (the user's Claude Code sign-in), "codex" (the user's Codex sign-in)
++    /// or "muse" (the user's Muse Code sign-in).
+     /// </summary>
+     public string Brain { get; set; } = "local";
+ 
+@@ -244,6 +245,9 @@ public sealed class Settings
+     /// <summary>Claude Code model alias: "haiku", "sonnet" or "opus".</summary>
+     public string BrainClaudeCodeModel { get; set; } = "haiku";
+ 
++    /// <summary>Muse Code model id: "muse-spark-1.3", "muse-ember-1.0" or "muse-wonder-1.0".</summary>
++    public string BrainMuseModel { get; set; } = "muse-spark-1.3";
++
+     /// <summary>"openrouter/free" picks among OpenRouter's free models by itself.</summary>
+     public string BrainOpenRouterModel { get; set; } = "openrouter/free";
+ 
+diff --git a/beacon/Providers/AiProvider.cs b/beacon/Providers/AiProvider.cs
+index 009e1e2..162a2d0 100644
+--- a/beacon/Providers/AiProvider.cs
++++ b/beacon/Providers/AiProvider.cs
+@@ -126,17 +126,18 @@ public sealed class AiProvider : IResultProvider
+     }
+ 
+     /// <summary>
+-    /// The ask goes to Kai's brain when that brain is a subscription (Claude Code, Codex) or when
+-    /// there's no API key for the launcher's own Claude: never a dead end saying "no API key".
++    /// The ask goes to Kai's brain when that brain is a subscription (Claude Code, Codex, Muse)
++    /// or when there's no API key for the launcher's own Claude: never a dead end saying "no API key".
+     /// </summary>
+     public static bool UsesBrain(AiPlanner planner, Settings settings) =>
+-        settings.Brain is "claudecode" or "codex" || !planner.IsConfigured;
++        settings.Brain is "claudecode" or "codex" or "muse" || !planner.IsConfigured;
+ 
+     /// <summary>The brain from Settings > Brain, in words.</summary>
+     public static string BrainLabel(Settings s) => s.Brain switch
+     {
+         "claudecode" => "Claude (your subscription)",
+         "codex" => "ChatGPT (your plan)",
++        "muse" => "Muse (your subscription)",
+         "openrouter" => "OpenRouter",
+         "claude" => "Claude",
+         _ => "the AI on this PC",
+diff --git a/beacon/UI/Pet/PetWindow.cs b/beacon/UI/Pet/PetWindow.cs
+index 830d95a..ac4f867 100644
+--- a/beacon/UI/Pet/PetWindow.cs
++++ b/beacon/UI/Pet/PetWindow.cs
+@@ -444,6 +444,9 @@ public sealed class PetWindow : Window
+                 return (messages, ct) => CliBrains.ChatAsync(CliBrains.Cli.ClaudeCode, ccModel, effort, messages, ct);
+             case "codex":
+                 return (messages, ct) => CliBrains.ChatAsync(CliBrains.Cli.Codex, null, effort, messages, ct);
++            case "muse":
++                var museModel = _settings.BrainMuseModel;
++                return (messages, ct) => MuseBrain.ChatAsync(museModel, effort, messages, ct);
+             case "openrouter" when _settings.OpenRouterKey is { Length: > 0 } orKey && _settings.BrainOpenRouterModel.Length > 0:
+                 var orModel = _settings.BrainOpenRouterModel;
+                 return (messages, ct) => CloudBrains.OpenRouterAsync(orKey, orModel, effort, messages, ct);
+@@ -705,11 +708,14 @@ public sealed class PetWindow : Window
+                 return (system, q, jpeg, ct) => CliBrains.ChatAsync(CliBrains.Cli.ClaudeCode, ccModel, effort, [("system", system), ("user", q)], ct, jpeg);
+             case "codex":
+                 return (system, q, jpeg, ct) => CliBrains.ChatAsync(CliBrains.Cli.Codex, null, effort, [("system", system), ("user", q)], ct, jpeg);
++            case "muse":
++                var museModel = _settings.BrainMuseModel;
++                return (system, q, jpeg, ct) => MuseBrain.ChatAsync(museModel, effort, [("system", system), ("user", q)], ct, jpeg);
+             case "claude" or "openrouter":
+                 Brain();   // says what's missing
+                 return null;
+         }
+-        Say("To see your screen I need a brain that can look at pictures: Claude, OpenRouter, Claude Code or ChatGPT. Pick one in Settings, on the Brain page.");
++        Say("To see your screen I need a brain that can look at pictures: Claude, OpenRouter, Claude Code, ChatGPT or Muse. Pick one in Settings, on the Brain page.");
+         return null;
+     }
+ 
+diff --git a/beacon/UI/SettingsWindow.Brain.cs b/beacon/UI/SettingsWindow.Brain.cs
+index 141d681..10eaf93 100644
+--- a/beacon/UI/SettingsWindow.Brain.cs
++++ b/beacon/UI/SettingsWindow.Brain.cs
+@@ -111,6 +111,9 @@ public partial class SettingsWindow
+         CodexCheck.Click += async (_, _) => await CheckCliAsync(CliBrains.Cli.Codex, CodexStatus);
+         ClaudeCodeInstall.Click += (_, _) => OpenUrl("https://code.claude.com/docs/en/setup");
+         CodexInstall.Click += (_, _) => OpenUrl("https://developers.openai.com/codex/cli");
++        MuseSignIn.Click += (_, _) => SignInMuse();
++        MuseCheck.Click += async (_, _) => await CheckMuseAsync();
++        MuseInstall.Click += (_, _) => OpenUrl(MuseBrain.InstallUrl);
+         Closed += (_, _) => _openRouterCts?.Cancel();
+     }
+ 
+@@ -131,6 +134,20 @@ public partial class SettingsWindow
+         catch (Exception e) when (e is not OutOfMemoryException) { status.Text = "Couldn't check: " + e.Message; }
+     }
+ 
++    private void SignInMuse()
++    {
++        MuseStatus.Text = MuseBrain.StartSignIn()
++            ? "A window opened: it shows Meta's link and a short code — open the link, approve it, then press Check."
++            : "Muse Code isn't installed yet: press Get, install it, then Sign in.";
++    }
++
++    private async Task CheckMuseAsync()
++    {
++        MuseStatus.Text = "Checking…";
++        try { MuseStatus.Text = (await MuseBrain.StatusAsync(CancellationToken.None)).Status; }
++        catch (Exception e) when (e is not OutOfMemoryException) { MuseStatus.Text = "Couldn't check: " + e.Message; }
++    }
++
+     private void ShowBrainTab(bool accounts)
+     {
+         BrainTabDefault.IsChecked = !accounts;
+@@ -150,6 +167,7 @@ public partial class SettingsWindow
+         _ = LoadOpenRouterModelsAsync();
+         _ = CheckCliAsync(CliBrains.Cli.ClaudeCode, ClaudeCodeStatus);
+         _ = CheckCliAsync(CliBrains.Cli.Codex, CodexStatus);
++        _ = CheckMuseAsync();
+     }
+ 
+     private void RefreshOpenRouterState()
+@@ -166,6 +184,7 @@ public partial class SettingsWindow
+         "claude" => new("claude", _settings.BrainClaudeModel, CloudBrains.ClaudeModels.FirstOrDefault(m => m.Id == _settings.BrainClaudeModel)?.Label ?? _settings.BrainClaudeModel, "With your API key."),
+         "claudecode" => new("claudecode", _settings.BrainClaudeCodeModel, CliBrains.ClaudeCodeModels.FirstOrDefault(m => m.Id == _settings.BrainClaudeCodeModel)?.Label ?? "Claude", "With your Claude subscription, through Claude Code."),
+         "codex" => new("codex", "", "ChatGPT", "With your ChatGPT plan, through Codex."),
++        "muse" => new("muse", _settings.BrainMuseModel, MuseBrain.MuseModels.FirstOrDefault(m => m.Id == _settings.BrainMuseModel)?.Label ?? "Muse", "With your Muse subscription, through Muse Code."),
+         "openrouter" => new("openrouter", _settings.BrainOpenRouterModel,
+             TopTen.FirstOrDefault(t => t.Id == _settings.BrainOpenRouterModel).Name ?? _settings.BrainOpenRouterModel, "Through OpenRouter." + OpenRouterHint()),
+         _ => new("local", _settings.LocalModel, "On this PC: " + (LocalModels.ForAssistant(_settings.LocalModel)?.Label ?? "no model yet"), "Free and private: nothing leaves this PC."),
+@@ -182,6 +201,7 @@ public partial class SettingsWindow
+         BrainClaudeSub.Children.Clear();
+         BrainClaudeApi.Children.Clear();
+         BrainChatGpt.Children.Clear();
++        BrainMuseSub.Children.Clear();
+         BrainLocalChips.Children.Clear();
+         BrainPrefs.Children.Clear();
+ 
+@@ -205,6 +225,9 @@ public partial class SettingsWindow
+         foreach (var m in CloudBrains.ClaudeModels)
+             AddChip(BrainClaudeApi, new BrainChoice("claude", m.Id, m.Label, m.Note + " With your API key."), m.Label, m.Note.Split(':')[0]);
+         AddChip(BrainChatGpt, new BrainChoice("codex", "", "ChatGPT", "With your ChatGPT plan, through OpenAI's Codex app."), "ChatGPT", "your ChatGPT plan");
++        foreach (var m in MuseBrain.MuseModels)
++            AddChip(BrainMuseSub, new BrainChoice("muse", m.Id, m.Label.Replace(" (your Muse subscription)", ""), m.Note),
++                m.Label.Replace(" (your Muse subscription)", ""), "your subscription");
+ 
+         foreach (var m in LocalModels.All)
+         {
+@@ -290,6 +313,7 @@ public partial class SettingsWindow
+         _settings.Brain = c.Kind;
+         if (c.Kind == "claude") _settings.BrainClaudeModel = c.Model;
+         if (c.Kind == "claudecode") _settings.BrainClaudeCodeModel = c.Model;
++        if (c.Kind == "muse") _settings.BrainMuseModel = c.Model;
+         if (c.Kind == "openrouter") _settings.BrainOpenRouterModel = c.Model;
+         if (c.Kind == "local" && c.Model.Length > 0) _settings.LocalModel = c.Model;
+         _settings.BrainEffort = CloudBrains.EffortLevels[(int)Math.Clamp(BrainEffort.Value, 0, 3)];
+diff --git a/beacon/UI/SettingsWindow.xaml b/beacon/UI/SettingsWindow.xaml
+index 7b49a8c..3fe4d5d 100644
+--- a/beacon/UI/SettingsWindow.xaml
++++ b/beacon/UI/SettingsWindow.xaml
+@@ -1283,6 +1283,14 @@
+                             </StackPanel>
+                         </Border>
+ 
++                        <Border Style="{StaticResource Card}">
++                            <StackPanel>
++                                <TextBlock Text="Muse" Style="{StaticResource GroupHeader}" />
++                                <TextBlock Text="With your Muse subscription (through Muse Code)" Style="{StaticResource Label}" />
++                                <WrapPanel x:Name="BrainMuseSub" />
++                            </StackPanel>
++                        </Border>
++
+                     <Border Style="{StaticResource Card}">
+                         <StackPanel>
+                             <TextBlock Text="On this PC" Style="{StaticResource GroupHeader}" />
+@@ -1361,6 +1369,20 @@
+                             </StackPanel>
+                         </Border>
+ 
++                        <Border Style="{StaticResource Card}">
++                            <StackPanel>
++                                <TextBlock Text="Your Muse subscription (through Muse Code)" Style="{StaticResource GroupHeader}" />
++                                <TextBlock TextWrapping="Wrap" Foreground="{StaticResource TextSecondary}" FontSize="12.5"
++                                           Text="Nova talks through Meta's Muse Code app installed on this PC, signed in with your own Meta account on Meta's own page. NovaShield never sees your login. Uses your Muse plan's usage: the $5 Everyday plan allows roughly 10–50 prompts every 5 hours." />
++                                <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
++                                    <Button x:Name="MuseSignIn" Content="Sign in" Style="{StaticResource PrimaryButton}" Margin="0,0,8,0" />
++                                    <Button x:Name="MuseCheck" Content="Check" Margin="0,0,8,0" />
++                                    <Button x:Name="MuseInstall" Content="Get Muse Code" />
++                                </StackPanel>
++                                <TextBlock x:Name="MuseStatus" Style="{StaticResource Caption}" />
++                            </StackPanel>
++                        </Border>
++
+                         <Border Style="{StaticResource Card}">
+                             <StackPanel>
+                                 <TextBlock Text="OpenRouter" Style="{StaticResource GroupHeader}" />

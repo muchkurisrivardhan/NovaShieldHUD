@@ -77,7 +77,8 @@ public partial class App : System.Windows.Application
             rebuildIndex: () => _ = fileIndex.BuildAsync(BuildIndexOptions(settings)),
             openSettings: OpenSettings,
             startVoice: StartVoiceSearch,
-            promptRing: target => (_promptRing ??= new LocalAi.PromptRing(settings, Notify)).RunAsync(target),
+            promptRing: target => (_smartRing ??= new LocalAi.SmartRing(settings, Notify)).RunAsync(target),
+            codeRing: target => (_codeRing ??= new LocalAi.CodeRing(settings, Notify)).RunAsync(target),
             assistant: target => Dispatcher.Invoke(() => Pet().Summon(target)),
             dismissAssistant: () => Dispatcher.Invoke(() => _pet?.Dismiss()));
 
@@ -227,7 +228,8 @@ public partial class App : System.Windows.Application
     /// Windows refused. Conflicts are surfaced rather than swallowed - a hotkey that
     /// silently does nothing is indistinguishable from a broken app.
     /// </summary>
-    private LocalAi.PromptRing? _promptRing;
+    private LocalAi.SmartRing? _smartRing;
+    private LocalAi.CodeRing? _codeRing;
     private UI.Pet.PetWindow? _pet;
     private Func<UI.Pet.PetWindow>? _makePet;
     private PushToTalkHook? _talkKey;

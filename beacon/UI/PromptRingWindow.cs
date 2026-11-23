@@ -34,8 +34,19 @@ public sealed class PromptRingWindow : Window
     readonly FontFamily _font;
     readonly bool _glow;
 
-    public PromptRingWindow(Settings settings, string selection, bool hasModel)
+    readonly PromptStyle[] _styles;
+    readonly string _centerDefault;
+    readonly string _workingVerb;
+
+    /// <param name="styles">The slices of the ring; defaults to the prompt styles.</param>
+    /// <param name="centerTitle">The idle label in the hole; "Shape prompt" for the prompt ring.</param>
+    /// <param name="workingVerb">What the spinner says it is doing ("rewriting", "working").</param>
+    public PromptRingWindow(Settings settings, string selection, bool hasModel,
+        PromptStyle[]? styles = null, string centerTitle = "Shape prompt", string workingVerb = "rewriting")
     {
+        _styles = styles ?? PromptStyles.All;
+        _centerDefault = centerTitle;
+        _workingVerb = workingVerb;
         var p = Suite.PaletteFor(settings);
         Color C(string key, string fallback) => Parse(p.Colors is { } c && c.TryGetValue(key, out var v) ? v : fallback);
         _accent = Parse(p.Accent);
@@ -75,7 +86,7 @@ public sealed class PromptRingWindow : Window
         _working = true;
         foreach (var (slice, s) in _slices) slice.Opacity = s == style ? 1 : 0.35;
         _centerTitle.Text = style.Label;
-        _centerSub.Text = withModel ? "rewriting on this PC…" : "building the guide…";
+        _centerSub.Text = withModel ? _workingVerb + " on this PC…" : "building the guide…";
         _spinner = new Path
         {
             Data = Arc(Size / 2, Size / 2, Inner - 9, -90, 30),
@@ -104,7 +115,7 @@ public sealed class PromptRingWindow : Window
         Canvas.SetLeft(back, cx - back.Width / 2); Canvas.SetTop(back, cy - back.Height / 2);
         _canvas.Children.Add(back);
 
-        var styles = PromptStyles.All;
+        var styles = _styles;
         var step = 360.0 / styles.Length;
         for (var i = 0; i < styles.Length; i++)
         {
@@ -159,7 +170,7 @@ public sealed class PromptRingWindow : Window
 
         var words = selection.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).Length;
         var center = new StackPanel { Width = Inner * 2 - 22, IsHitTestVisible = false };
-        _centerTitle.Text = "Shape prompt";
+        _centerTitle.Text = _centerDefault;
         _centerTitle.FontSize = 13; _centerTitle.FontWeight = FontWeights.SemiBold;
         _centerTitle.Foreground = new SolidColorBrush(_text);
         _centerTitle.HorizontalAlignment = HorizontalAlignment.Center;
@@ -181,7 +192,7 @@ public sealed class PromptRingWindow : Window
         slice.Fill = new SolidColorBrush(on ? WithAlpha(Mix(_surface, _accent, 0.35), 0xF5) : WithAlpha(_surface, 0xF2));
         slice.Stroke = new SolidColorBrush(on ? _accent : WithAlpha(_border, 0xD0));
         var hint = _slices.First(s => s.Slice == slice).Style;
-        _centerTitle.Text = on ? hint.Label : "Shape prompt";
+        _centerTitle.Text = on ? hint.Label : _centerDefault;
         _centerSub.Text = on ? hint.Hint : _centerSub.Text;
     }
 
