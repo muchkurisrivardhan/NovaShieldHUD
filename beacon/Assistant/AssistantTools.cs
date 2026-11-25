@@ -47,4 +47,14 @@ public sealed class AssistantTools(
     public Task<string> ReadEmailAsync(int number, CancellationToken ct) => inbox.ReadAsync(number, ct);
     public Task<string> OpenEmailAsync(int number, CancellationToken ct) => ui.InvokeAsync(() => inbox.OpenAsync(number)).Task.Unwrap();
     public Task<string> ReplyEmailAsync(int number, string text, CancellationToken ct) => ui.InvokeAsync(() => inbox.ReplyAsync(number, text)).Task.Unwrap();
+
+    /// <summary>Set by Nova's window: shows a video it found as a card (opened only if the user clicks Watch).</summary>
+    public Action<VideoAnswer>? ShowVideo { get; set; }
+
+    public async Task<string> LookUpAsync(string kind, string what, CancellationToken ct)
+    {
+        var answer = await LiveAnswers.AskAsync(kind, what, ct).ConfigureAwait(false);
+        if (answer.Video is { } video && ShowVideo is { } show) _ = ui.BeginInvoke(() => show(video));
+        return answer.Detail;
+    }
 }

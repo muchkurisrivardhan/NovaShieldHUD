@@ -75,6 +75,7 @@ public sealed class PetWindow : Window
             (action, why) => Dispatcher.InvokeAsync(() => ApproveAsync(action, why)).Task.Unwrap(),
             parser.Parse);
         _brain = new AssistantBrain(_tools, _sentinel, MemoryStore.Shared);
+        _tools.ShowVideo = ShowVideoCard;
         // Goal mode's checklist sits where Kai's explain panel goes; Stop cancels the running turn.
         _brain.Goals = new GoalUi(settings, Dispatcher, (action, why) => ApproveAsync(action, why),
             () => ExplainBoard.Place(_settings, WorkDip()),
@@ -401,6 +402,14 @@ public sealed class PetWindow : Window
                 return;
             }
 
+            // "What's the weather?", "latest MrBeast video": answered right here, in words, live,
+            // without the model and without opening the browser. "Search youtube for…" isn't caught.
+            if (LiveAnswers.Find(text) is { } question)
+            {
+                await AnswerAsync(text, question, work.Token);
+                return;
+            }
+
             // The drawing on the screen: "thanks, got it" puts it away.
             if (_board is { IsVisible: true } && Intents.IsCloseBoard(text))
             {
@@ -466,6 +475,42 @@ public sealed class PetWindow : Window
             if (_pet.State == NovaPet3D.Activity.Thinking) _pet.State = NovaPet3D.Activity.Idle;
             if (_voice.State != SynthesizerState.Speaking) OnSpeechDone();
         }
+    }
+
+    /// <summary>A question Beacon answers itself: looked up live, said out loud, a video shown as a card.</summary>
+    async Task AnswerAsync(string text, LiveAnswers.Question question, CancellationToken ct)
+    {
+        _pet.State = NovaPet3D.Activity.Thinking;
+        var what = question.What;
+        // "What's the weather?" with no city: the one the user asked Nova to remember they live in.
+        if (question.Kind == "weather" && what.Length == 0)
+            what = LiveAnswers.HomeFrom(MemoryStore.Shared.All().Select(m => m.Text));
+
+        var answer = question.Kind == "weather"
+            ? await LiveAnswers.WeatherAsync(what, question.Tomorrow, ct)
+            : await LiveAnswers.LatestVideoAsync(what, ct);
+        ct.ThrowIfCancellationRequested();
+
+        _sentinel.Record("You", question.Kind,
+            question.Kind == "weather" ? $"look up the weather in {(what.Length > 0 ? what : "?")}" : $"look up {what}'s latest video",
+            Risk.Local, "Ran", "your question; answered in Beacon, nothing opened");
+        _brain.Remember(text, answer.Say);
+        Say(answer.Say);
+        if (answer.Video is { } video) ShowVideoCard(video);
+    }
+
+    /// <summary>The video Nova found, by the tray. Nothing opens unless the user clicks Watch.</summary>
+    void ShowVideoCard(VideoAnswer video)
+    {
+        var views = video.Views is { } v ? $" · {LiveAnswers.Count(v)} views" : "";
+        WatcherCard.Present(_settings, new WatcherAlert("video", video.Channel,
+            $"“{video.Title}”\nPosted {LiveAnswers.Ago(video.Published)}{views}",
+            [
+                new WatcherOffer("Watch", () => System.Diagnostics.Process.Start(
+                    new System.Diagnostics.ProcessStartInfo(video.Url) { UseShellExecute = true }), Primary: true),
+                new WatcherOffer("Copy link", () => { try { Clipboard.SetText(video.Url); } catch (System.Runtime.InteropServices.ExternalException) { } }),
+            ],
+            Silent: true));
     }
 
     /// <summary>

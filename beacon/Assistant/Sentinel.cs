@@ -53,6 +53,7 @@ public sealed partial class Sentinel(AuditLog log, Func<string, string?, Task<bo
     static readonly HashSet<string> KnownTools = new(StringComparer.Ordinal)
     {
         "do", "check_inbox", "read_email", "open_email", "reply_email", "remember", "recall", "forget", "plan",
+        "weather", "latest_video", "look_up",
     };
 
     const string Marker = "<untrusted source=\"";
@@ -142,6 +143,12 @@ public sealed partial class Sentinel(AuditLog log, Func<string, string?, Task<bo
             "forget" => (Risk.Local, $"forget what I remember about \"{Arg("query")}\""),
             // Only writes a checklist from the user's own words; running it needs their yes.
             "plan" => (Risk.Read, "write a plan for your request"),
+            // Public lookups: only a place or channel name goes out, and nothing opens. Run like an
+            // action on this PC, so while untrusted text is in view (when that name could be a
+            // smuggled message) they ask first.
+            "weather" => (Risk.Local, $"look up the weather in {Arg("place")} (Open-Meteo)"),
+            "latest_video" => (Risk.Local, $"look up {Arg("channel")}'s latest YouTube video"),
+            "look_up" => (Risk.Local, $"research \"{Arg("query")}\" online (in the background)"),
             _ => (Risk.External, tool),
         };
     }
