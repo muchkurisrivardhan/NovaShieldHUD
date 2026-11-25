@@ -36,6 +36,7 @@ public sealed class PetWindow : Window
     readonly NlParser _parser;
     readonly AssistantTools _tools;
     readonly AssistantBrain _brain;
+    readonly Sentinel _sentinel;
     readonly Func<string> _vocabulary;
     readonly MicRecorder _mic = new();
     readonly Transcriber _transcriber = new();
@@ -68,8 +69,16 @@ public sealed class PetWindow : Window
         _petSize = settings.AvatarSize switch { "small" => 150d, "large" => 260d, _ => 200d };
 
         var inbox = new EmailInbox(settings.EmailAccount);
-        _tools = new AssistantTools(parser, runner, inbox, Dispatcher, () => _target[0], ApproveAsync, Say);
-        _brain = new AssistantBrain(_tools);
+        _tools = new AssistantTools(parser, runner, inbox, Dispatcher, () => _target[0], action => ApproveAsync(action), Say);
+        // Sentinel runs on the brain's worker thread; the approval bubble lives on the UI thread.
+        _sentinel = new Sentinel(AuditLog.Shared,
+            (action, why) => Dispatcher.InvokeAsync(() => ApproveAsync(action, why)).Task.Unwrap(),
+            parser.Parse);
+        _brain = new AssistantBrain(_tools, _sentinel, MemoryStore.Shared);
+        // Goal mode's checklist sits where Kai's explain panel goes; Stop cancels the running turn.
+        _brain.Goals = new GoalUi(settings, Dispatcher, (action, why) => ApproveAsync(action, why),
+            () => ExplainBoard.Place(_settings, WorkDip()),
+            () => { _approval?.TrySetResult(false); _work?.Cancel(); });
         _brain.Said += line => Dispatcher.BeginInvoke(() => Say(line));
         _brain.Working += _ => Dispatcher.BeginInvoke(() => _pet.State = NovaPet3D.Activity.Thinking);
 
@@ -199,6 +208,16 @@ public sealed class PetWindow : Window
     {
         Appear(target);
         _ = HandleAsync(text);
+    }
+
+    /// <summary>
+    /// A watcher's card, said aloud because the user clicked "Tell me". Only speaks: no model,
+    /// no tools, and nothing is added to the conversation.
+    /// </summary>
+    public void Announce(string line)
+    {
+        Appear(IntPtr.Zero);
+        Say(line);
     }
 
     /// <summary>Ctrl+Alt+N or right-click: gone from the screen, everything stopped.</summary>
@@ -341,6 +360,9 @@ public sealed class PetWindow : Window
             if (yes != no) { pending.TrySetResult(yes); return; }
         }
 
+        // Anything else while a question waits moves on: the old question counts as a no, so a
+        // late click can't approve an action from a conversation the user has left.
+        _approval?.TrySetResult(false);
         _work?.Cancel();
         var work = _work = new CancellationTokenSource();
         _pet.State = NovaPet3D.Activity.Thinking;
@@ -358,6 +380,24 @@ public sealed class PetWindow : Window
                 Say("Bye!");
                 await Task.Delay(1200);
                 Dismiss();
+                return;
+            }
+
+            // Agent team: "ask Claude to…", "Kai, ask Muse…", "ask the expert…". Only on the user's
+            // word, so saying the name is the consent; checked first, so "ask Claude to explain…"
+            // goes to Claude rather than Kai's own explain board.
+            if (AgentTeam.Match(text, _brain.LastUserText) is { } handoff)
+            {
+                if (AgentTeam.Resolve(handoff.Who, _settings, id => AgentTeam.Available(id, _settings)) is not { } expertId)
+                {
+                    Say(AgentTeam.Missing(handoff.Who));
+                    return;
+                }
+                if (Brain(id: expertId) is not { } expert) return;   // it says what's missing
+                var expertPlan = Brain(AssistantBrain.PlanGbnf, maxTokens: 900, quiet: true, id: expertId);
+                var name = AgentTeam.Name(expertId);
+                // A cloud brain: private memories stay behind, the recent chat goes with it.
+                await Task.Run(() => _brain.RespondAsync(expert, handoff.Request, work.Token, onThisPc: false, expertPlan, voice: name), work.Token);
                 return;
             }
 
@@ -400,6 +440,8 @@ public sealed class PetWindow : Window
             if (plan is { Kind: NlKind.Actions, Confidence: >= 1, IsDestructive: false } && plan.Steps.Count > 0)
             {
                 await _tools.RunInstructionAsync(text);
+                // The user's own words, not Nova's decision: recorded, never questioned.
+                _sentinel.Record("You", "do", plan.Summary, Sentinel.RiskOf(plan), "Ran", "your direct command");
                 var reply = char.ToUpperInvariant(plan.Summary[0]) + plan.Summary[1..] + ".";
                 _brain.Remember(text, reply);
                 Say(reply);
@@ -407,7 +449,11 @@ public sealed class PetWindow : Window
             }
 
             if (Brain() is not { } brain) return;
-            await Task.Run(() => _brain.RespondAsync(brain, text, work.Token), work.Token);
+            // Private memories only reach a brain that runs on this PC.
+            var onThisPc = _settings.Brain is not ("claude" or "claudecode" or "codex" or "muse" or "openrouter");
+            // The planner needs the plan's shape; on this PC's model that's a different grammar.
+            var planChat = Brain(AssistantBrain.PlanGbnf, maxTokens: 900, quiet: true);
+            await Task.Run(() => _brain.RespondAsync(brain, text, work.Token, onThisPc, planChat), work.Token);
         }
         catch (OperationCanceledException) { }
         catch (Exception e) when (e is not OutOfMemoryException)
@@ -426,12 +472,13 @@ public sealed class PetWindow : Window
     /// The brain chosen in Settings > Brain, or null (after saying what's missing). The grammar
     /// and length are for the model on this PC; cloud models are told the shape in the prompt.
     /// </summary>
+    /// <param name="id">A specific brain (an agent-team expert); null for the one picked on the Brain page.</param>
     Func<IReadOnlyList<(string Role, string Content)>, CancellationToken, Task<string>>? Brain(
-        string? gbnf = AssistantBrain.Gbnf, int maxTokens = 400, bool quiet = false)
+        string? gbnf = AssistantBrain.Gbnf, int maxTokens = 400, bool quiet = false, string? id = null)
     {
         void Say(string line) { if (!quiet) this.Say(line); }
         var effort = _settings.BrainEffort;
-        switch (_settings.Brain)
+        switch (id ?? _settings.Brain)
         {
             case "claude" when _settings.ApiKey is { Length: > 0 } key:
                 var claudeModel = _settings.BrainClaudeModel;
@@ -782,11 +829,17 @@ public sealed class PetWindow : Window
         }
     }
 
-    /// <summary>Something that can't be undone: asked in the bubble, answered by button or by saying yes or no.</summary>
-    Task<bool> ApproveAsync(string action)
+    /// <summary>
+    /// An action that needs the user's OK (Sentinel's call, or one that can't be undone): asked
+    /// in the bubble, answered by button or by saying yes or no. <paramref name="why"/> is the
+    /// reason, said after the question ("It goes outside this PC.").
+    /// </summary>
+    Task<bool> ApproveAsync(string action, string? why = null)
     {
+        // A newer question replaces an older one still waiting: the old one counts as a no.
+        _approval?.TrySetResult(false);
         var answer = _approval = new TaskCompletionSource<bool>();
-        Say($"Should I {action}?");
+        Say($"Should I {action}?" + (string.IsNullOrWhiteSpace(why) ? "" : " " + why));
         _hideBubbleAt = DateTime.MaxValue;
         _bubbleButtons.Children.Clear();
         _bubbleButtons.Children.Add(Pill("Yes, do it", true, () => answer.TrySetResult(true)));

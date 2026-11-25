@@ -1432,6 +1432,105 @@
                         </StackPanel>
                     </Border>
 
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <TextBlock Text="Sentinel: what Nova may do" Style="{StaticResource GroupHeader}" />
+                            <TextBlock TextWrapping="Wrap" FontSize="12.5" LineHeight="19" Foreground="{StaticResource TextSecondary}"
+                                       Text="Every action Nova decides on goes through Sentinel. Reading your email just happens. Opening apps and changing settings on this PC runs at once. Anything that can't be undone, or that goes outside this PC (a website, an email draft), asks you first: say yes or no, or press a button. After Nova reads an email, it also asks before anything else, so a message can't trick it into acting. Commands you give yourself are never questioned." />
+                            <TextBlock x:Name="SentinelSummary" TextWrapping="Wrap" Margin="0,10,0,0" FontSize="12.5"
+                                       Foreground="{StaticResource TextSecondary}" />
+                            <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                                <Button x:Name="SentinelView" Content="View activity log…" Margin="0,0,8,0" />
+                                <Button x:Name="SentinelClear" Content="Clear log" />
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <TextBlock Text="Memory: what Nova remembers" Style="{StaticResource GroupHeader}" />
+                            <TextBlock TextWrapping="Wrap" FontSize="12.5" LineHeight="19" Foreground="{StaticResource TextSecondary}"
+                                       Text="Say “remember that…” and Nova keeps it across conversations; say “forget…” and it deletes it. Nova saves only when you ask, and after reading an email it asks before saving anything. Memories stay on this PC, encrypted. Cloud brains (Claude, Muse, OpenRouter…) see them too, except the ones you mark This PC only." />
+                            <TextBlock x:Name="MemorySummary" TextWrapping="Wrap" Margin="0,10,0,0" FontSize="12.5"
+                                       Foreground="{StaticResource TextSecondary}" />
+                            <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                                <Button x:Name="MemoryView" Content="View memories…" />
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <TextBlock Text="Watchers: Nova speaks up first" Style="{StaticResource GroupHeader}" />
+                            <TextBlock TextWrapping="Wrap" FontSize="12.5" LineHeight="19" Foreground="{StaticResource TextSecondary}"
+                                       Text="Nova can tell you things without being asked, as a small card by the tray. It never acts on its own: every button on a card runs only when you click it. Pause them all for an hour from the tray menu." />
+                            <CheckBox x:Name="WatchersOn" Margin="0,12,0,0" Content="Let Nova tell me things without being asked" />
+                            <StackPanel x:Name="WatcherList" Margin="22,8,0,0">
+                                <CheckBox x:Name="WatchRemindersBox" Content="Reminders and timers come as Nova's card (off: a tray balloon, as before)" />
+                                <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                                    <CheckBox x:Name="WatchBriefingBox" VerticalAlignment="Center"
+                                              Content="Morning briefing, the first time I'm at the PC after" />
+                                    <TextBox x:Name="BriefingTimeBox" Width="64" Margin="8,0,0,0" />
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                                    <TextBlock Text="Quiet hours from" VerticalAlignment="Center" Foreground="{StaticResource TextSecondary}" />
+                                    <TextBox x:Name="QuietFromBox" Width="64" Margin="8,0,8,0" />
+                                    <TextBlock Text="to" VerticalAlignment="Center" Foreground="{StaticResource TextSecondary}" />
+                                    <TextBox x:Name="QuietToBox" Width="64" Margin="8,0,0,0" />
+                                </StackPanel>
+                                <TextBlock TextWrapping="Wrap" Margin="0,6,0,0" FontSize="12" Foreground="{StaticResource TextSecondary}"
+                                           Text="Also quiet while a full-screen app, game or presentation is on, while the PC is locked, and during a Dotline focus session. The briefing waits until you're free; your own reminders still come, silently. Times are 24-hour, like 22:00." />
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <TextBlock Text="Agent team: ask an expert" Style="{StaticResource GroupHeader}" />
+                            <TextBlock TextWrapping="Wrap" FontSize="12.5" LineHeight="19" Foreground="{StaticResource TextSecondary}"
+                                       Text="Nova answers with your default brain. For something harder, say “ask Claude…”, “ask Muse…”, “ask ChatGPT…” or “ask the expert…”; just “ask Claude” hands over your last request. Only your words send anything out. The expert gets the recent chat, never memories marked This PC only, and its answers start with its name. Its actions still go through Sentinel." />
+                            <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                                <TextBlock Text="“The expert” means" VerticalAlignment="Center" Foreground="{StaticResource TextSecondary}" />
+                                <ComboBox x:Name="TeamExpertPicker" Width="300" Margin="10,0,0,0">
+                                    <ComboBoxItem Tag="auto" Content="Automatic (your cloud brain, or the first set up)" />
+                                    <ComboBoxItem Tag="claude" Content="Claude (API key)" />
+                                    <ComboBoxItem Tag="claudecode" Content="Claude Code (your subscription)" />
+                                    <ComboBoxItem Tag="muse" Content="Muse (your subscription)" />
+                                    <ComboBoxItem Tag="codex" Content="ChatGPT (Codex)" />
+                                    <ComboBoxItem Tag="openrouter" Content="OpenRouter" />
+                                </ComboBox>
+                            </StackPanel>
+                            <TextBlock x:Name="TeamStatus" TextWrapping="Wrap" Margin="0,8,0,0" FontSize="12.5"
+                                       Foreground="{StaticResource TextSecondary}" />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <TextBlock Text="Agents (MCP): let other AI agents use Beacon" Style="{StaticResource GroupHeader}" />
+                            <TextBlock TextWrapping="Wrap" FontSize="12.5" LineHeight="19" Foreground="{StaticResource TextSecondary}"
+                                       Text="Claude Desktop, Claude Code, Cursor and other agents that speak MCP can use Beacon's tools. Each new agent asks once. Everything goes through Sentinel: anything that can't be undone or leaves this PC asks you on a card, and after an agent reads your email, its other actions ask too. What an agent reads goes to that agent's provider; memories marked This PC only never do." />
+                            <CheckBox x:Name="McpOn" Margin="0,12,0,0" Content="Let AI agents on this PC use Beacon's tools" />
+                            <StackPanel x:Name="McpPanel" Margin="22,8,0,0">
+                                <CheckBox x:Name="McpPc" Content="PC actions: open apps and sites, volume, windows, timers and reminders" />
+                                <CheckBox x:Name="McpReminders" Margin="0,6,0,0" Content="See the list of reminders and timers" />
+                                <CheckBox x:Name="McpMemory" Margin="0,6,0,0" Content="Memory: recall shared memories (saving one asks you)" />
+                                <CheckBox x:Name="McpEmail" Margin="0,6,0,0" Content="Email, read-only: check and read the inbox" />
+                                <TextBlock x:Name="McpAgents" TextWrapping="Wrap" Margin="0,10,0,0" FontSize="12.5"
+                                           Foreground="{StaticResource TextSecondary}" />
+                                <Button x:Name="McpForgetAgents" Content="Forget allowed agents" HorizontalAlignment="Left" Margin="0,6,0,0" />
+                                <TextBlock Text="Add Beacon to your agent's MCP settings. For Claude Desktop, paste this into claude_desktop_config.json:"
+                                           TextWrapping="Wrap" Margin="0,14,0,4" FontSize="12.5" Foreground="{StaticResource TextSecondary}" />
+                                <TextBox x:Name="McpSnippet" IsReadOnly="True" FontFamily="Cascadia Mono, Consolas" FontSize="12"
+                                         TextWrapping="NoWrap" HorizontalScrollBarVisibility="Auto" />
+                                <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                                    <Button x:Name="McpCopy" Content="Copy" Margin="0,0,8,0" />
+                                    <Button x:Name="McpCopyClaudeCode" Content="Copy the Claude Code command" />
+                                </StackPanel>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
 
                 </StackPanel>
 

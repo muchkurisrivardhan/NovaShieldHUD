@@ -258,6 +258,25 @@ public sealed class Settings
     /// <summary>"low", "medium", "high" or "max". Higher is smarter but slower (cloud brains).</summary>
     public string BrainEffort { get; set; } = "low";
 
+    /// <summary>
+    /// The agent team's expert, for "ask the expert…": "auto" (the default brain when it's a
+    /// cloud one, else the first set up), or claude, claudecode, muse, codex, openrouter.
+    /// </summary>
+    public string TeamExpert { get; set; } = "auto";
+
+    // -------------------------------------------------------------- agents (MCP)
+
+    /// <summary>Let other AI agents on this PC use Beacon's tools over MCP. Off until the user turns it on.</summary>
+    public bool McpEnabled { get; set; }
+
+    public bool McpAllowPc { get; set; } = true;
+    public bool McpAllowReminders { get; set; } = true;
+    public bool McpAllowMemory { get; set; } = true;
+    public bool McpAllowEmail { get; set; } = true;
+
+    /// <summary>Agents the user allowed, by the name they give (e.g. "claude-ai"). Removable on the settings page.</summary>
+    public List<string> McpAllowedAgents { get; set; } = [];
+
     /// <summary>The key OpenRouter handed over when the user clicked Authorize, encrypted (DPAPI).</summary>
     public string? OpenRouterKeyProtected { get; set; }
 
@@ -344,6 +363,27 @@ public sealed class Settings
 
     /// <summary>Which Windows voice speaks (its name), or null for the default.</summary>
     public string? AssistantVoice { get; set; }
+
+    // -------------------------------------------------------------- watchers
+
+    /// <summary>Master switch for everything Nova tells you without being asked.</summary>
+    public bool WatchersEnabled { get; set; } = true;
+
+    /// <summary>Reminders and timers come as Nova's card instead of a tray balloon.</summary>
+    public bool WatchReminders { get; set; } = true;
+
+    /// <summary>A short briefing the first time you're at the PC after <see cref="BriefingTime"/>.</summary>
+    public bool WatchBriefing { get; set; } = true;
+
+    /// <summary>"HH:mm".</summary>
+    public string BriefingTime { get; set; } = "08:30";
+
+    /// <summary>Quiet hours, "HH:mm" to "HH:mm" (may run past midnight).</summary>
+    public string QuietFrom { get; set; } = "22:00";
+    public string QuietTo { get; set; } = "08:00";
+
+    /// <summary>The day the last briefing was shown (yyyy-MM-dd), so it comes once a day.</summary>
+    public string LastBriefingDay { get; set; } = "";
 
     public string EmailAddress { get; set; } = "";
 

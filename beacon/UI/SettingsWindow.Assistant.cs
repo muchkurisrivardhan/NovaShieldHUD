@@ -42,6 +42,35 @@ public partial class SettingsWindow
                 await command.RunAsync(new ActionContext { TargetWindow = IntPtr.Zero, Dismiss = () => { }, Notify = _ => { } });
         };
 
+        SentinelView.Click += (_, _) =>
+            new AuditLogWindow(_settings, AuditLog.Shared.Entries()) { Owner = this }.Show();
+        SentinelClear.Click += (_, _) =>
+        {
+            if (MessageBox.Show(this, "Delete Nova's activity log? This can't be undone.", "Clear activity log",
+                    MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) != MessageBoxResult.Yes) return;
+            AuditLog.Shared.Clear();
+            RefreshSentinelSummary();
+        };
+
+        WatchersOn.Click += (_, _) => WatcherList.IsEnabled = WatchersOn.IsChecked == true;
+
+        McpOn.Click += (_, _) => McpPanel.IsEnabled = McpOn.IsChecked == true;
+        McpCopy.Click += (_, _) => CopyText(McpSnippet.Text, McpCopy);
+        McpCopyClaudeCode.Click += (_, _) => CopyText($"claude mcp add novashield -- \"{BeaconPath}\" --mcp", McpCopyClaudeCode);
+        McpForgetAgents.Click += (_, _) =>
+        {
+            _settings.McpAllowedAgents.Clear();
+            _settings.Save();
+            RefreshMcpAgents();
+        };
+
+        MemoryView.Click += (_, _) =>
+        {
+            var window = new MemoryWindow(_settings, MemoryStore.Shared) { Owner = this };
+            window.Closed += (_, _) => RefreshMemorySummary();
+            window.Show();
+        };
+
         EmailTest.Click += async (_, _) =>
         {
             SaveEmailFields();
@@ -77,6 +106,33 @@ public partial class SettingsWindow
         EmailServer.Text = _settings.EmailImapHost;
         RefreshEmailState();
 
+        WatchersOn.IsChecked = _settings.WatchersEnabled;
+        WatcherList.IsEnabled = _settings.WatchersEnabled;
+        WatchRemindersBox.IsChecked = _settings.WatchReminders;
+        WatchBriefingBox.IsChecked = _settings.WatchBriefing;
+        BriefingTimeBox.Text = _settings.BriefingTime;
+        QuietFromBox.Text = _settings.QuietFrom;
+        QuietToBox.Text = _settings.QuietTo;
+
+        TeamExpertPicker.SelectedItem = TeamExpertPicker.Items.OfType<System.Windows.Controls.ComboBoxItem>()
+            .FirstOrDefault(i => (string)i.Tag == _settings.TeamExpert) ?? TeamExpertPicker.Items[0];
+        var ready = AgentTeam.Experts.Where(id => AgentTeam.Available(id, _settings)).Select(AgentTeam.Name).ToList();
+        var auto = AgentTeam.Automatic(_settings, id => AgentTeam.Available(id, _settings));
+        TeamStatus.Text = ready.Count == 0
+            ? "No cloud brain is set up yet, so there's no expert to ask. Add Claude, Muse or ChatGPT on the Brain page, under Accounts."
+            : $"Set up on this PC: {string.Join(", ", ready)}." + (auto is null ? "" : $" Automatic means {AgentTeam.Name(auto)}.");
+
+        McpOn.IsChecked = _settings.McpEnabled;
+        McpPanel.IsEnabled = _settings.McpEnabled;
+        McpPc.IsChecked = _settings.McpAllowPc;
+        McpReminders.IsChecked = _settings.McpAllowReminders;
+        McpMemory.IsChecked = _settings.McpAllowMemory;
+        McpEmail.IsChecked = _settings.McpAllowEmail;
+        McpSnippet.Text =
+            "{\n  \"mcpServers\": {\n    \"novashield\": {\n      \"command\": " + System.Text.Json.JsonSerializer.Serialize(BeaconPath) +
+            ",\n      \"args\": [\"--mcp\"]\n    }\n  }\n}";
+        RefreshMcpAgents();
+
         var model = LocalModels.ForAssistant(_settings.LocalModel);
         var voice = Voice.WhisperModels.IsDownloaded(Voice.WhisperModels.Find(_settings.VoiceModel));
         AssistantReadiness.Text =
@@ -91,6 +147,35 @@ public partial class SettingsWindow
             (_settings.EmailAccount() is null
                 ? "– Email: not set up (Connectors page). Optional."
                 : "✓ Email: " + _settings.EmailAddress + ".");
+        RefreshSentinelSummary();
+        RefreshMemorySummary();
+    }
+
+    private void RefreshMemorySummary()
+    {
+        var items = MemoryStore.Shared.All();
+        var local = items.Count(m => m.Private);
+        MemorySummary.Text = items.Count == 0
+            ? "Nova doesn't remember anything yet."
+            : $"Nova remembers {items.Count} thing{(items.Count == 1 ? "" : "s")}" +
+              (local > 0 ? $", {local} of them on this PC only." : ".") +
+              $" Latest: “{items[^1].Text}”";
+    }
+
+    private void RefreshSentinelSummary()
+    {
+        var entries = AuditLog.Shared.Entries();
+        if (entries.Count == 0)
+        {
+            SentinelSummary.Text = "Activity log: empty. Kept on this PC only, encrypted, for 30 days.";
+            return;
+        }
+        var asked = entries.Count(e => e.Outcome is "Approved by you" or "Declined by you");
+        var blocked = entries.Count(e => e.Outcome == "Blocked");
+        var last = entries[^1];
+        SentinelSummary.Text =
+            $"Activity log: {entries.Count} actions in the last 30 days ({asked} asked you, {blocked} blocked). " +
+            $"Latest: {last.Action}, {last.Outcome.ToLowerInvariant()}, {last.Time:MMM d, h:mm tt}.";
     }
 
     private void RefreshEmailState() =>
@@ -115,5 +200,39 @@ public partial class SettingsWindow
         _settings.AssistantListensForReply = AssistantListens.IsChecked == true;
         _settings.AssistantVoice = AssistantVoicePicker.SelectedItem as string;
         SaveEmailFields();
+
+        _settings.WatchersEnabled = WatchersOn.IsChecked == true;
+        _settings.WatchReminders = WatchRemindersBox.IsChecked == true;
+        _settings.WatchBriefing = WatchBriefingBox.IsChecked == true;
+        // A time that doesn't parse keeps the old one rather than switching a watcher off by accident.
+        string Time(string text, string old) => WatcherHub.Clock(text) is { } t ? t.ToString("HH:mm") : old;
+        _settings.BriefingTime = Time(BriefingTimeBox.Text, _settings.BriefingTime);
+        _settings.QuietFrom = Time(QuietFromBox.Text, _settings.QuietFrom);
+        _settings.QuietTo = Time(QuietToBox.Text, _settings.QuietTo);
+        if (TeamExpertPicker.SelectedItem is System.Windows.Controls.ComboBoxItem { Tag: string expert }) _settings.TeamExpert = expert;
+
+        _settings.McpEnabled = McpOn.IsChecked == true;
+        _settings.McpAllowPc = McpPc.IsChecked == true;
+        _settings.McpAllowReminders = McpReminders.IsChecked == true;
+        _settings.McpAllowMemory = McpMemory.IsChecked == true;
+        _settings.McpAllowEmail = McpEmail.IsChecked == true;
+    }
+
+    /// <summary>The program agents start: this Beacon.exe, wherever it's installed.</summary>
+    static string BeaconPath => Environment.ProcessPath ?? "Beacon.exe";
+
+    private void RefreshMcpAgents() =>
+        McpAgents.Text = _settings.McpAllowedAgents.Count == 0
+            ? "No agent allowed yet. The first time one connects, a card asks you."
+            : "Allowed: " + string.Join(", ", _settings.McpAllowedAgents) + ".";
+
+    static void CopyText(string text, System.Windows.Controls.Button button)
+    {
+        try
+        {
+            Clipboard.SetText(text);
+            button.Content = "Copied";
+        }
+        catch (System.Runtime.InteropServices.ExternalException) { button.Content = "Try again"; }
     }
 }

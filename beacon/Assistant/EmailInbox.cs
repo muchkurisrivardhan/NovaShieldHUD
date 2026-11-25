@@ -119,6 +119,28 @@ public sealed class EmailInbox(Func<EmailAccount?> account)
         }
     }
 
+    /// <summary>
+    /// For the morning briefing: how many unread, and who the newest few are from. Null when
+    /// email isn't set up; throws when the server can't be reached. Read-only, like the rest.
+    /// Kept apart from <see cref="CheckAsync"/>: nothing here goes into Nova's conversation.
+    /// </summary>
+    public async Task<(int Count, IReadOnlyList<string> From)?> UnreadAsync(CancellationToken ct)
+    {
+        if (account() is not { } a) return null;
+        using var client = await ConnectAsync(a, ct).ConfigureAwait(false);
+        await client.Inbox.OpenAsync(FolderAccess.ReadOnly, ct).ConfigureAwait(false);
+        var unread = await client.Inbox.SearchAsync(SearchQuery.NotSeen, ct).ConfigureAwait(false);
+        var newest = unread.Reverse().Take(5).ToList();
+        var summaries = newest.Count == 0 ? [] : await client.Inbox.FetchAsync(newest, MessageSummaryItems.Envelope, ct).ConfigureAwait(false);
+        await client.DisconnectAsync(true, ct).ConfigureAwait(false);
+        var from = summaries
+            .Select(m => m.Envelope?.From?.Mailboxes.FirstOrDefault())
+            .Select(f => f?.Name is { Length: > 0 } n ? n : f?.Address ?? "someone")
+            .Distinct()
+            .ToList();
+        return (unread.Count, from);
+    }
+
     /// <summary>One message's text, for summarising. Fetched with PEEK: it stays unread.</summary>
     public async Task<string> ReadAsync(int number, CancellationToken ct)
     {

@@ -13,18 +13,23 @@ public sealed class AssistantTools(
     NlParser parser, NlRunner runner, EmailInbox inbox, Dispatcher ui,
     Func<IntPtr> target, Func<string, Task<bool>> approve, Action<string> notify) : IAssistantTools
 {
-    public Task<string> DoAsync(string instruction, CancellationToken ct) =>
-        ui.InvokeAsync(() => RunInstructionAsync(instruction)).Task.Unwrap();
+    public Task<string> DoAsync(string instruction, bool approved, CancellationToken ct) =>
+        ui.InvokeAsync(() => RunInstructionAsync(instruction, approved)).Task.Unwrap();
 
-    /// <summary>Also the fast path: a plain command the parser fully understands skips the model.</summary>
-    public async Task<string> RunInstructionAsync(string instruction)
+    /// <summary>
+    /// Also the fast path: a plain command the parser fully understands skips the model.
+    /// <paramref name="approved"/>: the user already said yes (through Sentinel), so a
+    /// destructive plan isn't asked about twice. Without it, destructive plans still ask here,
+    /// as a second line of defence.
+    /// </summary>
+    public async Task<string> RunInstructionAsync(string instruction, bool approved = false)
     {
         var plan = parser.Parse(instruction);
         if (plan is null || plan.Kind != NlKind.Actions || plan.Steps.Count == 0)
             return $"Couldn't work out how to \"{instruction}\" on this PC. Beacon can open apps and sites, search, " +
                    "change volume and brightness, set timers, manage windows and open settings.";
 
-        if (plan.IsDestructive && !await approve(plan.Summary))
+        if (plan.IsDestructive && !approved && !await approve(plan.Summary))
             return $"The user said no, so I didn't {plan.Summary}.";
 
         var context = new ActionContext

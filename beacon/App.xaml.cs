@@ -37,6 +37,15 @@ public partial class App : System.Windows.Application
     {
         base.OnStartup(e);
 
+        // Started by an AI agent as its MCP server: relay to the running Beacon and nothing else.
+        // Before the single-instance check, so it never complains that Beacon is already running.
+        if (e.Args.Any(a => string.Equals(a, "--mcp", StringComparison.OrdinalIgnoreCase)))
+        {
+            ShutdownMode = ShutdownMode.OnExplicitShutdown;
+            _ = Task.Run(Assistant.McpRelay.RunAsync).ContinueWith(_ => Dispatcher.BeginInvoke(() => Shutdown()), TaskScheduler.Default);
+            return;
+        }
+
         _instanceLock = new Mutex(initiallyOwned: true, SingleInstanceMutex, out var isFirst);
         if (!isFirst)
         {
@@ -139,6 +148,25 @@ public partial class App : System.Windows.Application
         _talkKey.Tap += () => Pet().TalkTap(NativeMethods.GetForegroundWindow());
         _talkKey.Use(settings.PushToTalk);
 
+        // Watchers: Nova telling you things without being asked. They only show cards; every
+        // button on a card is the user's own action, and goes through Sentinel like any request.
+        var watchMail = new Assistant.EmailInbox(settings.EmailAccount);
+        _watchers = new Assistant.WatcherHub(settings,
+            new Assistant.WatcherSignals { Mail = ct => watchMail.UnreadAsync(ct) },
+            Assistant.AuditLog.Shared,
+            show: alert => UI.WatcherCard.Present(settings, alert),
+            announce: line => Pet().Announce(line),
+            ask: text => Pet().Ask(text, IntPtr.Zero));
+        _watchTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(30) };
+        _watchTimer.Tick += async (_, _) =>
+        {
+            try { await _watchers.TickAsync(); }
+            catch (Exception e) when (e is not OutOfMemoryException) { }   // a watcher must never take Beacon down
+        };
+        _watchTimer.Start();
+
+        ApplyMcp();   // agents (MCP): only if the user turned it on
+
         BuildTrayIcon(settings);
         ApplyStartupRegistration(settings.RunAtStartup);
         if (settings.LaunchDotline) Suite.OpenDotline();
@@ -151,6 +179,8 @@ public partial class App : System.Windows.Application
         // restoring, so reminders that fell due while Beacon was off are announced too.
         Timers.Due += message => Dispatcher.BeginInvoke(() =>
         {
+            // Nova's card when the reminders watcher is on; otherwise the tray balloon, as before.
+            if (_watchers?.OnReminder(message) == true) return;
             System.Media.SystemSounds.Exclamation.Play();
             Notify("⏰ " + message);
         });
@@ -231,6 +261,44 @@ public partial class App : System.Windows.Application
     private LocalAi.SmartRing? _smartRing;
     private LocalAi.CodeRing? _codeRing;
     private UI.Pet.PetWindow? _pet;
+    private Assistant.WatcherHub? _watchers;
+    private System.Windows.Threading.DispatcherTimer? _watchTimer;
+    private Assistant.McpHost? _mcp;
+
+    /// <summary>Starts or stops the MCP host to match Settings > Nova Assistant > Agents.</summary>
+    private void ApplyMcp()
+    {
+        if (_settings is not { } settings) return;
+        if (settings.McpEnabled) (_mcp ??= MakeMcpHost(settings)).Start();
+        else _mcp?.Stop();
+    }
+
+    /// <summary>
+    /// Other AI agents' way into Beacon: their own tools instance (so they don't share Nova's
+    /// conversation), every call through a per-agent Sentinel, approvals on Allow/Deny cards.
+    /// </summary>
+    private Assistant.McpHost MakeMcpHost(Settings settings)
+    {
+        var inbox = new Assistant.EmailInbox(settings.EmailAccount);
+        Task<bool> Ask(string title, string body, string yes = "Allow", string no = "Deny") =>
+            Dispatcher.InvokeAsync(() => UI.WatcherCard.AskAsync(settings, "agent", title, body, yes, no)).Task.Unwrap();
+        var tools = new Assistant.AssistantTools(_language!, _languageRunner!, inbox, Dispatcher,
+            () => NativeMethods.GetForegroundWindow(),
+            action => Ask("An agent wants to " + action, "It can't be undone."), Notify);
+        return new Assistant.McpHost(() => new Assistant.McpSession(new Assistant.McpEnvironment
+        {
+            Settings = settings,
+            Tools = tools,
+            Memory = Assistant.MemoryStore.Shared,
+            Log = Assistant.AuditLog.Shared,
+            Understand = _language!.Parse,
+            ApproveAgent = agent => Ask($"{agent} wants to use Beacon",
+                "Another AI agent on this PC is asking to use Beacon's tools (the ones you turned on in Settings, Nova Assistant, Agents). " +
+                "Everything goes through Sentinel: anything that can't be undone or leaves this PC still asks you here.",
+                "Allow", "Not now"),
+            ApproveAction = (agent, summary, why) => Ask($"{agent} wants to {summary}", why),
+        }));
+    }
     private Func<UI.Pet.PetWindow>? _makePet;
     private PushToTalkHook? _talkKey;
 
@@ -456,6 +524,19 @@ public partial class App : System.Windows.Application
         };
         menu.Items.Add(startup);
 
+        // The off-switch at hand: Nova's watchers quiet for an hour (reminders fall back to balloons).
+        var pause = new Forms.ToolStripMenuItem("Pause Nova's watchers for 1 hour");
+        pause.Click += (_, _) =>
+        {
+            if (_watchers is null) return;
+            if (_watchers.Paused) _watchers.Resume();
+            else _watchers.Pause(TimeSpan.FromHours(1));
+        };
+        menu.Opening += (_, _) => pause.Text = _watchers?.Paused == true
+            ? $"Resume Nova's watchers (paused until {_watchers.PausedUntil:h:mm tt})"
+            : "Pause Nova's watchers for 1 hour";
+        menu.Items.Add(pause);
+
         menu.Items.Add(new Forms.ToolStripSeparator());
         menu.Items.Add("Exit", null, (_, _) => ExitCleanly());
 
@@ -522,6 +603,7 @@ public partial class App : System.Windows.Application
     {
         if (_settings is null) return;
 
+        ApplyMcp();
         ApplyHotkeys();
         ApplyStartupRegistration(_settings.RunAtStartup);
         _talkKey?.Use(_settings.PushToTalk);
@@ -582,6 +664,7 @@ public partial class App : System.Windows.Application
 
     private void ExitCleanly()
     {
+        _mcp?.Stop();
         _hotkeys?.Dispose();
 
         if (_tray is not null)
